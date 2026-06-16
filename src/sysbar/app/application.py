@@ -33,6 +33,7 @@ from ..core.constants import (  # noqa: E402
     CURRENT_FEATURE_SET,
     SHELF_DIR,
 )
+from ..core.i18n import _  # noqa: E402
 from ..core.localization import install_language  # noqa: E402
 from ..services.audio.app_volume_mixer import AppVolumeMixer  # noqa: E402
 from ..services.audio.pulse_backend import PulseAudioBackend  # noqa: E402
@@ -181,7 +182,7 @@ class SysbarApplication(Adw.Application):
     def _on_update_found(self, info: UpdateInfo) -> bool:
         if self._notifier is not None:
             self._notifier.notify(
-                "Sysbar update available",
+                _("Sysbar update available"),
                 f"{info.version} is available. Run: sudo apt update && sudo apt upgrade sysbar",
                 notification_id="update",
             )
@@ -307,7 +308,7 @@ class SysbarApplication(Adw.Application):
     def _on_session_ended(self, _manager: KeepAwakeManager, reason: str) -> None:
         message = _SESSION_END_MESSAGES.get(reason)
         if message and self._notifier is not None:
-            self._notifier.notify("Sysbar", message, notification_id="keep-awake")
+            self._notifier.notify("Sysbar", _(message), notification_id="keep-awake")
 
     def _toggle_keep_awake(self) -> None:
         if self._keep_awake is None:
@@ -373,22 +374,22 @@ class SysbarApplication(Adw.Application):
         keep_awake_on = self._keep_awake is not None and self._keep_awake.is_active
         items = [
             MenuItem(
-                label="Keep awake",
+                label=_("Keep awake"),
                 toggle_type="checkmark",
                 toggle_state=TOGGLE_ON if keep_awake_on else TOGGLE_OFF,
                 action=self._toggle_keep_awake,
             ),
             MenuItem(item_type=TYPE_SEPARATOR),
-            MenuItem(label="Open panel", action=self._open_panel),
+            MenuItem(label=_("Open panel"), action=self._open_panel),
         ]
         if self.config.get_bool("shelf-enabled"):
-            items.append(MenuItem(label="Open shelf", action=self._open_shelf))
+            items.append(MenuItem(label=_("Open shelf"), action=self._open_shelf))
         items.extend(
             [
-                MenuItem(label="Uninstall app…", action=self._open_uninstaller),
-                MenuItem(label="Settings", action=self._open_settings),
+                MenuItem(label=_("Uninstall app…"), action=self._open_uninstaller),
+                MenuItem(label=_("Settings"), action=self._open_settings),
                 MenuItem(item_type=TYPE_SEPARATOR),
-                MenuItem(label="Quit", action=self.quit),
+                MenuItem(label=_("Quit"), action=self.quit),
             ]
         )
         return MenuModel(items)

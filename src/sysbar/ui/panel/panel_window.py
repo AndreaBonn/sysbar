@@ -14,6 +14,7 @@ gi.require_version("Adw", "1")
 from gi.repository import Adw, Gtk  # noqa: E402
 
 from ...core.constants import DEFAULT_TEMPERATURE_UNIT  # noqa: E402
+from ...core.i18n import _  # noqa: E402
 from ...services.audio.app_volume_mixer import AppVolumeMixer  # noqa: E402
 from ...services.metrics import metric_format as mf  # noqa: E402
 from ...services.system_monitor.snapshot import SystemSnapshot  # noqa: E402
@@ -32,7 +33,7 @@ class PanelWindow(Adw.Window):
         self._temperature_unit = DEFAULT_TEMPERATURE_UNIT
         self._rows: dict[str, Adw.ActionRow] = {}
         self._mixer_section = MixerSection()
-        self._fan_group = Adw.PreferencesGroup(title="Fan Control (beta)", visible=False)
+        self._fan_group = Adw.PreferencesGroup(title=_("Fan Control (beta)"), visible=False)
         self._fan_rows: list[Adw.ActionRow] = []
         self._build_content()
 
@@ -60,7 +61,7 @@ class PanelWindow(Adw.Window):
 
         content.append(
             self._group(
-                "System",
+                _("System"),
                 (
                     ("cpu", "CPU load"),
                     ("cpu_temp", "CPU temperature"),
@@ -70,8 +71,8 @@ class PanelWindow(Adw.Window):
                 ),
             )
         )
-        content.append(self._group("Network", (("net_speed", "Speed"), ("net_total", "Total"))))
-        content.append(self._group("Power", (("battery", "Battery"), ("power", "Power draw"))))
+        content.append(self._group(_("Network"), (("net_speed", "Speed"), ("net_total", "Total"))))
+        content.append(self._group(_("Power"), (("battery", "Battery"), ("power", "Power draw"))))
         content.append(self._fan_group)
         content.append(self._mixer_section)
 

@@ -12,6 +12,7 @@ from gi.repository import Adw, Gtk  # noqa: E402
 
 from ... import __version__  # noqa: E402
 from ...core.config import Config  # noqa: E402
+from ...core.i18n import _  # noqa: E402
 from ...services.autostart import AutostartManager  # noqa: E402
 from .widgets import ComboBinding, bound_switch  # noqa: E402
 
@@ -27,7 +28,7 @@ class SettingsWindow(Adw.PreferencesWindow):
     """Live-bound preferences, one page per feature."""
 
     def __init__(self, config: Config, autostart: AutostartManager) -> None:
-        super().__init__(title="Sysbar Preferences")
+        super().__init__(title=_("Sysbar Preferences"))
         self.set_default_size(640, 560)
         self._config = config
         self._settings = config.settings
@@ -48,7 +49,7 @@ class SettingsWindow(Adw.PreferencesWindow):
         return binding.row
 
     def _general_page(self) -> Adw.PreferencesPage:
-        page = Adw.PreferencesPage(title="General", icon_name="preferences-system-symbolic")
+        page = Adw.PreferencesPage(title=_("General"), icon_name="preferences-system-symbolic")
         group = Adw.PreferencesGroup(title="General")
         group.add(self._combo("app-language", "Language", _LANGUAGES, is_int=False))
 
@@ -92,7 +93,7 @@ class SettingsWindow(Adw.PreferencesWindow):
         return page
 
     def _features_page(self) -> Adw.PreferencesPage:
-        page = Adw.PreferencesPage(title="Features", icon_name="view-grid-symbolic")
+        page = Adw.PreferencesPage(title=_("Features"), icon_name="view-grid-symbolic")
         group = Adw.PreferencesGroup(title="Features", description="Each feature is off by default")
         group.add(bound_switch(self._settings, "monitor-show-mixer", "Volume mixer"))
         group.add(bound_switch(self._settings, "auto-quit-enabled", "Auto-quit closed apps"))
@@ -102,7 +103,7 @@ class SettingsWindow(Adw.PreferencesWindow):
         return page
 
     def _about_page(self) -> Adw.PreferencesPage:
-        page = Adw.PreferencesPage(title="About", icon_name="help-about-symbolic")
+        page = Adw.PreferencesPage(title=_("About"), icon_name="help-about-symbolic")
         group = Adw.PreferencesGroup(title="About")
         group.add(Adw.ActionRow(title="Version", subtitle=__version__))
 

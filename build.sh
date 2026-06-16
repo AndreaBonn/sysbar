@@ -18,6 +18,10 @@ compile_schema() {
 compile_translations() {
     local locale_root="${ROOT_DIR}/data/locale"
     [ -d "${locale_root}" ] || return 0
+    if ! command -v msgfmt >/dev/null 2>&1; then
+        echo "msgfmt not found; skipping translation compilation (install gettext)" >&2
+        return 0
+    fi
     while IFS= read -r -d '' po; do
         msgfmt "${po}" -o "${po%.po}.mo"
         echo "Compiled ${po%.po}.mo"

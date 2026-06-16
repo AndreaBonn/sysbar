@@ -15,6 +15,7 @@ gi.require_version("Adw", "1")
 from gi.repository import Adw, Gtk  # noqa: E402
 
 from ...core.capabilities import Capabilities  # noqa: E402
+from ...core.i18n import _  # noqa: E402
 
 _CAPABILITY_LABELS = {
     "session_x11": "X11 session (auto-quit, hotkeys, shelf shake)",
@@ -31,7 +32,7 @@ class OnboardingWindow(Adw.Window):
     """A single-page welcome listing detected capabilities."""
 
     def __init__(self, capabilities: Capabilities, on_finish: Callable[[], None]) -> None:
-        super().__init__(title="Welcome to Sysbar")
+        super().__init__(title=_("Welcome to Sysbar"))
         self.set_default_size(440, 520)
         self._on_finish = on_finish
 
@@ -40,12 +41,12 @@ class OnboardingWindow(Adw.Window):
 
         page = Adw.PreferencesPage()
         intro = Adw.PreferencesGroup(
-            title="Welcome",
+            title=_("Welcome"),
             description="Sysbar runs in the tray. Every feature is off until you enable it.",
         )
         page.add(intro)
 
-        detected = Adw.PreferencesGroup(title="Detected on this system")
+        detected = Adw.PreferencesGroup(title=_("Detected on this system"))
         state = capabilities.snapshot()
         for name, label in _CAPABILITY_LABELS.items():
             row = Adw.ActionRow(title=label)
@@ -56,7 +57,7 @@ class OnboardingWindow(Adw.Window):
 
         toolbar.set_content(page)
 
-        finish = Gtk.Button(label="Get started", css_classes=["suggested-action"])
+        finish = Gtk.Button(label=_("Get started"), css_classes=["suggested-action"])
         finish.connect("clicked", self._finish)
         bottom = Gtk.Box(halign=Gtk.Align.CENTER, margin_top=8, margin_bottom=16)
         bottom.append(finish)

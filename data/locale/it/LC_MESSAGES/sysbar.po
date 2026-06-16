@@ -1,0 +1,75 @@
+msgid ""
+msgstr ""
+"Project-Id-Version: sysbar 0.1.0\n"
+"Language: it\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+# Tray menu
+msgid "Keep awake"
+msgstr "Tieni sveglio"
+
+msgid "Open panel"
+msgstr "Apri pannello"
+
+msgid "Open shelf"
+msgstr "Apri shelf"
+
+msgid "Uninstall app…"
+msgstr "Disinstalla app…"
+
+msgid "Settings"
+msgstr "Impostazioni"
+
+msgid "Quit"
+msgstr "Esci"
+
+# Notifications
+msgid "Sysbar update available"
+msgstr "Aggiornamento Sysbar disponibile"
+
+msgid "Keep awake ended (timer elapsed)"
+msgstr "Keep awake terminato (timer scaduto)"
+
+msgid "Keep awake ended (battery low)"
+msgstr "Keep awake terminato (batteria scarica)"
+
+# Onboarding
+msgid "Welcome to Sysbar"
+msgstr "Benvenuto in Sysbar"
+
+msgid "Welcome"
+msgstr "Benvenuto"
+
+msgid "Get started"
+msgstr "Inizia"
+
+msgid "Detected on this system"
+msgstr "Rilevato su questo sistema"
+
+# Settings
+msgid "Sysbar Preferences"
+msgstr "Preferenze Sysbar"
+
+msgid "General"
+msgstr "Generale"
+
+msgid "Features"
+msgstr "Funzioni"
+
+msgid "About"
+msgstr "Informazioni"
+
+# Panel sections
+msgid "System"
+msgstr "Sistema"
+
+msgid "Network"
+msgstr "Rete"
+
+msgid "Power"
+msgstr "Alimentazione"
+
+msgid "Fan Control (beta)"
+msgstr "Controllo ventole (beta)"

@@ -11,6 +11,7 @@ import gettext
 import os
 from pathlib import Path
 
+from . import i18n
 from .constants import GETTEXT_DOMAIN
 
 SUPPORTED_LANGUAGES: tuple[str, ...] = ("en", "it")
@@ -51,7 +52,7 @@ def install_language(language: str = "") -> str:
         languages=[resolved, FALLBACK_LANGUAGE],
         fallback=True,
     )
-    translation.install(names=["gettext", "ngettext"])
+    i18n.set_translation(translation)
     return resolved
 
 
