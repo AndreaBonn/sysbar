@@ -10,7 +10,7 @@ SCHEMA_DIR="${BUILD_DIR}/schemas"
 
 compile_schema() {
     mkdir -p "${SCHEMA_DIR}"
-    cp "${ROOT_DIR}/data/it.linkalab.Sysbar.gschema.xml" "${SCHEMA_DIR}/"
+    cp "${ROOT_DIR}/data/io.github.AndreaBonn.Sysbar.gschema.xml" "${SCHEMA_DIR}/"
     glib-compile-schemas "${SCHEMA_DIR}"
     echo "Schema compiled into ${SCHEMA_DIR}"
 }

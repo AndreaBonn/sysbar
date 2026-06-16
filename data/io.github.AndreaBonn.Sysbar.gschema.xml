@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <schemalist>
-  <schema id="it.linkalab.Sysbar" path="/it/linkalab/Sysbar/">
+  <schema id="io.github.AndreaBonn.Sysbar" path="/io/github/AndreaBonn/Sysbar/">
 
     <key name="app-language" type="s">
       <default>''</default>

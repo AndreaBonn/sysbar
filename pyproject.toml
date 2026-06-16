@@ -5,7 +5,7 @@ description = "System tray toolkit for Ubuntu/GNOME: monitor, per-app volume mix
 readme = "README.md"
 requires-python = ">=3.11"
 license = { text = "GPL-3.0-or-later" }
-authors = [{ name = "Linkalab" }]
+authors = [{ name = "AndreaBonn" }]
 keywords = ["gnome", "system-tray", "system-monitor", "gtk4", "pipewire"]
 
 # Nota: PyGObject NON e' elencato qui. Il venv usa --system-site-packages e
@@ -24,8 +24,8 @@ nvidia = ["pynvml>=12.0.0"]
 sysbar = "sysbar.__main__:main"
 
 [project.urls]
-Homepage = "https://github.com/linkalab/sysbar"
-Repository = "https://github.com/linkalab/sysbar"
+Homepage = "https://github.com/AndreaBonn/sysbar"
+Repository = "https://github.com/AndreaBonn/sysbar"
 
 [dependency-groups]
 # PyGObject-stubs e' deliberatamente assente: dipende da PyGObject, che in un

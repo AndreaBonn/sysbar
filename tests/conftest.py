@@ -27,7 +27,7 @@ def compiled_schema(tmp_path_factory: pytest.TempPathFactory) -> Iterator[str]:
         pytest.skip("glib-compile-schemas not available")
 
     target = tmp_path_factory.mktemp("schemas")
-    shutil.copy(_SCHEMA_SOURCE / "it.linkalab.Sysbar.gschema.xml", target)
+    shutil.copy(_SCHEMA_SOURCE / "io.github.AndreaBonn.Sysbar.gschema.xml", target)
     subprocess.run([compiler, str(target)], check=True)
 
     previous = os.environ.get("GSETTINGS_SCHEMA_DIR")

@@ -8,19 +8,19 @@ from __future__ import annotations
 
 from pathlib import Path
 
-APP_ID = "it.linkalab.Sysbar"
+APP_ID = "io.github.AndreaBonn.Sysbar"
 APP_NAME = "Sysbar"
 BINARY_NAME = "sysbar"
 GETTEXT_DOMAIN = "sysbar"
-GSETTINGS_PATH = "/it/linkalab/Sysbar/"
+GSETTINGS_PATH = "/io/github/AndreaBonn/Sysbar/"
 
 # Tray icon. A themed symbolic name is used so the icon is visible in a source
-# checkout; packaging installs the branded "it.linkalab.Sysbar" icon (M9).
+# checkout; packaging installs the branded "io.github.AndreaBonn.Sysbar" icon (M9).
 TRAY_ICON_NAME = "utilities-system-monitor-symbolic"
 TRAY_TITLE = "Sysbar"
 
 # GitHub identity used by the optional update check (services/update_service.py).
-GITHUB_OWNER = "linkalab"
+GITHUB_OWNER = "AndreaBonn"
 GITHUB_REPO = "sysbar"
 
 # Keep-awake durations, in minutes (0 = indefinite).

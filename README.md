@@ -81,8 +81,8 @@ uv run mypy
 ## Configurazione
 
 Tutta la configurazione runtime vive in GSettings, schema
-`it.linkalab.Sysbar`, path `/it/linkalab/Sysbar/`. Le chiavi sono documentate
-nello schema `data/it.linkalab.Sysbar.gschema.xml`. Non sono richiesti secret
+`io.github.AndreaBonn.Sysbar`, path `/io/github/AndreaBonn/Sysbar/`. Le chiavi sono
+documentate nello schema `data/io.github.AndreaBonn.Sysbar.gschema.xml`. Non sono richiesti secret
 né variabili d'ambiente in produzione; `.env.example` elenca le sole variabili
 di sviluppo.
 

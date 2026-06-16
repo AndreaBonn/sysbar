@@ -1,6 +1,6 @@
 """XDG autostart management.
 
-Creating or removing ``~/.config/autostart/it.linkalab.Sysbar.desktop`` is the
+Creating or removing ``~/.config/autostart/io.github.AndreaBonn.Sysbar.desktop`` is the
 Linux equivalent of a macOS login item. The directory is injectable so the
 logic is testable without touching the real home directory.
 """

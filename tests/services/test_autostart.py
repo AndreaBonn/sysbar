@@ -12,7 +12,7 @@ def test_enable_creates_desktop_file(tmp_path: Path) -> None:
     manager = AutostartManager(autostart_dir=tmp_path / "autostart")
     manager.enable()
     assert manager.is_enabled() is True
-    content = (tmp_path / "autostart" / "it.linkalab.Sysbar.desktop").read_text()
+    content = (tmp_path / "autostart" / "io.github.AndreaBonn.Sysbar.desktop").read_text()
     assert "Exec=sysbar" in content
     assert "X-GNOME-Autostart-enabled=true" in content
 
