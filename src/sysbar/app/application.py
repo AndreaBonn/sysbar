@@ -9,14 +9,21 @@ milestones; here the shell, panel, settings and onboarding are in place.
 from __future__ import annotations
 
 import logging
+from pathlib import Path
 
 import gi
 
 gi.require_version("Gtk", "4.0")
 gi.require_version("Adw", "1")
+
 from gi.repository import Adw, Gio, GLib  # noqa: E402
 
-from ..core.capabilities import PIPEWIRE_PULSE, SESSION_X11, Capabilities  # noqa: E402
+from ..core.capabilities import (  # noqa: E402
+    PIPEWIRE_PULSE,
+    POLKIT,
+    SESSION_X11,
+    Capabilities,
+)
 from ..core.config import Config  # noqa: E402
 from ..core.constants import (  # noqa: E402
     APP_ID,
@@ -42,6 +49,10 @@ from ..services.shelf.shelf_service import ShelfService  # noqa: E402
 from ..services.system_monitor.adapters import SysfsPowerReader  # noqa: E402
 from ..services.system_monitor.monitor import SystemMonitor  # noqa: E402
 from ..services.system_monitor.snapshot import SystemSnapshot  # noqa: E402
+from ..services.uninstall.app_uninstaller import AppUninstaller  # noqa: E402
+from ..services.uninstall.command_query import CommandPackageQuery  # noqa: E402
+from ..services.uninstall.package_remover import PkexecPackageRemover  # noqa: E402
+from ..services.uninstall.trash import GioTrash  # noqa: E402
 from .tray.menu_model import (  # noqa: E402
     TOGGLE_OFF,
     TOGGLE_ON,
@@ -88,6 +99,8 @@ class SysbarApplication(Adw.Application):
         self._shelf_window: Adw.Window | None = None
         self._shake_monitor: ShakeMonitor | None = None
         self._auto_quit: AutoQuitService | None = None
+        self._uninstaller: AppUninstaller | None = None
+        self._uninstaller_window: Adw.Window | None = None
         self._notifier: Notifier | None = None
         self._countdown_timer = 0
         self._held = False
@@ -105,6 +118,7 @@ class SysbarApplication(Adw.Application):
         self._setup_mixer()
         self._reconcile_shelf()
         self._setup_auto_quit()
+        self._setup_uninstaller()
         GLib.timeout_add_seconds(CAPABILITY_REFRESH_INTERVAL_SECONDS, self._refresh_capabilities)
         log.info("application started", extra={"capabilities": self._capabilities.snapshot()})
 
@@ -149,6 +163,29 @@ class SysbarApplication(Adw.Application):
             enabled=lambda: self.config.get_bool("auto-quit-enabled"),
         )
         self._auto_quit.start()
+
+    def _setup_uninstaller(self) -> None:
+        self._uninstaller = AppUninstaller(
+            home=Path.home(),
+            trash=GioTrash(),
+            remover=PkexecPackageRemover(),
+            polkit_available=self._capabilities.has(POLKIT),
+        )
+
+    def _open_uninstaller(self) -> None:
+        if self._uninstaller is None:
+            self._setup_uninstaller()
+        from ..ui.uninstall.uninstaller_window import UninstallerWindow
+
+        if self._uninstaller_window is None and self._uninstaller is not None:
+            self._uninstaller_window = UninstallerWindow(self._uninstaller, CommandPackageQuery())
+            self._uninstaller_window.connect("close-request", self._on_uninstaller_closed)
+        if self._uninstaller_window is not None:
+            self._uninstaller_window.present()
+
+    def _on_uninstaller_closed(self, _window: Adw.Window) -> bool:
+        self._uninstaller_window = None
+        return False
 
     def _reconcile_shelf(self) -> None:
         enabled = self.config.get_bool("shelf-enabled")
@@ -293,6 +330,7 @@ class SysbarApplication(Adw.Application):
             ("open-settings", self._open_settings),
             ("toggle-keep-awake", self._toggle_keep_awake),
             ("open-shelf", self._open_shelf),
+            ("open-uninstaller", self._open_uninstaller),
             ("quit", self.quit),
         ):
             action = Gio.SimpleAction.new(name, None)
@@ -324,6 +362,7 @@ class SysbarApplication(Adw.Application):
             items.append(MenuItem(label="Open shelf", action=self._open_shelf))
         items.extend(
             [
+                MenuItem(label="Uninstall app…", action=self._open_uninstaller),
                 MenuItem(label="Settings", action=self._open_settings),
                 MenuItem(item_type=TYPE_SEPARATOR),
                 MenuItem(label="Quit", action=self.quit),

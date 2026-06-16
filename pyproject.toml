@@ -102,6 +102,9 @@ omit = [
     "src/sysbar/services/shelf/shake_monitor.py",
     "src/sysbar/services/auto_quit/wnck_source.py",
     "src/sysbar/services/auto_quit/os_terminator.py",
+    "src/sysbar/services/uninstall/command_query.py",
+    "src/sysbar/services/uninstall/package_remover.py",
+    "src/sysbar/services/uninstall/trash.py",
     "src/sysbar/services/notifier.py",
     "src/sysbar/__main__.py",
 ]
