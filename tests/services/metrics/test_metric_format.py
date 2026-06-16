@@ -47,3 +47,15 @@ def test_format_uptime_minutes_only() -> None:
 
 def test_format_uptime_zero() -> None:
     assert mf.format_uptime(0) == "0m"
+
+
+def test_format_countdown_minutes_seconds() -> None:
+    assert mf.format_countdown(125) == "2:05"
+
+
+def test_format_countdown_with_hours() -> None:
+    assert mf.format_countdown(3725) == "1:02:05"
+
+
+def test_format_countdown_clamps_negative() -> None:
+    assert mf.format_countdown(-10) == "0:00"

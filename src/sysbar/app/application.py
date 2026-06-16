@@ -25,11 +25,30 @@ from ..core.constants import (  # noqa: E402
 )
 from ..core.localization import install_language  # noqa: E402
 from ..services.autostart import AutostartManager  # noqa: E402
+from ..services.keep_awake.inhibitor import SystemInhibitor  # noqa: E402
+from ..services.keep_awake.manager import KeepAwakeManager  # noqa: E402
+from ..services.keep_awake.ports import EndReason  # noqa: E402
+from ..services.keep_awake.scheduler import GLibScheduler  # noqa: E402
+from ..services.metrics import metric_format as mf  # noqa: E402
+from ..services.notifier import Notifier  # noqa: E402
+from ..services.system_monitor.adapters import SysfsPowerReader  # noqa: E402
 from ..services.system_monitor.monitor import SystemMonitor  # noqa: E402
 from ..services.system_monitor.snapshot import SystemSnapshot  # noqa: E402
-from .tray.menu_model import TYPE_SEPARATOR, MenuItem, MenuModel  # noqa: E402
+from .tray.menu_model import (  # noqa: E402
+    TOGGLE_OFF,
+    TOGGLE_ON,
+    TYPE_SEPARATOR,
+    MenuItem,
+    MenuModel,
+)
 from .tray.tray import Tray  # noqa: E402
 from .tray_renderer import TrayOptions, render_tray_label  # noqa: E402
+
+_KEEP_AWAKE_PLAY = "▶"
+_SESSION_END_MESSAGES = {
+    EndReason.TIMER.value: "Keep awake ended (timer elapsed)",
+    EndReason.BATTERY.value: "Keep awake ended (battery low)",
+}
 
 _TRAY_METRIC_KEYS = (
     "menu-bar-cpu",
@@ -55,6 +74,9 @@ class SysbarApplication(Adw.Application):
         self._panel: Adw.Window | None = None
         self._settings_window: Adw.PreferencesWindow | None = None
         self._monitor: SystemMonitor | None = None
+        self._keep_awake: KeepAwakeManager | None = None
+        self._notifier: Notifier | None = None
+        self._countdown_timer = 0
         self._held = False
 
     def do_startup(self) -> None:
@@ -62,9 +84,11 @@ class SysbarApplication(Adw.Application):
         self._config = Config()
         install_language(self._config.get_string("app-language"))
         self._capabilities.refresh()
+        self._notifier = Notifier(self)
         self._install_actions()
         self._setup_tray()
         self._setup_monitor()
+        self._setup_keep_awake()
         GLib.timeout_add_seconds(CAPABILITY_REFRESH_INTERVAL_SECONDS, self._refresh_capabilities)
         log.info("application started", extra={"capabilities": self._capabilities.snapshot()})
 
@@ -74,13 +98,17 @@ class SysbarApplication(Adw.Application):
         self.config.settings.connect("changed", self._on_settings_changed)
         self._update_tray_active()
 
+    def _setup_keep_awake(self) -> None:
+        self._keep_awake = KeepAwakeManager(SystemInhibitor(), SysfsPowerReader(), GLibScheduler())
+        self._keep_awake.connect("changed", self._on_keep_awake_changed)
+        self._keep_awake.connect("session-ended", self._on_session_ended)
+
     def _update_tray_active(self) -> None:
         if self._monitor is None:
             return
         active = any(self.config.get_bool(key) for key in _TRAY_METRIC_KEYS)
         self._monitor.set_tray_active(active)
-        if not active and self._tray is not None:
-            self._tray.set_label("")
+        self._refresh_tray_label()
 
     def _tray_options(self) -> TrayOptions:
         config = self.config
@@ -96,13 +124,75 @@ class SysbarApplication(Adw.Application):
         )
 
     def _on_snapshot(self, _monitor: SystemMonitor, snapshot: SystemSnapshot) -> None:
-        if self._tray is not None:
-            self._tray.set_label(render_tray_label(snapshot, self._tray_options()))
+        self._refresh_tray_label()
         if self._panel is not None:
             self._panel.update_snapshot(snapshot)
 
+    def _refresh_tray_label(self) -> None:
+        if self._tray is None:
+            return
+        segments: list[str] = []
+        countdown = self._countdown_text()
+        if countdown:
+            segments.append(countdown)
+        if self._monitor is not None and self._monitor.latest is not None:
+            metrics = render_tray_label(self._monitor.latest, self._tray_options())
+            if metrics:
+                segments.append(metrics)
+        self._tray.set_label(" · ".join(segments))
+
+    def _countdown_text(self) -> str:
+        if self._keep_awake is None or not self._keep_awake.is_active:
+            return ""
+        if not self.config.get_bool("show-countdown"):
+            return ""
+        remaining = self._keep_awake.remaining_seconds()
+        if remaining is None:
+            return _KEEP_AWAKE_PLAY
+        return f"{_KEEP_AWAKE_PLAY} {mf.format_countdown(remaining)}"
+
     def _on_settings_changed(self, _settings: Gio.Settings, _key: str) -> None:
         self._update_tray_active()
+
+    def _on_keep_awake_changed(self, _manager: KeepAwakeManager) -> None:
+        if self._tray is not None:
+            self._tray.set_menu(self._build_menu())
+        self._reconcile_countdown()
+        self._refresh_tray_label()
+
+    def _on_session_ended(self, _manager: KeepAwakeManager, reason: str) -> None:
+        message = _SESSION_END_MESSAGES.get(reason)
+        if message and self._notifier is not None:
+            self._notifier.notify("Sysbar", message, notification_id="keep-awake")
+
+    def _toggle_keep_awake(self) -> None:
+        if self._keep_awake is None:
+            return
+        config = self.config
+        self._keep_awake.toggle(
+            duration_minutes=config.default_duration_minutes,
+            clamshell=config.get_bool("clamshell-preferred"),
+            battery_limit=config.battery_limit_percent,
+        )
+
+    def _reconcile_countdown(self) -> None:
+        wants = (
+            self._keep_awake is not None
+            and self._keep_awake.is_active
+            and self.config.get_bool("show-countdown")
+        )
+        if wants and not self._countdown_timer:
+            self._countdown_timer = GLib.timeout_add_seconds(1, self._on_countdown_tick)
+        elif not wants and self._countdown_timer:
+            GLib.source_remove(self._countdown_timer)
+            self._countdown_timer = 0
+
+    def _on_countdown_tick(self) -> bool:
+        self._refresh_tray_label()
+        if self._keep_awake is not None and self._keep_awake.is_active:
+            return True
+        self._countdown_timer = 0
+        return False
 
     def do_activate(self) -> None:
         if not self._held:
@@ -117,6 +207,7 @@ class SysbarApplication(Adw.Application):
         for name, handler in (
             ("open-panel", self._open_panel),
             ("open-settings", self._open_settings),
+            ("toggle-keep-awake", self._toggle_keep_awake),
             ("quit", self.quit),
         ):
             action = Gio.SimpleAction.new(name, None)
@@ -133,8 +224,16 @@ class SysbarApplication(Adw.Application):
         self._tray.set_menu(self._build_menu())
 
     def _build_menu(self) -> MenuModel:
+        keep_awake_on = self._keep_awake is not None and self._keep_awake.is_active
         return MenuModel(
             [
+                MenuItem(
+                    label="Keep awake",
+                    toggle_type="checkmark",
+                    toggle_state=TOGGLE_ON if keep_awake_on else TOGGLE_OFF,
+                    action=self._toggle_keep_awake,
+                ),
+                MenuItem(item_type=TYPE_SEPARATOR),
                 MenuItem(label="Open panel", action=self._open_panel),
                 MenuItem(label="Settings", action=self._open_settings),
                 MenuItem(item_type=TYPE_SEPARATOR),

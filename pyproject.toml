@@ -96,6 +96,9 @@ omit = [
     "src/sysbar/app/tray/tray.py",
     "src/sysbar/services/system_monitor/adapters.py",
     "src/sysbar/services/system_monitor/monitor.py",
+    "src/sysbar/services/keep_awake/inhibitor.py",
+    "src/sysbar/services/keep_awake/scheduler.py",
+    "src/sysbar/services/notifier.py",
     "src/sysbar/__main__.py",
 ]
 

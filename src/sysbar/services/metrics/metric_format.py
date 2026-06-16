@@ -45,6 +45,16 @@ def format_percent(value: float) -> str:
     return f"{round(value)}%"
 
 
+def format_countdown(seconds: float) -> str:
+    """Format remaining time as ``M:SS`` (or ``H:MM:SS`` past an hour)."""
+    total = max(0, int(seconds))
+    hours, remainder = divmod(total, 3600)
+    minutes, secs = divmod(remainder, 60)
+    if hours:
+        return f"{hours}:{minutes:02d}:{secs:02d}"
+    return f"{minutes}:{secs:02d}"
+
+
 def format_uptime(seconds: float) -> str:
     """Format an uptime in seconds as a compact ``2d 3h 15m`` string."""
     total_minutes = int(seconds) // 60
