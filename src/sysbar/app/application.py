@@ -16,12 +16,13 @@ gi.require_version("Gtk", "4.0")
 gi.require_version("Adw", "1")
 from gi.repository import Adw, Gio, GLib  # noqa: E402
 
-from ..core.capabilities import PIPEWIRE_PULSE, Capabilities  # noqa: E402
+from ..core.capabilities import PIPEWIRE_PULSE, SESSION_X11, Capabilities  # noqa: E402
 from ..core.config import Config  # noqa: E402
 from ..core.constants import (  # noqa: E402
     APP_ID,
     CAPABILITY_REFRESH_INTERVAL_SECONDS,
     CURRENT_FEATURE_SET,
+    SHELF_DIR,
 )
 from ..core.localization import install_language  # noqa: E402
 from ..services.audio.app_volume_mixer import AppVolumeMixer  # noqa: E402
@@ -33,6 +34,8 @@ from ..services.keep_awake.ports import EndReason  # noqa: E402
 from ..services.keep_awake.scheduler import GLibScheduler  # noqa: E402
 from ..services.metrics import metric_format as mf  # noqa: E402
 from ..services.notifier import Notifier  # noqa: E402
+from ..services.shelf.shake_monitor import ShakeMonitor  # noqa: E402
+from ..services.shelf.shelf_service import ShelfService  # noqa: E402
 from ..services.system_monitor.adapters import SysfsPowerReader  # noqa: E402
 from ..services.system_monitor.monitor import SystemMonitor  # noqa: E402
 from ..services.system_monitor.snapshot import SystemSnapshot  # noqa: E402
@@ -78,6 +81,9 @@ class SysbarApplication(Adw.Application):
         self._monitor: SystemMonitor | None = None
         self._keep_awake: KeepAwakeManager | None = None
         self._mixer: AppVolumeMixer | None = None
+        self._shelf: ShelfService | None = None
+        self._shelf_window: Adw.Window | None = None
+        self._shake_monitor: ShakeMonitor | None = None
         self._notifier: Notifier | None = None
         self._countdown_timer = 0
         self._held = False
@@ -93,6 +99,7 @@ class SysbarApplication(Adw.Application):
         self._setup_monitor()
         self._setup_keep_awake()
         self._setup_mixer()
+        self._reconcile_shelf()
         GLib.timeout_add_seconds(CAPABILITY_REFRESH_INTERVAL_SECONDS, self._refresh_capabilities)
         log.info("application started", extra={"capabilities": self._capabilities.snapshot()})
 
@@ -117,6 +124,41 @@ class SysbarApplication(Adw.Application):
             return
         self._mixer = AppVolumeMixer(backend, self.config)
         self._mixer.start()
+
+    def _reconcile_shelf(self) -> None:
+        enabled = self.config.get_bool("shelf-enabled")
+        if enabled and self._shelf is None:
+            self._shelf = ShelfService(SHELF_DIR)
+            self._shelf.load()
+        wants_shake = (
+            enabled
+            and self.config.get_bool("shelf-shake-to-open")
+            and self._capabilities.has(SESSION_X11)
+        )
+        if wants_shake and self._shake_monitor is None:
+            monitor = ShakeMonitor(on_shake=self._open_shelf)
+            if monitor.start():
+                self._shake_monitor = monitor
+        elif not wants_shake and self._shake_monitor is not None:
+            self._shake_monitor.stop()
+            self._shake_monitor = None
+        if self._tray is not None:
+            self._tray.set_menu(self._build_menu())
+
+    def _open_shelf(self) -> None:
+        if self._shelf is None:
+            self._shelf = ShelfService(SHELF_DIR)
+            self._shelf.load()
+        from ..ui.shelf.shelf_window import ShelfWindow
+
+        if self._shelf_window is None:
+            self._shelf_window = ShelfWindow(self._shelf)
+            self._shelf_window.connect("close-request", self._on_shelf_closed)
+        self._shelf_window.present()
+
+    def _on_shelf_closed(self, _window: Adw.Window) -> bool:
+        self._shelf_window = None
+        return False
 
     def _update_tray_active(self) -> None:
         if self._monitor is None:
@@ -166,8 +208,10 @@ class SysbarApplication(Adw.Application):
             return _KEEP_AWAKE_PLAY
         return f"{_KEEP_AWAKE_PLAY} {mf.format_countdown(remaining)}"
 
-    def _on_settings_changed(self, _settings: Gio.Settings, _key: str) -> None:
+    def _on_settings_changed(self, _settings: Gio.Settings, key: str) -> None:
         self._update_tray_active()
+        if key.startswith("shelf-"):
+            self._reconcile_shelf()
 
     def _on_keep_awake_changed(self, _manager: KeepAwakeManager) -> None:
         if self._tray is not None:
@@ -223,6 +267,7 @@ class SysbarApplication(Adw.Application):
             ("open-panel", self._open_panel),
             ("open-settings", self._open_settings),
             ("toggle-keep-awake", self._toggle_keep_awake),
+            ("open-shelf", self._open_shelf),
             ("quit", self.quit),
         ):
             action = Gio.SimpleAction.new(name, None)
@@ -240,21 +285,26 @@ class SysbarApplication(Adw.Application):
 
     def _build_menu(self) -> MenuModel:
         keep_awake_on = self._keep_awake is not None and self._keep_awake.is_active
-        return MenuModel(
+        items = [
+            MenuItem(
+                label="Keep awake",
+                toggle_type="checkmark",
+                toggle_state=TOGGLE_ON if keep_awake_on else TOGGLE_OFF,
+                action=self._toggle_keep_awake,
+            ),
+            MenuItem(item_type=TYPE_SEPARATOR),
+            MenuItem(label="Open panel", action=self._open_panel),
+        ]
+        if self.config.get_bool("shelf-enabled"):
+            items.append(MenuItem(label="Open shelf", action=self._open_shelf))
+        items.extend(
             [
-                MenuItem(
-                    label="Keep awake",
-                    toggle_type="checkmark",
-                    toggle_state=TOGGLE_ON if keep_awake_on else TOGGLE_OFF,
-                    action=self._toggle_keep_awake,
-                ),
-                MenuItem(item_type=TYPE_SEPARATOR),
-                MenuItem(label="Open panel", action=self._open_panel),
                 MenuItem(label="Settings", action=self._open_settings),
                 MenuItem(item_type=TYPE_SEPARATOR),
                 MenuItem(label="Quit", action=self.quit),
             ]
         )
+        return MenuModel(items)
 
     def _open_panel(self) -> None:
         from ..ui.panel.panel_window import PanelWindow
