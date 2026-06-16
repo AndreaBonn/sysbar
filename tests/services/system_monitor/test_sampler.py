@@ -117,3 +117,52 @@ def test_optional_sources_pass_through() -> None:
     assert snap.battery_percent == 80.0
     assert snap.on_battery is True
     assert snap.power_watts == 12.5
+
+
+class RaisingSensors:
+    def cpu_temperature(self) -> float | None:
+        raise OSError("sensor read failed")
+
+    def all_temperatures(self) -> dict[str, float]:
+        raise OSError("hwmon unreadable")
+
+    def fan_speeds(self) -> dict[str, float]:
+        raise OSError("hwmon unreadable")
+
+
+class BadMeminfoProc(FakeProc):
+    def read_meminfo(self) -> str:
+        raise OSError("procfs unreadable")
+
+
+class BadUptimeProc(FakeProc):
+    def read_uptime(self) -> str:
+        return "not-a-number"
+
+
+def test_memory_percent_none_when_meminfo_unreadable() -> None:
+    snap = _sampler(BadMeminfoProc()).build_snapshot(interval_seconds=2.0)
+    assert snap.memory_percent is None
+
+
+def test_uptime_none_when_uptime_unparseable() -> None:
+    snap = _sampler(BadUptimeProc()).build_snapshot(interval_seconds=2.0)
+    assert snap.uptime_seconds is None
+
+
+def test_temperatures_empty_when_sensor_raises() -> None:
+    sampler = SystemSampler(FakeProc(), RaisingSensors(), FakeGpu(), FakePower())
+    snap = sampler.build_snapshot(interval_seconds=2.0)
+    assert snap.temperatures == {}
+
+
+def test_fans_empty_when_sensor_raises() -> None:
+    sampler = SystemSampler(FakeProc(), RaisingSensors(), FakeGpu(), FakePower())
+    snap = sampler.build_snapshot(interval_seconds=2.0)
+    assert snap.fans == {}
+
+
+def test_safe_reader_returns_none_when_source_raises() -> None:
+    sampler = SystemSampler(FakeProc(), RaisingSensors(), FakeGpu(), FakePower())
+    snap = sampler.build_snapshot(interval_seconds=2.0)
+    assert snap.cpu_temp_celsius is None

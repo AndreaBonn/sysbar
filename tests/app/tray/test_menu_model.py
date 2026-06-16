@@ -71,3 +71,15 @@ def test_action_for_invokes_correct_item() -> None:
 
 def test_action_for_unknown_id_returns_none() -> None:
     assert _sample_model().action_for(999) is None
+
+
+def test_icon_name_included_in_properties_when_set() -> None:
+    model = MenuModel([MenuItem(label="Quit", icon_name="application-exit")])
+    props = model.properties(model.get(1))  # type: ignore[arg-type]
+    assert props["icon-name"] == "application-exit"
+
+
+def test_icon_name_absent_from_properties_when_empty() -> None:
+    model = MenuModel([MenuItem(label="Quit")])
+    props = model.properties(model.get(1))  # type: ignore[arg-type]
+    assert "icon-name" not in props

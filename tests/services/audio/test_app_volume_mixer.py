@@ -1,7 +1,12 @@
 from collections.abc import Callable
 
-from sysbar.services.audio.app_volume_mixer import AppVolumeMixer
-from sysbar.services.audio.models import SinkInput
+import gi
+
+gi.require_version("GLib", "2.0")
+from gi.repository import GLib  # noqa: E402
+
+from sysbar.services.audio.app_volume_mixer import AppVolumeMixer  # noqa: E402
+from sysbar.services.audio.models import SinkInput  # noqa: E402
 
 
 class FakeBackend:
@@ -9,9 +14,13 @@ class FakeBackend:
         self._sink_inputs = sink_inputs
         self.volume_calls: list[tuple[int, float]] = []
         self.mute_calls: list[tuple[int, bool]] = []
+        self.callback: Callable[[], None] | None = None
 
     def list_sink_inputs(self) -> list[SinkInput]:
         return list(self._sink_inputs)
+
+    def set_sink_inputs(self, sink_inputs: list[SinkInput]) -> None:
+        self._sink_inputs = sink_inputs
 
     def set_volume(self, index: int, volume: float) -> None:
         self.volume_calls.append((index, volume))
@@ -20,7 +29,13 @@ class FakeBackend:
         self.mute_calls.append((index, muted))
 
     def subscribe(self, callback: Callable[[], None]) -> None:
-        pass
+        self.callback = callback
+
+
+def _drain_idle() -> None:
+    context = GLib.MainContext.default()
+    while context.pending():
+        context.iteration(may_block=False)
 
 
 class FakeStore:
@@ -89,3 +104,39 @@ def test_persisted_volume_not_reapplied_on_subsequent_refresh() -> None:
     backend.volume_calls.clear()
     mixer.refresh()
     assert backend.volume_calls == []
+
+
+def test_start_subscribes_and_does_initial_refresh() -> None:
+    backend = FakeBackend([SinkInput(index=1, app_id="org.app")])
+    mixer = AppVolumeMixer(backend, FakeStore())
+    mixer.start()
+    assert backend.callback is not None
+    assert [app.id for app in mixer.apps] == ["org.app"]
+
+
+def test_set_muted_unknown_app_is_noop() -> None:
+    backend = FakeBackend([SinkInput(index=1, app_id="org.app")])
+    mixer = AppVolumeMixer(backend, FakeStore())
+    mixer.refresh()
+    mixer.set_app_muted("nope", True)
+    assert backend.mute_calls == []
+
+
+def test_persisted_volume_within_epsilon_is_not_reapplied() -> None:
+    # Stored 0.505 vs live 0.5: closer than the epsilon, so no redundant write.
+    backend = FakeBackend([SinkInput(index=1, app_id="org.app", volume=0.5)])
+    mixer = AppVolumeMixer(backend, FakeStore({"org.app": 0.505}))
+    mixer.refresh()
+    assert backend.volume_calls == []
+    assert mixer.apps[0].volume == 0.5
+
+
+def test_backend_event_triggers_refresh_on_idle() -> None:
+    backend = FakeBackend([SinkInput(index=1, app_id="org.app")])
+    mixer = AppVolumeMixer(backend, FakeStore())
+    mixer.start()
+    backend.set_sink_inputs([SinkInput(index=2, app_id="org.other")])
+    assert backend.callback is not None
+    backend.callback()  # schedules a refresh on the GLib idle queue
+    _drain_idle()
+    assert [app.id for app in mixer.apps] == ["org.other"]

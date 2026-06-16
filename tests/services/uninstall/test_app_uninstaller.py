@@ -96,3 +96,11 @@ def test_manual_install_package_never_removed(tmp_path: Path) -> None:
     uninstaller.scan(target)
     uninstaller.remove([], remove_package=True)
     assert remover.removed == []
+
+
+def test_failed_package_removal_is_reported(tmp_path: Path) -> None:
+    uninstaller, _trash, _remover = _uninstaller(tmp_path, remover=FakeRemover(succeed=False))
+    target = AppTarget("gedit", None, "/usr/bin/gedit", PackageManager.APT, package_ref="gedit")
+    uninstaller.scan(target)
+    result = uninstaller.remove([], remove_package=True)
+    assert result.failed == ["gedit"]

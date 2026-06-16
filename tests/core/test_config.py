@@ -5,6 +5,7 @@ import pytest  # noqa: E402
 from gi.repository import Gio  # noqa: E402
 
 from sysbar.core.config import Config  # noqa: E402
+from sysbar.core.constants import APP_ID  # noqa: E402
 
 
 @pytest.fixture
@@ -44,3 +45,31 @@ def test_set_app_volume_round_trips_multiple_apps(config: Config) -> None:
 def test_auto_quit_exceptions_setter_sanitizes(config: Config) -> None:
     config.auto_quit_exceptions = [" org.gnome.Nautilus ", "", "x", "x"]
     assert config.auto_quit_exceptions == ["org.gnome.Nautilus", "x"]
+
+
+def test_get_bool_round_trips(config: Config) -> None:
+    config.set_bool("hotkey-enabled", True)
+    assert config.get_bool("hotkey-enabled") is True
+    config.set_bool("hotkey-enabled", False)
+    assert config.get_bool("hotkey-enabled") is False
+
+
+def test_get_int_reads_stored_value(config: Config) -> None:
+    config.settings.set_int("onboarding-step", 4)
+    assert config.get_int("onboarding-step") == 4
+
+
+def test_get_string_round_trips(config: Config) -> None:
+    config.set_string("app-language", "it")
+    assert config.get_string("app-language") == "it"
+
+
+def test_default_duration_minutes_is_sanitized(config: Config) -> None:
+    config.settings.set_int("default-duration-minutes", 30)
+    assert config.default_duration_minutes == 30
+
+
+def test_constructs_without_backend_from_installed_schema(compiled_schema: str) -> None:
+    # Exercises the no-backend branch: the schema resolves via GSETTINGS_SCHEMA_DIR.
+    config = Config(schema_id=APP_ID)
+    assert isinstance(config.settings, Gio.Settings)

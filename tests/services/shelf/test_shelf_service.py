@@ -1,3 +1,4 @@
+import json
 from collections.abc import Callable
 from pathlib import Path
 
@@ -75,3 +76,45 @@ def test_clear_empties_shelf(tmp_path: Path) -> None:
     service.add_file("/tmp/a.txt")
     service.clear()
     assert service.items == []
+
+
+def test_remove_unknown_id_is_noop(tmp_path: Path) -> None:
+    service = _service(tmp_path)
+    service.add_file("/tmp/a.txt")
+    service.remove("does-not-exist")
+    assert [item.label for item in service.items] == ["a.txt"]
+
+
+def test_load_without_manifest_keeps_empty_shelf(tmp_path: Path) -> None:
+    service = _service(tmp_path)
+    service.load()
+    assert service.items == []
+
+
+def test_load_corrupt_manifest_resets_to_empty(tmp_path: Path) -> None:
+    data_dir = tmp_path / "shelf"
+    data_dir.mkdir(parents=True)
+    (data_dir / "manifest.json").write_text("{ not valid json", encoding="utf-8")
+    service = ShelfService(data_dir=data_dir, id_factory=_ids())
+    service.load()
+    assert service.items == []
+
+
+def test_remove_does_not_unlink_image_outside_staging(tmp_path: Path) -> None:
+    # An image whose path lives outside the staging dir (e.g. an externally
+    # referenced file) must be removed from the shelf but never deleted on disk.
+    external = tmp_path / "external.png"
+    external.write_bytes(b"img")
+    data_dir = tmp_path / "shelf"
+    data_dir.mkdir(parents=True)
+    manifest = [
+        {"id": "x1", "kind": "image", "label": "external.png", "path": str(external), "text": None}
+    ]
+    (data_dir / "manifest.json").write_text(json.dumps(manifest), encoding="utf-8")
+    service = ShelfService(data_dir=data_dir, id_factory=_ids())
+    service.load()
+
+    service.remove("x1")
+
+    assert service.items == []
+    assert external.exists()

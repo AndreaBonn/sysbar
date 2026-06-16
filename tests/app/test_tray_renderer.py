@@ -45,3 +45,53 @@ def test_fahrenheit_unit() -> None:
 def test_power_segment() -> None:
     snap = SystemSnapshot(power_watts=12.0)
     assert render_tray_label(snap, TrayOptions(show_power=True)) == "12 W"
+
+
+def test_battery_segment() -> None:
+    snap = SystemSnapshot(battery_percent=88.0)
+    assert render_tray_label(snap, TrayOptions(show_battery=True)) == "BAT 88%"
+
+
+def test_battery_hidden_when_unavailable() -> None:
+    snap = SystemSnapshot(battery_percent=None)
+    assert render_tray_label(snap, TrayOptions(show_battery=True)) == ""
+
+
+def test_gpu_hidden_when_unavailable() -> None:
+    snap = SystemSnapshot(gpu_percent=None)
+    assert render_tray_label(snap, TrayOptions(show_gpu=True)) == ""
+
+
+def test_power_hidden_when_unavailable() -> None:
+    snap = SystemSnapshot(power_watts=None)
+    assert render_tray_label(snap, TrayOptions(show_power=True)) == ""
+
+
+def test_cpu_shows_temperature_only_when_percent_missing() -> None:
+    snap = SystemSnapshot(cpu_percent=None, cpu_temp_celsius=60.0)
+    assert render_tray_label(snap, TrayOptions(show_cpu=True)) == "60°C"
+
+
+def test_memory_hidden_when_percent_missing() -> None:
+    snap = SystemSnapshot(memory_percent=None)
+    assert render_tray_label(snap, TrayOptions(show_memory=True)) == ""
+
+
+def test_memory_dot_style_shows_pressure_dot_only() -> None:
+    snap = SystemSnapshot(memory_percent=50.0, memory_pressure="warning")
+    assert render_tray_label(snap, TrayOptions(show_memory=True, memory_style="dot")) == "●"
+
+
+def test_memory_dot_style_defaults_to_normal_when_pressure_missing() -> None:
+    snap = SystemSnapshot(memory_percent=50.0, memory_pressure=None)
+    assert render_tray_label(snap, TrayOptions(show_memory=True, memory_style="dot")) == "●"
+
+
+def test_memory_both_style_shows_dot_and_percent() -> None:
+    snap = SystemSnapshot(memory_percent=50.0, memory_pressure="critical")
+    assert render_tray_label(snap, TrayOptions(show_memory=True, memory_style="both")) == "● 50%"
+
+
+def test_network_hidden_when_rates_missing() -> None:
+    snap = SystemSnapshot(net_rx_rate=None, net_tx_rate=None)
+    assert render_tray_label(snap, TrayOptions(show_network=True)) == ""

@@ -32,7 +32,9 @@ def format_bytes(num_bytes: float) -> str:
                 return f"{int(value)} {unit}"
             return f"{value:.1f} {unit}"
         value /= _BYTE_STEP
-    return f"{value:.1f} {_BYTE_UNITS[-1]}"
+    # Unreachable: the final unit always satisfies the loop guard. Kept to
+    # satisfy mypy's exhaustiveness check on the function's return.
+    return f"{value:.1f} {_BYTE_UNITS[-1]}"  # pragma: no cover
 
 
 def format_rate(bytes_per_second: float) -> str:

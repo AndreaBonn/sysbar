@@ -110,4 +110,11 @@ omit = [
 ]
 
 [tool.coverage.report]
-exclude_lines = ["pragma: no cover", "if TYPE_CHECKING:", "raise NotImplementedError"]
+# Protocol method bodies are bare ellipses (`def f() -> T: ...`): abstract
+# signatures with no executable body, so they are excluded from measurement.
+exclude_lines = [
+    "pragma: no cover",
+    "if TYPE_CHECKING:",
+    "raise NotImplementedError",
+    "\\.\\.\\.$",
+]

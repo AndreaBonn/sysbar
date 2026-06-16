@@ -45,3 +45,26 @@ def test_scan_finds_flatpak_data_and_desktop_entry(tmp_path: Path) -> None:
 
 def test_scan_no_residue_returns_empty(tmp_path: Path) -> None:
     assert scan_leftovers("nothing", None, tmp_path) == []
+
+
+def test_directory_size_of_single_file(tmp_path: Path) -> None:
+    target = tmp_path / "one.bin"
+    target.write_bytes(b"x" * 64)
+    assert directory_size(target) == 64
+
+
+def test_scan_with_app_id_but_no_flatpak_or_desktop_entry(tmp_path: Path) -> None:
+    # app_id given, but neither ~/.var/app nor a .desktop entry exists.
+    assert scan_leftovers("Foo", "org.foo", tmp_path) == []
+
+
+def test_desktop_entry_reported_once_alongside_xdg_residue(tmp_path: Path) -> None:
+    # A residue dir and the .desktop entry coexist under .local/share; the entry
+    # is reported exactly once and not confused with the data directory.
+    _write(tmp_path / ".local" / "share" / "org.foo" / "data", 5)
+    _write(tmp_path / ".local" / "share" / "applications" / "org.foo.desktop", 7)
+    leftovers = scan_leftovers("org.foo", "org.foo", tmp_path)
+    desktop_entries = [
+        item for item in leftovers if item.category == LeftoverCategory.DESKTOP_ENTRY
+    ]
+    assert len(desktop_entries) == 1

@@ -95,3 +95,29 @@ def test_memory_pressure_level_warning_at_threshold() -> None:
 
 def test_memory_pressure_level_critical_at_threshold() -> None:
     assert parsers.memory_pressure_level(40.0) == "critical"
+
+
+def test_parse_cpu_stat_skips_lines_with_too_few_fields() -> None:
+    # A truncated cpu line (fewer than 5 counters) cannot yield idle, so it is dropped.
+    samples = parsers.parse_cpu_stat("cpu 1 2 3\ncpu0 10 0 5 80 5 0\n")
+    assert "cpu" not in samples
+    assert "cpu0" in samples
+
+
+def test_parse_meminfo_ignores_non_numeric_lines() -> None:
+    text = "MemTotal:       1000 kB\nHugePagesize:   unknown\nMemAvailable:    400 kB\n"
+    info = parsers.parse_meminfo(text)
+    assert info == MemInfo(total_kb=1000, available_kb=400)
+
+
+def test_parse_meminfo_absent_fields_default_to_zero() -> None:
+    assert parsers.parse_meminfo("") == MemInfo(total_kb=0, available_kb=0)
+
+
+def test_parse_net_dev_skips_interfaces_with_too_few_columns() -> None:
+    counters = parsers.parse_net_dev("  eth0: 1 2 3\n")
+    assert counters == {}
+
+
+def test_parse_psi_some_line_without_avg10_returns_none() -> None:
+    assert parsers.parse_psi_some_avg10("some avg60=3.00 avg300=1.00 total=10\n") is None

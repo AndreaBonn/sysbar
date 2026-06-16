@@ -138,3 +138,58 @@ def test_no_pid_known_skips_termination() -> None:
     service.handle_window_opened(1, "org.app", pid=None)
     service.handle_window_closed(1)
     assert scheduler.jobs == {}
+
+
+class RecordingSource:
+    def __init__(self) -> None:
+        self.on_opened: WindowOpenedCallback | None = None
+        self.on_closed: WindowClosedCallback | None = None
+
+    def subscribe(self, on_opened: WindowOpenedCallback, on_closed: WindowClosedCallback) -> None:
+        self.on_opened = on_opened
+        self.on_closed = on_closed
+
+
+def test_start_wires_window_callbacks() -> None:
+    source = RecordingSource()
+    service = AutoQuitService(
+        source=source,
+        terminator=FakeTerminator(),
+        scheduler=FakeScheduler(),
+        exceptions=list,
+        system_ids=frozenset(),
+    )
+    service.start()
+    assert source.on_opened == service.handle_window_opened
+    assert source.on_closed == service.handle_window_closed
+
+
+def test_window_without_app_id_is_ignored() -> None:
+    service, _terminator, scheduler = _service()
+    service.handle_window_opened(1, None, pid=1)
+    service.handle_window_closed(1)
+    assert scheduler.jobs == {}
+
+
+def test_closing_unknown_window_is_ignored() -> None:
+    service, _terminator, scheduler = _service()
+    service.handle_window_closed(999)
+    assert scheduler.jobs == {}
+
+
+def test_closing_window_with_no_tracked_app_windows_is_safe() -> None:
+    # Defensive path: a window id maps to an app that has no live window set.
+    service, _terminator, scheduler = _service()
+    service._window_app[42] = "org.app"
+    service.handle_window_closed(42)
+    assert scheduler.jobs == {}
+
+
+def test_terminate_without_known_pid_does_nothing() -> None:
+    # Defensive path: the pid is gone by the time the grace timer fires.
+    service, terminator, scheduler = _service()
+    service.handle_window_opened(1, "org.app", pid=4242)
+    service.handle_window_closed(1)
+    service._app_pid.pop("org.app")
+    scheduler.fire(next(iter(scheduler.jobs)))
+    assert terminator.terminated == []

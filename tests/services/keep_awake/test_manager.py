@@ -166,3 +166,47 @@ def test_restart_releases_previous_inhibitions() -> None:
     manager.start(duration_minutes=0, clamshell=False, battery_limit=0)
     manager.start(duration_minutes=0, clamshell=False, battery_limit=0)
     assert len(inhibitor.live) == 1  # old token released, one new held
+
+
+def test_stop_when_inactive_is_noop() -> None:
+    manager, _, _ = _manager()
+    changes: list[bool] = []
+    manager.connect("changed", lambda _m: changes.append(True))
+    manager.stop(EndReason.MANUAL)
+    assert manager.is_active is False
+    assert changes == []
+
+
+def test_battery_watchdog_keeps_running_on_ac_power() -> None:
+    # On AC power the low charge is irrelevant; the session must continue.
+    battery = FakeBattery(percent=2.0, on_battery=False)
+    manager, _, scheduler = _manager(battery=battery)
+    manager.start(duration_minutes=0, clamshell=False, battery_limit=10)
+    scheduler.fire(next(iter(scheduler.jobs)))
+    assert manager.is_active is True
+
+
+class NullInhibitor:
+    def __init__(self) -> None:
+        self.released: list[object] = []
+
+    def acquire(self, what: str) -> object | None:
+        return None
+
+    def release(self, token: object) -> None:
+        self.released.append(token)
+
+
+def test_unavailable_inhibitor_holds_no_tokens() -> None:
+    manager, _, _ = _manager(inhibitor=NullInhibitor())  # type: ignore[arg-type]
+    manager.start(duration_minutes=0, clamshell=True, battery_limit=0)
+    assert manager.is_active is True
+    manager.stop(EndReason.MANUAL)  # nothing to release, must not raise
+
+
+def test_manual_stop_cancels_pending_timers() -> None:
+    manager, _, scheduler = _manager()
+    manager.start(duration_minutes=15, clamshell=False, battery_limit=10)
+    assert len(scheduler.jobs) == 2  # duration timer + battery watchdog
+    manager.stop(EndReason.MANUAL)
+    assert scheduler.jobs == {}
