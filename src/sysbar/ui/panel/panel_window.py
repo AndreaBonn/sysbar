@@ -14,12 +14,14 @@ gi.require_version("Adw", "1")
 from gi.repository import Adw, Gtk  # noqa: E402
 
 from ...core.constants import DEFAULT_TEMPERATURE_UNIT  # noqa: E402
+from ...services.audio.app_volume_mixer import AppVolumeMixer  # noqa: E402
 from ...services.metrics import metric_format as mf  # noqa: E402
 from ...services.system_monitor.snapshot import SystemSnapshot  # noqa: E402
+from .mixer_section import MixerSection  # noqa: E402
 
 _PANEL_WIDTH = 360
 _PANEL_HEIGHT = 480
-_PLACEHOLDER_SECTIONS = (("Network", "network"), ("Power", "power"), ("Mixer", "mixer"))
+_PLACEHOLDER_SECTIONS = (("Network", "network"), ("Power", "power"))
 
 
 class PanelWindow(Adw.Window):
@@ -30,10 +32,17 @@ class PanelWindow(Adw.Window):
         self.set_default_size(_PANEL_WIDTH, _PANEL_HEIGHT)
         self._temperature_unit = DEFAULT_TEMPERATURE_UNIT
         self._rows: dict[str, Adw.ActionRow] = {}
+        self._mixer_section = MixerSection()
         self._build_content()
 
     def set_temperature_unit(self, unit: str) -> None:
         self._temperature_unit = unit
+
+    def bind_mixer(self, mixer: AppVolumeMixer) -> None:
+        self._mixer_section.bind(mixer)
+
+    def set_mixer_unavailable(self) -> None:
+        self._mixer_section.set_unavailable()
 
     def _build_content(self) -> None:
         toolbar = Adw.ToolbarView()
@@ -48,6 +57,7 @@ class PanelWindow(Adw.Window):
         content.append(self._build_system_group())
         for title, _key in _PLACEHOLDER_SECTIONS:
             content.append(self._placeholder_group(title))
+        content.append(self._mixer_section)
 
         scroller = Gtk.ScrolledWindow(hexpand=True, vexpand=True)
         scroller.set_child(content)

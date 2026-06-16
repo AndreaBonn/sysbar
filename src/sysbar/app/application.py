@@ -16,7 +16,7 @@ gi.require_version("Gtk", "4.0")
 gi.require_version("Adw", "1")
 from gi.repository import Adw, Gio, GLib  # noqa: E402
 
-from ..core.capabilities import Capabilities  # noqa: E402
+from ..core.capabilities import PIPEWIRE_PULSE, Capabilities  # noqa: E402
 from ..core.config import Config  # noqa: E402
 from ..core.constants import (  # noqa: E402
     APP_ID,
@@ -24,6 +24,8 @@ from ..core.constants import (  # noqa: E402
     CURRENT_FEATURE_SET,
 )
 from ..core.localization import install_language  # noqa: E402
+from ..services.audio.app_volume_mixer import AppVolumeMixer  # noqa: E402
+from ..services.audio.pulse_backend import PulseAudioBackend  # noqa: E402
 from ..services.autostart import AutostartManager  # noqa: E402
 from ..services.keep_awake.inhibitor import SystemInhibitor  # noqa: E402
 from ..services.keep_awake.manager import KeepAwakeManager  # noqa: E402
@@ -75,6 +77,7 @@ class SysbarApplication(Adw.Application):
         self._settings_window: Adw.PreferencesWindow | None = None
         self._monitor: SystemMonitor | None = None
         self._keep_awake: KeepAwakeManager | None = None
+        self._mixer: AppVolumeMixer | None = None
         self._notifier: Notifier | None = None
         self._countdown_timer = 0
         self._held = False
@@ -89,6 +92,7 @@ class SysbarApplication(Adw.Application):
         self._setup_tray()
         self._setup_monitor()
         self._setup_keep_awake()
+        self._setup_mixer()
         GLib.timeout_add_seconds(CAPABILITY_REFRESH_INTERVAL_SECONDS, self._refresh_capabilities)
         log.info("application started", extra={"capabilities": self._capabilities.snapshot()})
 
@@ -102,6 +106,17 @@ class SysbarApplication(Adw.Application):
         self._keep_awake = KeepAwakeManager(SystemInhibitor(), SysfsPowerReader(), GLibScheduler())
         self._keep_awake.connect("changed", self._on_keep_awake_changed)
         self._keep_awake.connect("session-ended", self._on_session_ended)
+
+    def _setup_mixer(self) -> None:
+        if not self._capabilities.has(PIPEWIRE_PULSE):
+            return
+        try:
+            backend = PulseAudioBackend()
+        except Exception as error:
+            log.warning("audio backend unavailable", extra={"error": str(error)})
+            return
+        self._mixer = AppVolumeMixer(backend, self.config)
+        self._mixer.start()
 
     def _update_tray_active(self) -> None:
         if self._monitor is None:
@@ -247,6 +262,10 @@ class SysbarApplication(Adw.Application):
         if self._panel is None:
             self._panel = PanelWindow()
             self._panel.connect("close-request", self._on_panel_closed)
+            if self._mixer is not None:
+                self._panel.bind_mixer(self._mixer)
+            else:
+                self._panel.set_mixer_unavailable()
         self._panel.set_temperature_unit(self.config.temperature_unit)
         if self._monitor is not None:
             self._monitor.set_panel_open(True)
