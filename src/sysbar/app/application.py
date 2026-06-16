@@ -9,6 +9,7 @@ milestones; here the shell, panel, settings and onboarding are in place.
 from __future__ import annotations
 
 import logging
+import threading
 from pathlib import Path
 
 import gi
@@ -53,6 +54,7 @@ from ..services.uninstall.app_uninstaller import AppUninstaller  # noqa: E402
 from ..services.uninstall.command_query import CommandPackageQuery  # noqa: E402
 from ..services.uninstall.package_remover import PkexecPackageRemover  # noqa: E402
 from ..services.uninstall.trash import GioTrash  # noqa: E402
+from ..services.update_service import UpdateInfo, UpdateService  # noqa: E402
 from .tray.menu_model import (  # noqa: E402
     TOGGLE_OFF,
     TOGGLE_ON,
@@ -119,6 +121,7 @@ class SysbarApplication(Adw.Application):
         self._reconcile_shelf()
         self._setup_auto_quit()
         self._setup_uninstaller()
+        self._setup_update_check()
         GLib.timeout_add_seconds(CAPABILITY_REFRESH_INTERVAL_SECONDS, self._refresh_capabilities)
         log.info("application started", extra={"capabilities": self._capabilities.snapshot()})
 
@@ -163,6 +166,26 @@ class SysbarApplication(Adw.Application):
             enabled=lambda: self.config.get_bool("auto-quit-enabled"),
         )
         self._auto_quit.start()
+
+    def _setup_update_check(self) -> None:
+        if not self.config.get_bool("auto-check-updates"):
+            return
+        thread = threading.Thread(target=self._run_update_check, daemon=True)
+        thread.start()
+
+    def _run_update_check(self) -> None:
+        info = UpdateService().check()
+        if info is not None:
+            GLib.idle_add(self._on_update_found, info)
+
+    def _on_update_found(self, info: UpdateInfo) -> bool:
+        if self._notifier is not None:
+            self._notifier.notify(
+                "Sysbar update available",
+                f"{info.version} is available. Run: sudo apt update && sudo apt upgrade sysbar",
+                notification_id="update",
+            )
+        return False
 
     def _setup_uninstaller(self) -> None:
         self._uninstaller = AppUninstaller(
