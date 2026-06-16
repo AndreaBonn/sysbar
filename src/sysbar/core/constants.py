@@ -96,6 +96,12 @@ DATA_HOME = Path.home() / ".local" / "share" / BINARY_NAME
 SHELF_DIR = DATA_HOME / "shelf"
 SHELF_MANIFEST = SHELF_DIR / "manifest.json"
 
+# Shake-to-open detection (pointer direction reversals within a time window).
+SHAKE_MIN_MOVE_PIXELS = 8.0
+SHAKE_WINDOW_SECONDS = 0.6
+SHAKE_REQUIRED_REVERSALS = 4
+SHAKE_POLL_MS = 30
+
 # Sysfs / procfs paths read by the system monitor.
 PROC_STAT = Path("/proc/stat")
 PROC_MEMINFO = Path("/proc/meminfo")
