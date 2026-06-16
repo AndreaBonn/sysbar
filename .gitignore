@@ -1,0 +1,33 @@
+# Documentazione progetto (interna, non versionata)
+doc_progetto/
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+htmlcov/
+*.egg-info/
+dist/
+build/
+
+# Build artifacts: schema GSettings compilato, traduzioni compilate, .deb
+data/locale/**/*.mo
+gschemas.compiled
+*.deb
+packaging/build/
+
+# Env & secrets
+.env
+.env.*
+!.env.example
+secrets/
+
+# IDE / OS
+.DS_Store
+.idea/
+.vscode/
