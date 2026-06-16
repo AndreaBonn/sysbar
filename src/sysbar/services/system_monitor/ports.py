@@ -1,0 +1,43 @@
+"""Interfaces for the system monitor's data sources.
+
+The sampler depends only on these protocols; concrete adapters (procfs, psutil,
+sysfs, NVML, UPower) implement them. Tests inject fakes, so the delta and
+snapshot logic runs without real hardware.
+"""
+
+from __future__ import annotations
+
+from typing import Protocol
+
+
+class ProcReader(Protocol):
+    """Reads raw procfs files."""
+
+    def read_stat(self) -> str: ...
+    def read_meminfo(self) -> str: ...
+    def read_uptime(self) -> str: ...
+    def read_net_dev(self) -> str: ...
+    def read_psi_memory(self) -> str | None: ...
+
+
+class SensorReader(Protocol):
+    """Reads temperature sensors."""
+
+    def cpu_temperature(self) -> float | None: ...
+    def all_temperatures(self) -> dict[str, float]: ...
+
+
+class GpuReader(Protocol):
+    """Reads GPU utilization and temperature."""
+
+    def utilization(self) -> float | None: ...
+    def temperature(self) -> float | None: ...
+
+
+class PowerReader(Protocol):
+    """Reads battery and power-draw information."""
+
+    def battery_percent(self) -> float | None: ...
+    def on_battery(self) -> bool | None: ...
+    def charging(self) -> bool | None: ...
+    def power_watts(self) -> float | None: ...
