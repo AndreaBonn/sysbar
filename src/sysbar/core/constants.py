@@ -14,6 +14,11 @@ BINARY_NAME = "sysbar"
 GETTEXT_DOMAIN = "sysbar"
 GSETTINGS_PATH = "/it/linkalab/Sysbar/"
 
+# Tray icon. A themed symbolic name is used so the icon is visible in a source
+# checkout; packaging installs the branded "it.linkalab.Sysbar" icon (M9).
+TRAY_ICON_NAME = "utilities-system-monitor-symbolic"
+TRAY_TITLE = "Sysbar"
+
 # GitHub identity used by the optional update check (services/update_service.py).
 GITHUB_OWNER = "linkalab"
 GITHUB_REPO = "sysbar"
@@ -52,6 +57,20 @@ DEFAULT_TEMPERATURE_UNIT = TEMPERATURE_CELSIUS
 # Memory pressure thresholds on PSI "some avg10" (see SystemMonitor §5.1).
 MEMORY_PRESSURE_WARNING = 10.0
 MEMORY_PRESSURE_CRITICAL = 40.0
+
+# Panel sections, in default order.
+SECTION_SYSTEM = "system"
+SECTION_NETWORK = "network"
+SECTION_POWER = "power"
+SECTION_MIXER = "mixer"
+SECTION_FAN_CONTROL = "fan_control"
+PANEL_SECTION_ORDER: tuple[str, ...] = (
+    SECTION_SYSTEM,
+    SECTION_NETWORK,
+    SECTION_POWER,
+    SECTION_MIXER,
+    SECTION_FAN_CONTROL,
+)
 
 # Feature tour versioning (post-update showcase).
 CURRENT_FEATURE_SET = 4

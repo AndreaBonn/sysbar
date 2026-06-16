@@ -85,5 +85,17 @@ testpaths = ["tests"]
 addopts = "-q --cov=sysbar --cov-report=term-missing"
 filterwarnings = ["error::DeprecationWarning"]
 
+[tool.coverage.run]
+# GUI windows and D-Bus glue are verified manually (no display in CI); coverage
+# tracks the framework-agnostic business logic.
+omit = [
+    "src/sysbar/ui/*",
+    "src/sysbar/app/application.py",
+    "src/sysbar/app/tray/dbus_menu.py",
+    "src/sysbar/app/tray/status_notifier.py",
+    "src/sysbar/app/tray/tray.py",
+    "src/sysbar/__main__.py",
+]
+
 [tool.coverage.report]
 exclude_lines = ["pragma: no cover", "if TYPE_CHECKING:", "raise NotImplementedError"]
