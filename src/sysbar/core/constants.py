@@ -84,6 +84,20 @@ AUTO_QUIT_GRACE_SECONDS = 2.0
 # Escalation delay from SIGTERM to SIGKILL.
 AUTO_QUIT_KILL_TIMEOUT_SECONDS = 5.0
 DEFAULT_AUTO_QUIT_EXCEPTIONS: tuple[str, ...] = ("org.gnome.Nautilus",)
+# System processes that auto-quit must never terminate, regardless of settings.
+AUTO_QUIT_SYSTEM_WHITELIST: frozenset[str] = frozenset(
+    {
+        "gnome-shell",
+        "org.gnome.Shell",
+        "gnome-session-binary",
+        "gnome-session",
+        "Xorg",
+        "Xwayland",
+        "plasmashell",
+        APP_ID,
+        BINARY_NAME,
+    }
+)
 
 # Battery watchdog polling cadence for keep-awake.
 BATTERY_WATCHDOG_INTERVAL_SECONDS = 45
