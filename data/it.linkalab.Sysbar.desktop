@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Name=Sysbar
+Comment=System tray toolkit: monitor, volume mixer, keep awake, auto-quit, uninstaller, shelf
+Exec=sysbar
+Icon=it.linkalab.Sysbar
+Terminal=false
+Categories=Utility;System;
+Keywords=monitor;volume;mixer;keep awake;uninstall;shelf;
+StartupNotify=false
+X-GNOME-UsesNotifications=true

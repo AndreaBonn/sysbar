@@ -1,0 +1,153 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<schemalist>
+  <schema id="it.linkalab.Sysbar" path="/it/linkalab/Sysbar/">
+
+    <key name="app-language" type="s">
+      <default>''</default>
+      <summary>UI language</summary>
+      <description>Language code; empty means follow the system locale.</description>
+    </key>
+
+    <key name="clamshell-preferred" type="b">
+      <default>false</default>
+      <summary>Inhibit lid-switch suspend during keep-awake sessions</summary>
+    </key>
+
+    <key name="onboarding-step" type="i">
+      <default>0</default>
+      <summary>Onboarding resume point</summary>
+    </key>
+
+    <key name="features-onboarding-version" type="i">
+      <default>0</default>
+      <summary>Last feature tour version seen</summary>
+    </key>
+
+    <key name="last-update-intro-version" type="i">
+      <default>0</default>
+      <summary>Last update intro version seen</summary>
+    </key>
+
+    <key name="default-duration-minutes" type="i">
+      <default>0</default>
+      <summary>Keep-awake duration in minutes; 0 = indefinite</summary>
+      <description>Allowed: 0, 15, 30, 60, 120, 240, 480.</description>
+    </key>
+
+    <key name="battery-limit-percent" type="i">
+      <default>10</default>
+      <summary>Battery cut-off for keep-awake; 0 = never</summary>
+      <description>Allowed: 0, 5, 10, 15, 20.</description>
+    </key>
+
+    <key name="hotkey-enabled" type="b">
+      <default>true</default>
+      <summary>Global hotkey to toggle keep-awake</summary>
+    </key>
+
+    <key name="show-countdown" type="b">
+      <default>false</default>
+      <summary>Show keep-awake countdown in the tray</summary>
+    </key>
+
+    <key name="has-onboarded" type="b">
+      <default>false</default>
+      <summary>Whether first-run onboarding completed</summary>
+    </key>
+
+    <key name="auto-check-updates" type="b">
+      <default>true</default>
+      <summary>Check GitHub Releases for a newer version</summary>
+    </key>
+
+    <key name="app-volumes" type="a{sd}">
+      <default>{}</default>
+      <summary>Per-application volume; app id to 0.0..2.0</summary>
+    </key>
+
+    <key name="auto-quit-enabled" type="b">
+      <default>false</default>
+      <summary>Quit an app when its last window closes</summary>
+    </key>
+
+    <key name="auto-quit-exceptions" type="as">
+      <default>['org.gnome.Nautilus']</default>
+      <summary>Apps kept alive by auto-quit (app id / WM_CLASS)</summary>
+    </key>
+
+    <key name="shelf-enabled" type="b">
+      <default>false</default>
+      <summary>Floating shelf</summary>
+    </key>
+
+    <key name="shelf-shake-to-open" type="b">
+      <default>true</default>
+      <summary>Open the shelf by shaking the pointer (X11 only)</summary>
+    </key>
+
+    <key name="menu-bar-cpu" type="b"><default>false</default><summary>Show CPU in tray</summary></key>
+    <key name="menu-bar-gpu" type="b"><default>false</default><summary>Show GPU in tray</summary></key>
+    <key name="menu-bar-memory" type="b"><default>false</default><summary>Show memory in tray</summary></key>
+    <key name="menu-bar-network" type="b"><default>false</default><summary>Show network in tray</summary></key>
+    <key name="menu-bar-battery" type="b"><default>false</default><summary>Show battery in tray</summary></key>
+    <key name="menu-bar-power" type="b"><default>false</default><summary>Show power in tray</summary></key>
+
+    <key name="menu-bar-memory-style" type="s">
+      <default>'percent'</default>
+      <summary>Tray memory representation: dot, percent or both</summary>
+    </key>
+
+    <key name="monitor-interval-seconds" type="i">
+      <default>2</default>
+      <summary>Sampling cadence in seconds; allowed 1, 2, 5</summary>
+    </key>
+
+    <key name="temperature-unit" type="s">
+      <default>'celsius'</default>
+      <summary>celsius or fahrenheit</summary>
+    </key>
+
+    <key name="monitor-show-system" type="b"><default>true</default><summary>Show System section</summary></key>
+    <key name="monitor-show-network" type="b"><default>true</default><summary>Show Network section</summary></key>
+    <key name="monitor-show-power" type="b"><default>true</default><summary>Show Power section</summary></key>
+    <key name="monitor-show-mixer" type="b"><default>true</default><summary>Show Mixer section</summary></key>
+    <key name="monitor-show-fan-control-beta" type="b"><default>false</default><summary>Show Fan Control (beta)</summary></key>
+
+    <key name="panel-navigation-enabled" type="b">
+      <default>true</default>
+      <summary>Section navigation in the panel</summary>
+    </key>
+    <key name="panel-section-order" type="s">
+      <default>''</default>
+      <summary>Section order, comma-separated ids</summary>
+    </key>
+    <key name="panel-collapsed-sections" type="s">
+      <default>''</default>
+      <summary>Collapsed sections, comma-separated ids</summary>
+    </key>
+
+    <key name="monitor-graph-cpu" type="b"><default>true</default><summary>History graph: CPU</summary></key>
+    <key name="monitor-graph-gpu" type="b"><default>true</default><summary>History graph: GPU</summary></key>
+    <key name="monitor-graph-memory" type="b"><default>true</default><summary>History graph: memory</summary></key>
+    <key name="monitor-graph-network" type="b"><default>true</default><summary>History graph: network</summary></key>
+    <key name="monitor-graph-power" type="b"><default>true</default><summary>History graph: power</summary></key>
+    <key name="monitor-graph-battery" type="b"><default>true</default><summary>History graph: battery</summary></key>
+
+    <key name="monitor-sys-temps" type="b"><default>true</default><summary>System: temperatures</summary></key>
+    <key name="monitor-sys-cpu" type="b"><default>true</default><summary>System: CPU</summary></key>
+    <key name="monitor-sys-gpu" type="b"><default>true</default><summary>System: GPU</summary></key>
+    <key name="monitor-sys-battery" type="b"><default>true</default><summary>System: battery</summary></key>
+    <key name="monitor-sys-memory" type="b"><default>true</default><summary>System: memory</summary></key>
+    <key name="monitor-sys-uptime" type="b"><default>true</default><summary>System: uptime</summary></key>
+
+    <key name="monitor-net-speed" type="b"><default>true</default><summary>Network: speed</summary></key>
+    <key name="monitor-net-totals" type="b"><default>true</default><summary>Network: totals</summary></key>
+    <key name="monitor-net-test" type="b"><default>true</default><summary>Network: speed test</summary></key>
+
+    <key name="monitor-pwr-system" type="b"><default>true</default><summary>Power: system draw</summary></key>
+    <key name="monitor-pwr-adapter" type="b"><default>true</default><summary>Power: adapter</summary></key>
+    <key name="monitor-pwr-battery" type="b"><default>true</default><summary>Power: battery</summary></key>
+    <key name="monitor-pwr-health" type="b"><default>true</default><summary>Power: battery health</summary></key>
+
+  </schema>
+</schemalist>
