@@ -94,6 +94,8 @@ omit = [
     "src/sysbar/app/tray/dbus_menu.py",
     "src/sysbar/app/tray/status_notifier.py",
     "src/sysbar/app/tray/tray.py",
+    "src/sysbar/services/system_monitor/adapters.py",
+    "src/sysbar/services/system_monitor/monitor.py",
     "src/sysbar/__main__.py",
 ]
 
