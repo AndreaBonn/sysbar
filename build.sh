@@ -28,6 +28,18 @@ run_app() {
     GSETTINGS_SCHEMA_DIR="${SCHEMA_DIR}" uv run sysbar "$@"
 }
 
+build_deb() {
+    if ! command -v dpkg-buildpackage >/dev/null 2>&1; then
+        echo "dpkg-buildpackage not found; install dpkg-dev and debhelper" >&2
+        exit 1
+    fi
+    compile_translations
+    ln -sfn packaging/debian "${ROOT_DIR}/debian"
+    trap 'rm -f "${ROOT_DIR}/debian"' EXIT
+    (cd "${ROOT_DIR}" && dpkg-buildpackage -us -uc -b)
+    echo "Built .deb in the parent directory"
+}
+
 case "${1:-build}" in
     build)
         compile_schema
@@ -40,8 +52,11 @@ case "${1:-build}" in
         compile_translations >/dev/null
         run_app "$@"
         ;;
+    deb)
+        build_deb
+        ;;
     *)
-        echo "Usage: ./build.sh [build|run -- <args>]" >&2
+        echo "Usage: ./build.sh [build|run -- <args>|deb]" >&2
         exit 1
         ;;
 esac

@@ -1,0 +1,40 @@
+#!/usr/bin/make -f
+# Build a self-contained venv under /opt/sysbar (system-site-packages so it
+# reuses the distribution's python3-gi/GTK) plus the data files.
+export DH_VERBOSE = 1
+
+PKG = debian/sysbar
+VENV = $(PKG)/opt/sysbar
+
+%:
+	dh $@
+
+override_dh_auto_build:
+
+override_dh_auto_test:
+
+override_dh_auto_install:
+	python3 -m venv --system-site-packages $(VENV)
+	$(VENV)/bin/pip install --no-cache-dir --upgrade pip
+	$(VENV)/bin/pip install --no-cache-dir .
+	# Drop the venv's hardcoded build path; the wrapper sets it at runtime.
+	find $(VENV) -name '*.pyc' -delete
+
+	install -d $(PKG)/usr/bin
+	install -m 0755 packaging/sysbar-wrapper $(PKG)/usr/bin/sysbar
+
+	install -d $(PKG)/usr/share/glib-2.0/schemas
+	install -m 0644 data/io.github.AndreaBonn.Sysbar.gschema.xml \
+		$(PKG)/usr/share/glib-2.0/schemas/
+
+	install -d $(PKG)/usr/share/applications
+	install -m 0644 data/io.github.AndreaBonn.Sysbar.desktop \
+		$(PKG)/usr/share/applications/
+
+	if [ -d data/locale ]; then \
+		cp -r data/locale/* $(PKG)/usr/share/locale/ 2>/dev/null || true; \
+	fi
+
+override_dh_fixperms:
+	dh_fixperms
+	chmod 0755 $(PKG)/opt/sysbar/bin/* || true

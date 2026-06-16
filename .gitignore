@@ -20,6 +20,8 @@ data/locale/**/*.mo
 gschemas.compiled
 *.deb
 packaging/build/
+# dpkg-buildpackage symlink created by ./build.sh deb
+/debian
 
 # Env & secrets
 .env

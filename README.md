@@ -100,6 +100,20 @@ data/         schema GSettings, file .desktop, autostart, icone, traduzioni
 packaging/    .deb e repository APT
 ```
 
+## Installazione (.deb)
+
+Il pacchetto installa un venv isolato in `/opt/sysbar` (con
+`--system-site-packages`, così riusa i binding GTK di sistema) e un wrapper
+`/usr/bin/sysbar`. Build del pacchetto da una macchina con `dpkg-dev` e
+`debhelper`:
+
+```bash
+./build.sh deb        # produce ../sysbar_<versione>_all.deb
+```
+
+Gli aggiornamenti passano da APT: vedi `packaging/apt-repo/README.md` per
+configurare il repository firmato e installare con `apt`.
+
 ## Licenza
 
 GPL-3.0-or-later.

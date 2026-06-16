@@ -1,0 +1,32 @@
+Source: sysbar
+Section: utils
+Priority: optional
+Maintainer: AndreaBonn <andreabonacci95@protonmail.com>
+Build-Depends: debhelper-compat (= 13),
+               python3 (>= 3.11),
+               python3-venv,
+               python3-pip
+Standards-Version: 4.6.2
+Homepage: https://github.com/AndreaBonn/sysbar
+
+Package: sysbar
+Architecture: all
+Depends: ${misc:Depends},
+         python3 (>= 3.11),
+         python3-gi,
+         python3-gi-cairo,
+         gir1.2-gtk-4.0,
+         gir1.2-adwaita-1,
+         gir1.2-glib-2.0,
+         gir1.2-ayatanaappindicator3-0.1,
+         gir1.2-wnck-3.0,
+         libnotify-bin
+Recommends: lm-sensors,
+            policykit-1,
+            pipewire-pulse | pulseaudio,
+            gnome-shell-extension-appindicator
+Description: System tray toolkit for Ubuntu/GNOME
+ Sysbar groups six utilities in a single tray application: system monitor,
+ per-application volume mixer, keep awake, auto-quit, uninstaller and shelf.
+ Every feature is opt-in and degrades gracefully when a dependency, extension
+ or session capability is missing. Local only, no account, no telemetry.

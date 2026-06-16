@@ -1,0 +1,4 @@
+#!/bin/sh
+# Launch Sysbar from its isolated venv, pointing GSettings at the installed schema.
+export GSETTINGS_SCHEMA_DIR="/usr/share/glib-2.0/schemas"
+exec /opt/sysbar/bin/sysbar "$@"
