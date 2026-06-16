@@ -37,6 +37,9 @@ class FakeSensors:
     def all_temperatures(self) -> dict[str, float]:
         return {"cpu": 54.0}
 
+    def fan_speeds(self) -> dict[str, float]:
+        return {"cpu_fan": 1200.0}
+
 
 class FakeGpu:
     def utilization(self) -> float | None:

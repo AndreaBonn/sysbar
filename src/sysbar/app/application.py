@@ -404,6 +404,7 @@ class SysbarApplication(Adw.Application):
             else:
                 self._panel.set_mixer_unavailable()
         self._panel.set_temperature_unit(self.config.temperature_unit)
+        self._panel.set_show_fans(self.config.get_bool("monitor-show-fan-control-beta"))
         if self._monitor is not None:
             self._monitor.set_panel_open(True)
             if self._monitor.latest is not None:

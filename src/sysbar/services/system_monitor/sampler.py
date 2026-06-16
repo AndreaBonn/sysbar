@@ -60,6 +60,7 @@ class SystemSampler:
             on_battery=self._safe(self._power.on_battery),
             power_watts=self._safe(self._power.power_watts),
             temperatures=self._temperatures(),
+            fans=self._fans(),
         )
 
     def _cpu(self) -> tuple[float | None, list[float] | None]:
@@ -115,6 +116,12 @@ class SystemSampler:
     def _temperatures(self) -> dict[str, float]:
         try:
             return self._sensors.all_temperatures()
+        except OSError:
+            return {}
+
+    def _fans(self) -> dict[str, float]:
+        try:
+            return self._sensors.fan_speeds()
         except OSError:
             return {}
 

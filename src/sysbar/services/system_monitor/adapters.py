@@ -75,6 +75,18 @@ class PsutilSensorReader:
                 result[f"{chip}/{label}"] = entry.current
         return result
 
+    def fan_speeds(self) -> dict[str, float]:
+        import psutil
+
+        if not hasattr(psutil, "sensors_fans"):
+            return {}
+        result: dict[str, float] = {}
+        for chip, entries in psutil.sensors_fans().items():
+            for entry in entries:
+                label = entry.label or chip
+                result[f"{chip}/{label}"] = float(entry.current)
+        return result
+
 
 class GpuReaderChain:
     """NVIDIA via NVML, falling back to AMD sysfs; ``None`` when no GPU."""

@@ -30,3 +30,4 @@ class SystemSnapshot:
     on_battery: bool | None = None
     power_watts: float | None = None
     temperatures: dict[str, float] = field(default_factory=dict)
+    fans: dict[str, float] = field(default_factory=dict)
