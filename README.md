@@ -38,9 +38,12 @@ L'ambiente Python riusa i binding GTK di sistema (`--system-site-packages`) e
 installa solo le dipendenze pure-Python.
 
 ```bash
-uv venv --system-site-packages
+uv venv --system-site-packages --python /usr/bin/python3
 uv sync
 ```
+
+Il venv deve usare il Python di sistema (`/usr/bin/python3`): un interprete
+gestito da uv non vedrebbe `python3-gi` installato a livello di sistema.
 
 Compila lo schema GSettings e avvia la diagnostica:
 
