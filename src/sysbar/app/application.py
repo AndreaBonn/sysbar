@@ -20,6 +20,7 @@ from ..core.capabilities import PIPEWIRE_PULSE, SESSION_X11, Capabilities  # noq
 from ..core.config import Config  # noqa: E402
 from ..core.constants import (  # noqa: E402
     APP_ID,
+    AUTO_QUIT_SYSTEM_WHITELIST,
     CAPABILITY_REFRESH_INTERVAL_SECONDS,
     CURRENT_FEATURE_SET,
     SHELF_DIR,
@@ -27,6 +28,8 @@ from ..core.constants import (  # noqa: E402
 from ..core.localization import install_language  # noqa: E402
 from ..services.audio.app_volume_mixer import AppVolumeMixer  # noqa: E402
 from ..services.audio.pulse_backend import PulseAudioBackend  # noqa: E402
+from ..services.auto_quit.os_terminator import OsTerminator  # noqa: E402
+from ..services.auto_quit.service import AutoQuitService  # noqa: E402
 from ..services.autostart import AutostartManager  # noqa: E402
 from ..services.keep_awake.inhibitor import SystemInhibitor  # noqa: E402
 from ..services.keep_awake.manager import KeepAwakeManager  # noqa: E402
@@ -84,6 +87,7 @@ class SysbarApplication(Adw.Application):
         self._shelf: ShelfService | None = None
         self._shelf_window: Adw.Window | None = None
         self._shake_monitor: ShakeMonitor | None = None
+        self._auto_quit: AutoQuitService | None = None
         self._notifier: Notifier | None = None
         self._countdown_timer = 0
         self._held = False
@@ -100,6 +104,7 @@ class SysbarApplication(Adw.Application):
         self._setup_keep_awake()
         self._setup_mixer()
         self._reconcile_shelf()
+        self._setup_auto_quit()
         GLib.timeout_add_seconds(CAPABILITY_REFRESH_INTERVAL_SECONDS, self._refresh_capabilities)
         log.info("application started", extra={"capabilities": self._capabilities.snapshot()})
 
@@ -124,6 +129,26 @@ class SysbarApplication(Adw.Application):
             return
         self._mixer = AppVolumeMixer(backend, self.config)
         self._mixer.start()
+
+    def _setup_auto_quit(self) -> None:
+        if not self._capabilities.has(SESSION_X11):
+            return
+        try:
+            from ..services.auto_quit.wnck_source import WnckWindowSource
+
+            source = WnckWindowSource()
+        except Exception as error:
+            log.warning("auto-quit unavailable", extra={"error": str(error)})
+            return
+        self._auto_quit = AutoQuitService(
+            source=source,
+            terminator=OsTerminator(),
+            scheduler=GLibScheduler(),
+            exceptions=lambda: self.config.auto_quit_exceptions,
+            system_ids=AUTO_QUIT_SYSTEM_WHITELIST,
+            enabled=lambda: self.config.get_bool("auto-quit-enabled"),
+        )
+        self._auto_quit.start()
 
     def _reconcile_shelf(self) -> None:
         enabled = self.config.get_bool("shelf-enabled")
