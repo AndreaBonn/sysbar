@@ -2,8 +2,7 @@
 
 Toolkit per la barra di sistema di Ubuntu/GNOME. Una sola applicazione nel
 system tray che raggruppa sei utility: monitor di sistema, mixer del volume per
-applicazione, keep awake, auto-quit, disinstallatore e shelf. Equivalente Linux
-di Vorssaint (macOS).
+applicazione, keep awake, auto-quit, disinstallatore e shelf.
 
 Tutto è locale: nessun account, nessuna telemetria. Ogni feature è disattivata
 finché non la attivi e si degrada con un messaggio esplicito quando una
