@@ -47,3 +47,47 @@ Chi aveva già configurato le metriche non deve fare nulla: all'avvio le imposta
 
 Complessità: alta - la modifica tocca configurazione, rendering, UI e schema GSettings con compatibilità verso le impostazioni esistenti.
 Stato: completato - suite test verde al 100%, lint pulito, migrazione automatica verificata.
+
+---
+
+## [2026-06-18] - Sessione #2 [BUG]
+
+### Richiesta
+
+Il menu a tendina del tray mostrava voci grigiate in modo errato e voci duplicate (ad esempio "Quit" ripetuto), in particolare quando alcune metriche erano configurate per apparire nel menu.
+
+### Azioni Eseguite
+
+- Individuata la causa radice: il menu cambiava numero di voci tra un aggiornamento e l'altro, causando uno slittamento degli identificatori interni e confondendo il sistema di rendering di GNOME, che riciclava stati vecchi su voci sbagliate
+- Introdotto un nuovo modulo `menu_builder.py` che costruisce il menu con struttura fissa: sempre le stesse voci nello stesso ordine, indipendentemente dalle metriche attive
+- Modificato `dbus_menu.py` per inviare sempre il set completo di voci, nascondendo quelle non pertinenti invece di rimuoverle
+- Aggiornato `tray_renderer.py` per mantenere la mappa metrica-valore usata dal menu
+- Aggiornato `application.py` per usare il nuovo costruttore di menu; i valori delle metriche nel menu vengono ora aggiornati all'apertura, non a ogni campionamento
+- Aggiunti test per `menu_builder.py` e aggiornati quelli di `tray_renderer.py`
+- Incrementata la versione a 0.2.2, aggiornati `pyproject.toml`, `__init__.py` e `packaging/debian/changelog`; ricostruito il pacchetto `.deb`
+- Verifica end-to-end: 15 nodi con ID stabili, nessuna voce duplicata, voci azione abilitate correttamente
+
+### File Modificati
+
+| File | Tipo | Descrizione |
+|------|------|-------------|
+| src/sysbar/app/tray/menu_builder.py | nuovo | Costruisce il menu a struttura fissa; voci non pertinenti nascoste, non rimosse |
+| src/sysbar/app/tray/dbus_menu.py | modifica | Invia sempre tutte le voci, incluse quelle nascoste, per tenere stabili gli ID |
+| src/sysbar/app/tray_renderer.py | modifica | Mantiene la mappa metrica-valore per l'aggiornamento del menu all'apertura |
+| src/sysbar/app/application.py | modifica | Usa il nuovo menu_builder; aggiornamento valori on-open invece che on-sample |
+| tests/app/tray/test_menu_builder.py | nuovo | Test del costruttore di menu a struttura fissa |
+| tests/app/test_tray_renderer.py | modifica | Test aggiornati per la nuova mappa metrica-valore |
+| pyproject.toml | modifica | Versione aggiornata a 0.2.2 |
+| src/sysbar/__init__.py | modifica | Versione aggiornata a 0.2.2 |
+| packaging/debian/changelog | modifica | Entry changelog per la versione 0.2.2 |
+
+### Note per il Cliente
+
+Il menu che si apre cliccando sull'icona nella barra di sistema mostrava alcune voci in grigio nel modo sbagliato, e in certi casi ripeteva la stessa voce (ad esempio "Esci") piu volte. Il problema non era nei contenuti ma nel modo in cui il menu veniva ricostruito: ogni aggiornamento poteva avere un numero diverso di voci, e questo disorientava il sistema operativo che "ricordava" le voci vecchie e le applicava a quelle nuove nel posto sbagliato.
+
+La correzione rende il menu sempre uguale nella struttura: le voci ci sono sempre, ma quelle che non servono in quel momento vengono semplicemente rese invisibili invece di essere tolte. Cosi il sistema operativo non si perde mai il conto, e il menu funziona in modo affidabile.
+
+### Riepilogo
+
+Complessita: media - il bug richiedeva di capire il comportamento del renderer DBus di GNOME e riprogettare la struttura del menu; l'impatto sui test era circoscritto.
+Stato: completato - suite test verde al 100%, coverage 100%, ruff pulito, verifica end-to-end superata, pacchetto .deb 0.2.2 ricostruito.
