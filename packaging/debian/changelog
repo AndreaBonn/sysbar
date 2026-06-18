@@ -1,3 +1,10 @@
+sysbar (0.2.0) noble; urgency=medium
+
+  * Tray metrics can be placed individually in the always-visible bar or in
+    the dropdown menu, or hidden. Existing boolean settings migrate on start.
+
+ -- AndreaBonn <andreabonacci95@protonmail.com>  Thu, 18 Jun 2026 00:00:00 +0200
+
 sysbar (0.1.0) noble; urgency=medium
 
   * Initial release: system monitor, per-app volume mixer, keep awake,
