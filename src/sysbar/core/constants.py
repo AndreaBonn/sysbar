@@ -49,6 +49,17 @@ ALLOWED_MEMORY_STYLES: tuple[str, ...] = (
 )
 DEFAULT_MEMORY_STYLE = MEMORY_STYLE_PERCENT
 
+# Per-metric tray placement: hidden, in the always-visible bar, or in the menu.
+PLACEMENT_OFF = "off"
+PLACEMENT_BAR = "bar"
+PLACEMENT_MENU = "menu"
+ALLOWED_PLACEMENTS: tuple[str, ...] = (PLACEMENT_OFF, PLACEMENT_BAR, PLACEMENT_MENU)
+DEFAULT_PLACEMENT = PLACEMENT_OFF
+
+# Tray metric identifiers, in display order. Each has a "menu-bar-<id>-placement"
+# GSettings key and (for migration) a legacy boolean "menu-bar-<id>" key.
+TRAY_METRICS: tuple[str, ...] = ("cpu", "gpu", "memory", "network", "battery", "power")
+
 TEMPERATURE_CELSIUS = "celsius"
 TEMPERATURE_FAHRENHEIT = "fahrenheit"
 ALLOWED_TEMPERATURE_UNITS: tuple[str, ...] = (TEMPERATURE_CELSIUS, TEMPERATURE_FAHRENHEIT)

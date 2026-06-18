@@ -31,7 +31,10 @@ from ..core.constants import (  # noqa: E402
     AUTO_QUIT_SYSTEM_WHITELIST,
     CAPABILITY_REFRESH_INTERVAL_SECONDS,
     CURRENT_FEATURE_SET,
+    PLACEMENT_MENU,
+    PLACEMENT_OFF,
     SHELF_DIR,
+    TRAY_METRICS,
 )
 from ..core.i18n import _  # noqa: E402
 from ..core.localization import install_language  # noqa: E402
@@ -64,22 +67,13 @@ from .tray.menu_model import (  # noqa: E402
     MenuModel,
 )
 from .tray.tray import Tray  # noqa: E402
-from .tray_renderer import TrayOptions, render_tray_label  # noqa: E402
+from .tray_renderer import TrayOptions, render_menu_metrics, render_tray_label  # noqa: E402
 
 _KEEP_AWAKE_PLAY = "▶"
 _SESSION_END_MESSAGES = {
     EndReason.TIMER.value: "Keep awake ended (timer elapsed)",
     EndReason.BATTERY.value: "Keep awake ended (battery low)",
 }
-
-_TRAY_METRIC_KEYS = (
-    "menu-bar-cpu",
-    "menu-bar-gpu",
-    "menu-bar-memory",
-    "menu-bar-network",
-    "menu-bar-battery",
-    "menu-bar-power",
-)
 
 log = logging.getLogger(__name__)
 
@@ -111,6 +105,7 @@ class SysbarApplication(Adw.Application):
     def do_startup(self) -> None:
         Adw.Application.do_startup(self)
         self._config = Config()
+        self._config.migrate_legacy_placements()
         install_language(self._config.get_string("app-language"))
         self._capabilities.refresh()
         self._notifier = Notifier(self)
@@ -249,27 +244,36 @@ class SysbarApplication(Adw.Application):
     def _update_tray_active(self) -> None:
         if self._monitor is None:
             return
-        active = any(self.config.get_bool(key) for key in _TRAY_METRIC_KEYS)
+        active = any(self.config.metric_placement(m) != PLACEMENT_OFF for m in TRAY_METRICS)
         self._monitor.set_tray_active(active)
-        self._refresh_tray_label()
+        self._refresh_tray()
 
     def _tray_options(self) -> TrayOptions:
         config = self.config
+        placements = {metric: config.metric_placement(metric) for metric in TRAY_METRICS}
         return TrayOptions(
-            show_cpu=config.get_bool("menu-bar-cpu"),
-            show_gpu=config.get_bool("menu-bar-gpu"),
-            show_memory=config.get_bool("menu-bar-memory"),
-            show_network=config.get_bool("menu-bar-network"),
-            show_battery=config.get_bool("menu-bar-battery"),
-            show_power=config.get_bool("menu-bar-power"),
             memory_style=config.memory_style,
             temperature_unit=config.temperature_unit,
+            **placements,
         )
 
+    def _has_menu_metrics(self) -> bool:
+        return any(self.config.metric_placement(m) == PLACEMENT_MENU for m in TRAY_METRICS)
+
     def _on_snapshot(self, _monitor: SystemMonitor, snapshot: SystemSnapshot) -> None:
-        self._refresh_tray_label()
+        self._refresh_tray()
         if self._panel is not None:
             self._panel.update_snapshot(snapshot)
+
+    def _refresh_tray(self) -> None:
+        """Refresh the label and, when metrics live in the dropdown, the menu."""
+        self._refresh_tray_label()
+        if self._has_menu_metrics():
+            self._refresh_menu()
+
+    def _refresh_menu(self) -> None:
+        if self._tray is not None:
+            self._tray.set_menu(self._build_menu())
 
     def _refresh_tray_label(self) -> None:
         if self._tray is None:
@@ -300,8 +304,7 @@ class SysbarApplication(Adw.Application):
             self._reconcile_shelf()
 
     def _on_keep_awake_changed(self, _manager: KeepAwakeManager) -> None:
-        if self._tray is not None:
-            self._tray.set_menu(self._build_menu())
+        self._refresh_menu()
         self._reconcile_countdown()
         self._refresh_tray_label()
 
@@ -370,18 +373,32 @@ class SysbarApplication(Adw.Application):
         self._tray.register(connection)
         self._tray.set_menu(self._build_menu())
 
+    def _menu_metric_items(self) -> list[MenuItem]:
+        """Build the read-only metric rows shown at the top of the dropdown."""
+        if self._monitor is None or self._monitor.latest is None:
+            return []
+        lines = render_menu_metrics(self._monitor.latest, self._tray_options())
+        if not lines:
+            return []
+        items = [MenuItem(label=line, enabled=False) for line in lines]
+        items.append(MenuItem(item_type=TYPE_SEPARATOR))
+        return items
+
     def _build_menu(self) -> MenuModel:
         keep_awake_on = self._keep_awake is not None and self._keep_awake.is_active
-        items = [
-            MenuItem(
-                label=_("Keep awake"),
-                toggle_type="checkmark",
-                toggle_state=TOGGLE_ON if keep_awake_on else TOGGLE_OFF,
-                action=self._toggle_keep_awake,
-            ),
-            MenuItem(item_type=TYPE_SEPARATOR),
-            MenuItem(label=_("Open panel"), action=self._open_panel),
-        ]
+        items = self._menu_metric_items()
+        items.extend(
+            [
+                MenuItem(
+                    label=_("Keep awake"),
+                    toggle_type="checkmark",
+                    toggle_state=TOGGLE_ON if keep_awake_on else TOGGLE_OFF,
+                    action=self._toggle_keep_awake,
+                ),
+                MenuItem(item_type=TYPE_SEPARATOR),
+                MenuItem(label=_("Open panel"), action=self._open_panel),
+            ]
+        )
         if self.config.get_bool("shelf-enabled"):
             items.append(MenuItem(label=_("Open shelf"), action=self._open_shelf))
         items.extend(

@@ -1,14 +1,23 @@
-"""Compose the short tray label from a snapshot (port of the macOS renderer).
+"""Compose tray output from a snapshot (port of the macOS renderer).
 
-Pure and unit-tested: given a snapshot and the user's opted-in metrics, it
-returns the string shown next to the tray icon.
+Pure and unit-tested. Each metric carries a placement (``off``, ``bar`` or
+``menu``): :func:`render_tray_label` builds the always-visible label from the
+``bar`` metrics, while :func:`render_menu_metrics` builds the read-only lines
+shown in the dropdown for the ``menu`` metrics.
 """
 
 from __future__ import annotations
 
 from dataclasses import dataclass
 
-from ..core.constants import MEMORY_STYLE_BOTH, MEMORY_STYLE_DOT
+from ..core.constants import (
+    MEMORY_STYLE_BOTH,
+    MEMORY_STYLE_DOT,
+    PLACEMENT_BAR,
+    PLACEMENT_MENU,
+    PLACEMENT_OFF,
+    TRAY_METRICS,
+)
 from ..services.metrics import metric_format as mf
 from ..services.system_monitor.snapshot import SystemSnapshot
 
@@ -18,34 +27,63 @@ _PRESSURE_DOTS = {"normal": "●", "warning": "●", "critical": "●"}
 
 @dataclass(frozen=True)
 class TrayOptions:
-    """The user's opted-in tray metrics and display preferences."""
+    """Per-metric placement and display preferences for the tray."""
 
-    show_cpu: bool = False
-    show_gpu: bool = False
-    show_memory: bool = False
-    show_network: bool = False
-    show_battery: bool = False
-    show_power: bool = False
+    cpu: str = PLACEMENT_OFF
+    gpu: str = PLACEMENT_OFF
+    memory: str = PLACEMENT_OFF
+    network: str = PLACEMENT_OFF
+    battery: str = PLACEMENT_OFF
+    power: str = PLACEMENT_OFF
     memory_style: str = "percent"
     temperature_unit: str = "celsius"
 
+    def placement(self, metric: str) -> str:
+        """Return the placement string for a metric id (defaults to ``off``)."""
+        return getattr(self, metric, PLACEMENT_OFF)
+
 
 def render_tray_label(snapshot: SystemSnapshot, options: TrayOptions) -> str:
-    """Return the tray label, joining opted-in non-empty metric segments."""
+    """Return the always-visible label, joining the ``bar`` metric segments."""
     segments: list[str] = []
-    if options.show_cpu:
-        segments.extend(_cpu_segments(snapshot, options.temperature_unit))
-    if options.show_gpu and snapshot.gpu_percent is not None:
-        segments.append(f"GPU {mf.format_percent(snapshot.gpu_percent)}")
-    if options.show_memory:
-        segments.extend(_memory_segments(snapshot, options.memory_style))
-    if options.show_network:
-        segments.extend(_network_segments(snapshot))
-    if options.show_battery and snapshot.battery_percent is not None:
-        segments.append(f"BAT {mf.format_percent(snapshot.battery_percent)}")
-    if options.show_power and snapshot.power_watts is not None:
-        segments.append(f"{snapshot.power_watts:.0f} W")
+    for metric in TRAY_METRICS:
+        if options.placement(metric) == PLACEMENT_BAR:
+            segments.extend(_metric_segments(snapshot, metric, options))
     return _SEPARATOR.join(segments)
+
+
+def render_menu_metrics(snapshot: SystemSnapshot, options: TrayOptions) -> list[str]:
+    """Return one read-only line per ``menu`` metric that has data to show."""
+    lines: list[str] = []
+    for metric in TRAY_METRICS:
+        if options.placement(metric) != PLACEMENT_MENU:
+            continue
+        segments = _metric_segments(snapshot, metric, options)
+        if segments:
+            lines.append(_SEPARATOR.join(segments))
+    return lines
+
+
+def _metric_segments(snapshot: SystemSnapshot, metric: str, options: TrayOptions) -> list[str]:
+    if metric == "cpu":
+        return _cpu_segments(snapshot, options.temperature_unit)
+    if metric == "gpu":
+        if snapshot.gpu_percent is None:
+            return []
+        return [f"GPU {mf.format_percent(snapshot.gpu_percent)}"]
+    if metric == "memory":
+        return _memory_segments(snapshot, options.memory_style)
+    if metric == "network":
+        return _network_segments(snapshot)
+    if metric == "battery":
+        if snapshot.battery_percent is None:
+            return []
+        return [f"BAT {mf.format_percent(snapshot.battery_percent)}"]
+    if metric == "power":
+        if snapshot.power_watts is None:
+            return []
+        return [f"{snapshot.power_watts:.0f} W"]
+    return []  # pragma: no cover - defensive: metric is always a TRAY_METRICS id
 
 
 def _cpu_segments(snapshot: SystemSnapshot, unit: str) -> list[str]:

@@ -47,6 +47,47 @@ def test_auto_quit_exceptions_setter_sanitizes(config: Config) -> None:
     assert config.auto_quit_exceptions == ["org.gnome.Nautilus", "x"]
 
 
+def test_metric_placement_default_is_off(config: Config) -> None:
+    assert config.metric_placement("cpu") == "off"
+
+
+def test_metric_placement_reads_stored_value(config: Config) -> None:
+    config.settings.set_string("menu-bar-cpu-placement", "menu")
+    assert config.metric_placement("cpu") == "menu"
+
+
+def test_metric_placement_invalid_is_sanitized(config: Config) -> None:
+    config.settings.set_string("menu-bar-cpu-placement", "statusbar")
+    assert config.metric_placement("cpu") == "off"
+
+
+def test_migrate_legacy_true_bool_becomes_bar(config: Config) -> None:
+    config.settings.set_boolean("menu-bar-cpu", True)
+    config.migrate_legacy_placements()
+    assert config.metric_placement("cpu") == "bar"
+
+
+def test_migrate_legacy_false_bool_stays_off(config: Config) -> None:
+    config.settings.set_boolean("menu-bar-memory", False)
+    config.migrate_legacy_placements()
+    assert config.metric_placement("memory") == "off"
+
+
+def test_migrate_does_not_overwrite_user_choice(config: Config) -> None:
+    config.settings.set_boolean("menu-bar-cpu", True)
+    config.settings.set_string("menu-bar-cpu-placement", "off")
+    config.migrate_legacy_placements()
+    assert config.metric_placement("cpu") == "off"
+
+
+def test_migrate_is_idempotent(config: Config) -> None:
+    config.settings.set_boolean("menu-bar-network", True)
+    config.migrate_legacy_placements()
+    config.settings.set_string("menu-bar-network-placement", "menu")
+    config.migrate_legacy_placements()
+    assert config.metric_placement("network") == "menu"
+
+
 def test_get_bool_round_trips(config: Config) -> None:
     config.set_bool("hotkey-enabled", True)
     assert config.get_bool("hotkey-enabled") is True

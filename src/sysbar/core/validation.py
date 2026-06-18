@@ -12,11 +12,13 @@ from .constants import (
     ALLOWED_DURATIONS,
     ALLOWED_INTERVALS,
     ALLOWED_MEMORY_STYLES,
+    ALLOWED_PLACEMENTS,
     ALLOWED_TEMPERATURE_UNITS,
     DEFAULT_BATTERY_LIMIT_PERCENT,
     DEFAULT_DURATION_MINUTES,
     DEFAULT_MEMORY_STYLE,
     DEFAULT_MONITOR_INTERVAL_SECONDS,
+    DEFAULT_PLACEMENT,
     DEFAULT_TEMPERATURE_UNIT,
     MAX_APP_VOLUME,
     MIN_APP_VOLUME,
@@ -46,6 +48,11 @@ def sanitized_memory_style(value: str) -> str:
 def sanitized_temperature_unit(value: str) -> str:
     """Return ``value`` if it is a known temperature unit, else the default."""
     return value if value in ALLOWED_TEMPERATURE_UNITS else DEFAULT_TEMPERATURE_UNIT
+
+
+def sanitized_placement(value: str) -> str:
+    """Return ``value`` if it is a known tray placement, else the default."""
+    return value if value in ALLOWED_PLACEMENTS else DEFAULT_PLACEMENT
 
 
 def sanitized_app_volume(value: float) -> float:

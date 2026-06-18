@@ -50,6 +50,15 @@ def test_sanitized_temperature_unit_invalid_returns_default() -> None:
     assert validation.sanitized_temperature_unit("kelvin") == "celsius"
 
 
+@pytest.mark.parametrize("value", ["off", "bar", "menu"])
+def test_sanitized_placement_allowed_kept(value: str) -> None:
+    assert validation.sanitized_placement(value) == value
+
+
+def test_sanitized_placement_invalid_returns_default() -> None:
+    assert validation.sanitized_placement("statusbar") == "off"
+
+
 def test_sanitized_app_volume_clamps_low() -> None:
     assert validation.sanitized_app_volume(-0.5) == 0.0
 

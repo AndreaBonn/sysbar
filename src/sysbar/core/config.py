@@ -14,7 +14,7 @@ gi.require_version("GLib", "2.0")
 from gi.repository import Gio, GLib  # noqa: E402
 
 from . import validation  # noqa: E402
-from .constants import APP_ID  # noqa: E402
+from .constants import APP_ID, PLACEMENT_BAR, TRAY_METRICS  # noqa: E402
 
 
 class Config:
@@ -67,6 +67,25 @@ class Config:
     @property
     def temperature_unit(self) -> str:
         return validation.sanitized_temperature_unit(self._settings.get_string("temperature-unit"))
+
+    def metric_placement(self, metric: str) -> str:
+        """Return where a tray metric is shown: ``off``, ``bar`` or ``menu``."""
+        raw = self._settings.get_string(f"menu-bar-{metric}-placement")
+        return validation.sanitized_placement(raw)
+
+    def migrate_legacy_placements(self) -> None:
+        """Seed placement keys from the deprecated boolean tray keys, once.
+
+        For each metric whose placement was never set by the user, a legacy
+        ``menu-bar-<metric>`` set to ``true`` becomes ``bar``. Idempotent: a
+        placement chosen by the user (including ``off``) is never overwritten.
+        """
+        for metric in TRAY_METRICS:
+            placement_key = f"menu-bar-{metric}-placement"
+            if self._settings.get_user_value(placement_key) is not None:
+                continue
+            if self._settings.get_boolean(f"menu-bar-{metric}"):
+                self._settings.set_string(placement_key, PLACEMENT_BAR)
 
     @property
     def auto_quit_exceptions(self) -> list[str]:

@@ -20,6 +20,15 @@ _LANGUAGES = [("", "System"), ("en", "English"), ("it", "Italiano")]
 _INTERVALS = [(1, "1 second"), (2, "2 seconds"), (5, "5 seconds")]
 _TEMPERATURE_UNITS = [("celsius", "Celsius"), ("fahrenheit", "Fahrenheit")]
 _MEMORY_STYLES = [("dot", "Dot"), ("percent", "Percent"), ("both", "Both")]
+_PLACEMENTS = [("off", "Off"), ("bar", "Bar"), ("menu", "Menu")]
+_TRAY_METRIC_ROWS = [
+    ("menu-bar-cpu-placement", "CPU"),
+    ("menu-bar-gpu-placement", "GPU"),
+    ("menu-bar-memory-placement", "Memory"),
+    ("menu-bar-network-placement", "Network"),
+    ("menu-bar-battery-placement", "Battery"),
+    ("menu-bar-power-placement", "Power"),
+]
 _DURATIONS = [(0, "Indefinite"), (15, "15 min"), (30, "30 min"), (60, "1 hour"), (120, "2 hours")]
 _BATTERY_LIMITS = [(0, "Never"), (5, "5%"), (10, "10%"), (15, "15%"), (20, "20%")]
 
@@ -65,13 +74,12 @@ class SettingsWindow(Adw.PreferencesWindow):
     def _monitor_page(self) -> Adw.PreferencesPage:
         page = Adw.PreferencesPage(title="Monitor", icon_name="utilities-system-monitor-symbolic")
 
-        tray = Adw.PreferencesGroup(title="Tray metrics")
-        tray.add(bound_switch(self._settings, "menu-bar-cpu", "CPU"))
-        tray.add(bound_switch(self._settings, "menu-bar-gpu", "GPU"))
-        tray.add(bound_switch(self._settings, "menu-bar-memory", "Memory"))
-        tray.add(bound_switch(self._settings, "menu-bar-network", "Network"))
-        tray.add(bound_switch(self._settings, "menu-bar-battery", "Battery"))
-        tray.add(bound_switch(self._settings, "menu-bar-power", "Power"))
+        tray = Adw.PreferencesGroup(
+            title="Tray metrics",
+            description="Off, in the always-visible bar, or in the dropdown menu",
+        )
+        for key, title in _TRAY_METRIC_ROWS:
+            tray.add(self._combo(key, title, _PLACEMENTS, is_int=False))
         page.add(tray)
 
         options = Adw.PreferencesGroup(title="Sampling")
