@@ -20,8 +20,17 @@ data/locale/**/*.mo
 gschemas.compiled
 *.deb
 packaging/build/
+# Cartella locale per i deliverable di presentazione (non versionata)
+__GitHubPresentazione/
 # dpkg-buildpackage symlink created by ./build.sh deb
 /debian
+# dpkg-buildpackage work products under packaging/debian
+packaging/debian/.debhelper/
+packaging/debian/debhelper-build-stamp
+packaging/debian/files
+packaging/debian/*.debhelper.log
+packaging/debian/*.substvars
+packaging/debian/sysbar/
 
 # Env & secrets
 .env
