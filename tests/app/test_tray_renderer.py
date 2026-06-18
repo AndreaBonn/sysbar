@@ -1,13 +1,16 @@
 from sysbar.app.tray_renderer import (
     TrayOptions,
+    available_metrics,
     menu_metric_values,
     render_menu_metrics,
     render_tray_label,
 )
+from sysbar.core.constants import HARDWARE_OPTIONAL_METRICS
 from sysbar.services.system_monitor.snapshot import SystemSnapshot
 
 BAR = "bar"
 MENU = "menu"
+OFF = "off"
 
 
 def test_empty_when_no_metrics_opted_in() -> None:
@@ -151,3 +154,45 @@ def test_menu_metric_values_follows_tray_metrics_order() -> None:
     snap = SystemSnapshot(cpu_percent=10.0, power_watts=5.0)
     values = menu_metric_values(snap, TrayOptions(power=MENU, cpu=MENU))
     assert list(values.keys()) == ["cpu", "power"]
+
+
+def test_available_metrics_reports_metrics_with_data() -> None:
+    snap = SystemSnapshot(cpu_percent=10.0, gpu_percent=30.0, battery_percent=88.0)
+    assert available_metrics(snap, TrayOptions()) == {"cpu", "gpu", "battery"}
+
+
+def test_available_metrics_excludes_metrics_without_data() -> None:
+    snap = SystemSnapshot(cpu_percent=10.0, gpu_percent=None, power_watts=None)
+    available = available_metrics(snap, TrayOptions())
+    assert "gpu" not in available
+    assert "power" not in available
+    assert "cpu" in available
+
+
+def test_available_metrics_independent_of_placement() -> None:
+    snap = SystemSnapshot(gpu_percent=30.0)
+    assert "gpu" in available_metrics(snap, TrayOptions(gpu=OFF))
+
+
+def test_available_metrics_network_needs_both_rates() -> None:
+    snap = SystemSnapshot(net_rx_rate=1024.0, net_tx_rate=512.0)
+    assert "network" in available_metrics(snap, TrayOptions())
+
+
+def test_available_metrics_cpu_from_temperature_only() -> None:
+    snap = SystemSnapshot(cpu_percent=None, cpu_temp_celsius=60.0)
+    assert "cpu" in available_metrics(snap, TrayOptions())
+
+
+def test_hardware_optional_metrics_all_unavailable_when_no_sensor_data() -> None:
+    snap = SystemSnapshot(gpu_percent=None, battery_percent=None, power_watts=None)
+    present = available_metrics(snap, TrayOptions())
+    unavailable = frozenset(m for m in HARDWARE_OPTIONAL_METRICS if m not in present)
+    assert unavailable == {"gpu", "battery", "power"}
+
+
+def test_hardware_optional_metrics_none_unavailable_when_all_present() -> None:
+    snap = SystemSnapshot(gpu_percent=30.0, battery_percent=88.0, power_watts=12.0)
+    present = available_metrics(snap, TrayOptions())
+    unavailable = frozenset(m for m in HARDWARE_OPTIONAL_METRICS if m not in present)
+    assert unavailable == frozenset()

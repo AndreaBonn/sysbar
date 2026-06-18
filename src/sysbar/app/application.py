@@ -31,6 +31,7 @@ from ..core.constants import (  # noqa: E402
     AUTO_QUIT_SYSTEM_WHITELIST,
     CAPABILITY_REFRESH_INTERVAL_SECONDS,
     CURRENT_FEATURE_SET,
+    HARDWARE_OPTIONAL_METRICS,
     PLACEMENT_MENU,
     PLACEMENT_OFF,
     SHELF_DIR,
@@ -62,7 +63,12 @@ from ..services.update_service import UpdateInfo, UpdateService  # noqa: E402
 from .tray.menu_builder import MenuActions, build_menu_items  # noqa: E402
 from .tray.menu_model import MenuModel  # noqa: E402
 from .tray.tray import Tray  # noqa: E402
-from .tray_renderer import TrayOptions, menu_metric_values, render_tray_label  # noqa: E402
+from .tray_renderer import (  # noqa: E402
+    TrayOptions,
+    available_metrics,
+    menu_metric_values,
+    render_tray_label,
+)
 
 _KEEP_AWAKE_PLAY = "▶"
 _SESSION_END_MESSAGES = {
@@ -429,10 +435,27 @@ class SysbarApplication(Adw.Application):
     def _open_settings(self) -> None:
         from ..ui.settings.settings_window import SettingsWindow
 
+        # Availability is frozen at open time. The window is recreated on every
+        # open (close clears the reference), so a hardware change is picked up on
+        # the next open rather than live in an already-open window.
         if self._settings_window is None:
-            self._settings_window = SettingsWindow(self.config, self._autostart)
+            self._settings_window = SettingsWindow(
+                self.config, self._autostart, self._unavailable_metrics()
+            )
             self._settings_window.connect("close-request", self._on_settings_closed)
         self._settings_window.present()
+
+    def _unavailable_metrics(self) -> frozenset[str]:
+        """Hardware-optional metrics with no data in the latest snapshot.
+
+        Fail-open: with no snapshot yet, nothing is reported unavailable so the
+        Settings rows stay enabled rather than being disabled by mistake.
+        """
+        snapshot = self._monitor.latest if self._monitor is not None else None
+        if snapshot is None:
+            return frozenset()
+        present = available_metrics(snapshot, TrayOptions())
+        return frozenset(m for m in HARDWARE_OPTIONAL_METRICS if m not in present)
 
     def _on_settings_closed(self, _window: Adw.PreferencesWindow) -> bool:
         self._settings_window = None

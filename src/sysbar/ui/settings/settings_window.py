@@ -22,12 +22,12 @@ _TEMPERATURE_UNITS = [("celsius", "Celsius"), ("fahrenheit", "Fahrenheit")]
 _MEMORY_STYLES = [("dot", "Dot"), ("percent", "Percent"), ("both", "Both")]
 _PLACEMENTS = [("off", "Off"), ("bar", "Bar"), ("menu", "Menu")]
 _TRAY_METRIC_ROWS = [
-    ("menu-bar-cpu-placement", "CPU"),
-    ("menu-bar-gpu-placement", "GPU"),
-    ("menu-bar-memory-placement", "Memory"),
-    ("menu-bar-network-placement", "Network"),
-    ("menu-bar-battery-placement", "Battery"),
-    ("menu-bar-power-placement", "Power"),
+    ("cpu", "menu-bar-cpu-placement", "CPU"),
+    ("gpu", "menu-bar-gpu-placement", "GPU"),
+    ("memory", "menu-bar-memory-placement", "Memory"),
+    ("network", "menu-bar-network-placement", "Network"),
+    ("battery", "menu-bar-battery-placement", "Battery"),
+    ("power", "menu-bar-power-placement", "Power"),
 ]
 _DURATIONS = [(0, "Indefinite"), (15, "15 min"), (30, "30 min"), (60, "1 hour"), (120, "2 hours")]
 _BATTERY_LIMITS = [(0, "Never"), (5, "5%"), (10, "10%"), (15, "15%"), (20, "20%")]
@@ -36,12 +36,18 @@ _BATTERY_LIMITS = [(0, "Never"), (5, "5%"), (10, "10%"), (15, "15%"), (20, "20%"
 class SettingsWindow(Adw.PreferencesWindow):
     """Live-bound preferences, one page per feature."""
 
-    def __init__(self, config: Config, autostart: AutostartManager) -> None:
+    def __init__(
+        self,
+        config: Config,
+        autostart: AutostartManager,
+        unavailable_metrics: frozenset[str] = frozenset(),
+    ) -> None:
         super().__init__(title=_("Sysbar Preferences"))
         self.set_default_size(640, 560)
         self._config = config
         self._settings = config.settings
         self._autostart = autostart
+        self._unavailable_metrics = unavailable_metrics
         self._combos: list[ComboBinding] = []
 
         self.add(self._general_page())
@@ -78,8 +84,12 @@ class SettingsWindow(Adw.PreferencesWindow):
             title="Tray metrics",
             description="Off, in the always-visible bar, or in the dropdown menu",
         )
-        for key, title in _TRAY_METRIC_ROWS:
-            tray.add(self._combo(key, title, _PLACEMENTS, is_int=False))
+        for metric, key, title in _TRAY_METRIC_ROWS:
+            row = self._combo(key, title, _PLACEMENTS, is_int=False)
+            if metric in self._unavailable_metrics:
+                row.set_sensitive(False)
+                row.set_subtitle(_("Not detected on this system"))
+            tray.add(row)
         page.add(tray)
 
         options = Adw.PreferencesGroup(title="Sampling")
