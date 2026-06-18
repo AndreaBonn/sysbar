@@ -60,6 +60,12 @@ DEFAULT_PLACEMENT = PLACEMENT_OFF
 # GSettings key and (for migration) a legacy boolean "menu-bar-<id>" key.
 TRAY_METRICS: tuple[str, ...] = ("cpu", "gpu", "memory", "network", "battery", "power")
 
+# Metrics that depend on optional hardware: absent on machines without that
+# sensor, so their placement is disabled in Settings when no data is present.
+# cpu/memory are universal; network is merely transient (no baseline on the
+# first sample), so neither is disabled.
+HARDWARE_OPTIONAL_METRICS: tuple[str, ...] = ("gpu", "battery", "power")
+
 TEMPERATURE_CELSIUS = "celsius"
 TEMPERATURE_FAHRENHEIT = "fahrenheit"
 ALLOWED_TEMPERATURE_UNITS: tuple[str, ...] = (TEMPERATURE_CELSIUS, TEMPERATURE_FAHRENHEIT)

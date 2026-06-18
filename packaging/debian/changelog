@@ -1,3 +1,11 @@
+sysbar (0.3.0) noble; urgency=medium
+
+  * Settings: tray metric placement combos for hardware not detected on the
+    system (GPU, battery, power) are now disabled with an explanatory
+    subtitle, instead of silently showing nothing in the bar or menu.
+
+ -- AndreaBonn <andreabonacci95@protonmail.com>  Thu, 18 Jun 2026 18:48:12 +0200
+
 sysbar (0.2.2) noble; urgency=medium
 
   * Fix the tray dropdown desync (greyed/duplicated entries) by giving the

@@ -91,3 +91,40 @@ La correzione rende il menu sempre uguale nella struttura: le voci ci sono sempr
 
 Complessita: media - il bug richiedeva di capire il comportamento del renderer DBus di GNOME e riprogettare la struttura del menu; l'impatto sui test era circoscritto.
 Stato: completato - suite test verde al 100%, coverage 100%, ruff pulito, verifica end-to-end superata, pacchetto .deb 0.2.2 ricostruito.
+
+---
+
+## [2026-06-18] - Sessione #3 [UI] [FEATURE]
+
+### Richiesta
+
+Nel menu tray alcune metriche impostate su "Menu" nelle Impostazioni (ad esempio Power e GPU) non comparivano. Anche il volume mixer risultava assente. Indagine: il mixer per progettazione vive nel pannello laterale, non nel menu; le metriche con placement "Menu" o "Bar" il cui sensore non è rilevato sull'hardware (GPU, Power su questo laptop MSI) vengono scartate silenziosamente senza alcuna spiegazione per l'utente. Soluzione concordata: disabilitare le opzioni di placement in Impostazioni per le metriche non rilevate sull'hardware, indicando il motivo con un sottotitolo.
+
+### Azioni Eseguite
+
+- Aggiunta costante `HARDWARE_OPTIONAL_METRICS = ("gpu", "battery", "power")` in `core/constants.py`; CPU e Memory sono universali, Network è sempre transitoria: nessuna delle tre viene mai disabilitata
+- Nuova funzione pura `available_metrics(snapshot, options)` in `app/tray_renderer.py`, con `_metric_segments` come unica fonte di verità per determinare quali metriche sono attive
+- Aggiornata `SettingsWindow` con parametro `unavailable_metrics`: le righe corrispondenti vengono rese insensibili (`set_sensitive(False)`) con sottotitolo "Not detected on this system"; il valore GSettings non viene modificato
+- Aggiunto metodo `_unavailable_metrics()` in `application.py` che calcola le metriche assenti da `monitor.latest` con strategia fail-open: se lo snapshot manca, nessuna riga viene disabilitata
+- Sviluppati 6 nuovi test con approccio TDD: 4 per `available_metrics`, 2 per il filtro hardware-optional
+
+### File Modificati
+
+| File | Tipo | Descrizione |
+|------|------|-------------|
+| src/sysbar/core/constants.py | modifica | Costante HARDWARE_OPTIONAL_METRICS |
+| src/sysbar/app/tray_renderer.py | modifica | Funzione pura available_metrics |
+| src/sysbar/ui/settings/settings_window.py | modifica | Disabilitazione righe metriche non rilevate, con sottotitolo esplicativo |
+| src/sysbar/app/application.py | modifica | Calcolo metriche non disponibili con strategia fail-open |
+| tests/app/test_tray_renderer.py | modifica | Test available_metrics e filtro hardware-optional |
+
+### Note per il Cliente
+
+Quando un'informazione come il consumo energetico o la scheda video non è rilevabile sul computer in uso, l'opzione corrispondente nelle Impostazioni ora appare in grigio con la scritta che spiega che non è stata rilevata. In questo modo è chiaro perché quella voce non compare nella barra o nel menu, invece di sembrare un malfunzionamento.
+
+Il mixer del volume non fa parte del menu a tendina per scelta di progettazione: si trova nel pannello che si apre cliccando sull'icona (voce "Open panel").
+
+### Riepilogo
+
+Complessità: media - la soluzione richiedeva di individuare la fonte di verità corretta per le metriche attive e coordinare il calcolo tra application, renderer e finestra impostazioni, con attenzione alla strategia fail-open.
+Stato: completato - ruff e mypy puliti, 339 test passano (+6 nuovi), code review pre-completamento approvata, verifica funzionale sul sistema confermata (GPU e Power grigiate, CPU/Memory/Network/Battery abilitate).

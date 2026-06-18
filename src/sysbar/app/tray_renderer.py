@@ -57,6 +57,16 @@ def render_menu_metrics(snapshot: SystemSnapshot, options: TrayOptions) -> list[
     return list(menu_metric_values(snapshot, options).values())
 
 
+def available_metrics(snapshot: SystemSnapshot, options: TrayOptions) -> set[str]:
+    """Return the metric ids that currently have data, ignoring placement.
+
+    A metric "has data" when it would render at least one segment from the
+    snapshot. Mirrors the menu/bar logic so a metric disabled in Settings is
+    exactly one the tray could not show anyway.
+    """
+    return {metric for metric in TRAY_METRICS if _metric_segments(snapshot, metric, options)}
+
+
 def menu_metric_values(snapshot: SystemSnapshot, options: TrayOptions) -> dict[str, str]:
     """Map each ``menu`` metric id to its formatted line, skipping empty ones.
 
