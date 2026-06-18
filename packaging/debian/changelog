@@ -1,3 +1,17 @@
+sysbar (0.2.2) noble; urgency=medium
+
+  * Fix the tray dropdown desync (greyed/duplicated entries) by giving the
+    menu a fixed shape with stable ids; hidden rows now use the visible flag.
+
+ -- AndreaBonn <andreabonacci95@protonmail.com>  Thu, 18 Jun 2026 00:00:00 +0200
+
+sysbar (0.2.1) noble; urgency=medium
+
+  * Fix corrupted/duplicated tray menu entries: dropdown metrics now refresh
+    on open via AboutToShow instead of rebuilding the menu on every sample.
+
+ -- AndreaBonn <andreabonacci95@protonmail.com>  Thu, 18 Jun 2026 00:00:00 +0200
+
 sysbar (0.2.0) noble; urgency=medium
 
   * Tray metrics can be placed individually in the always-visible bar or in
