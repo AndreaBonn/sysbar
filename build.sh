@@ -52,6 +52,7 @@ case "${1:-build}" in
         ;;
     run)
         shift
+        [ "${1:-}" = "--" ] && shift   # tolerate the conventional options separator
         compile_schema >/dev/null
         compile_translations >/dev/null
         run_app "$@"
