@@ -8,6 +8,7 @@ loading two incompatible GTK versions in the same process.
 from __future__ import annotations
 
 import logging
+from collections.abc import Callable
 from typing import TYPE_CHECKING
 
 import gi
@@ -84,8 +85,11 @@ def _to_variant(value: object) -> GLib.Variant:
 class DBusMenuServer:
     """Serve a :class:`MenuModel` on the ``com.canonical.dbusmenu`` interface."""
 
-    def __init__(self, object_path: str) -> None:
+    def __init__(
+        self, object_path: str, on_about_to_show: Callable[[], bool] | None = None
+    ) -> None:
         self._object_path = object_path
+        self._on_about_to_show = on_about_to_show
         self._model = MenuModel([])
         self._revision = 0
         self._connection: Gio.DBusConnection | None = None
@@ -135,11 +139,21 @@ class DBusMenuServer:
             self._on_event(*params.unpack())
             invocation.return_value(None)
         elif method == "AboutToShow":
-            invocation.return_value(GLib.Variant("(b)", (False,)))
+            invocation.return_value(GLib.Variant("(b)", (self._handle_about_to_show(),)))
         else:
             invocation.return_error_literal(
                 Gio.dbus_error_quark(), Gio.DBusError.UNKNOWN_METHOD, method
             )
+
+    def _handle_about_to_show(self) -> bool:
+        """Let the app refresh live menu values before the host re-reads the layout.
+
+        Returning ``True`` tells the host the layout must be re-fetched before it
+        is displayed, which is how dropdown metrics stay current without polling.
+        """
+        if self._on_about_to_show is None:
+            return False
+        return bool(self._on_about_to_show())
 
     def _get_layout(self, parent_id: int, depth: int, names: list[str]) -> GLib.Variant:
         parent = self._model.get(parent_id) or self._model.root
@@ -155,10 +169,13 @@ class DBusMenuServer:
         children: list[GLib.Variant] = []
         if depth != 0:
             child_depth = depth if depth == _RECURSE_ALL else depth - 1
+            # Always emit every child, even hidden ones: dropping them would
+            # change the node count and shift ids, desynchronising the host's
+            # per-id cache. Visibility is carried by the "visible" property so
+            # the host hides the row while ids stay stable across updates.
             for child in item.children:
-                if child.visible:
-                    child_layout = self._build_item(child, child_depth, names)
-                    children.append(GLib.Variant("(ia{sv}av)", child_layout))
+                child_layout = self._build_item(child, child_depth, names)
+                children.append(GLib.Variant("(ia{sv}av)", child_layout))
         return (item.item_id, props, children)
 
     def _props_variant(self, item: MenuItem, names: list[str]) -> dict[str, GLib.Variant]:

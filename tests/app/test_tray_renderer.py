@@ -1,4 +1,9 @@
-from sysbar.app.tray_renderer import TrayOptions, render_menu_metrics, render_tray_label
+from sysbar.app.tray_renderer import (
+    TrayOptions,
+    menu_metric_values,
+    render_menu_metrics,
+    render_tray_label,
+)
 from sysbar.services.system_monitor.snapshot import SystemSnapshot
 
 BAR = "bar"
@@ -128,3 +133,21 @@ def test_menu_metrics_preserve_declared_order() -> None:
     snap = SystemSnapshot(cpu_percent=10.0, power_watts=5.0)
     lines = render_menu_metrics(snap, TrayOptions(power=MENU, cpu=MENU))
     assert lines == ["CPU 10%", "5 W"]
+
+
+def test_menu_metric_values_maps_metric_id_to_line() -> None:
+    snap = SystemSnapshot(cpu_percent=23.0, battery_percent=99.0)
+    values = menu_metric_values(snap, TrayOptions(cpu=MENU, battery=MENU))
+    assert values == {"cpu": "CPU 23%", "battery": "BAT 99%"}
+
+
+def test_menu_metric_values_skips_bar_and_empty() -> None:
+    snap = SystemSnapshot(cpu_percent=23.0, gpu_percent=30.0, battery_percent=None)
+    values = menu_metric_values(snap, TrayOptions(cpu=BAR, gpu=MENU, battery=MENU))
+    assert values == {"gpu": "GPU 30%"}
+
+
+def test_menu_metric_values_follows_tray_metrics_order() -> None:
+    snap = SystemSnapshot(cpu_percent=10.0, power_watts=5.0)
+    values = menu_metric_values(snap, TrayOptions(power=MENU, cpu=MENU))
+    assert list(values.keys()) == ["cpu", "power"]

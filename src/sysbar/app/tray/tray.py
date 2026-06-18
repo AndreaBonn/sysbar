@@ -18,9 +18,13 @@ from .status_notifier import MENU_OBJECT_PATH, StatusNotifierItem  # noqa: E402
 class Tray:
     """High-level tray controller used by the application."""
 
-    def __init__(self, on_activate: Callable[[], None]) -> None:
+    def __init__(
+        self,
+        on_activate: Callable[[], None],
+        on_menu_about_to_show: Callable[[], bool] | None = None,
+    ) -> None:
         self._sni = StatusNotifierItem(TRAY_TITLE, TRAY_ICON_NAME, on_activate)
-        self._menu = DBusMenuServer(MENU_OBJECT_PATH)
+        self._menu = DBusMenuServer(MENU_OBJECT_PATH, on_about_to_show=on_menu_about_to_show)
 
     def register(self, connection: Gio.DBusConnection) -> None:
         """Export both objects and announce the item to the watcher."""

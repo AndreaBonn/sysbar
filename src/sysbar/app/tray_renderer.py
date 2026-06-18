@@ -54,14 +54,23 @@ def render_tray_label(snapshot: SystemSnapshot, options: TrayOptions) -> str:
 
 def render_menu_metrics(snapshot: SystemSnapshot, options: TrayOptions) -> list[str]:
     """Return one read-only line per ``menu`` metric that has data to show."""
-    lines: list[str] = []
+    return list(menu_metric_values(snapshot, options).values())
+
+
+def menu_metric_values(snapshot: SystemSnapshot, options: TrayOptions) -> dict[str, str]:
+    """Map each ``menu`` metric id to its formatted line, skipping empty ones.
+
+    Keys follow :data:`TRAY_METRICS` order so callers can fill fixed menu slots
+    deterministically.
+    """
+    values: dict[str, str] = {}
     for metric in TRAY_METRICS:
         if options.placement(metric) != PLACEMENT_MENU:
             continue
         segments = _metric_segments(snapshot, metric, options)
         if segments:
-            lines.append(_SEPARATOR.join(segments))
-    return lines
+            values[metric] = _SEPARATOR.join(segments)
+    return values
 
 
 def _metric_segments(snapshot: SystemSnapshot, metric: str, options: TrayOptions) -> list[str]:

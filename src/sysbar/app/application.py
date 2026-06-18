@@ -59,15 +59,10 @@ from ..services.uninstall.command_query import CommandPackageQuery  # noqa: E402
 from ..services.uninstall.package_remover import PkexecPackageRemover  # noqa: E402
 from ..services.uninstall.trash import GioTrash  # noqa: E402
 from ..services.update_service import UpdateInfo, UpdateService  # noqa: E402
-from .tray.menu_model import (  # noqa: E402
-    TOGGLE_OFF,
-    TOGGLE_ON,
-    TYPE_SEPARATOR,
-    MenuItem,
-    MenuModel,
-)
+from .tray.menu_builder import MenuActions, build_menu_items  # noqa: E402
+from .tray.menu_model import MenuModel  # noqa: E402
 from .tray.tray import Tray  # noqa: E402
-from .tray_renderer import TrayOptions, render_menu_metrics, render_tray_label  # noqa: E402
+from .tray_renderer import TrayOptions, menu_metric_values, render_tray_label  # noqa: E402
 
 _KEEP_AWAKE_PLAY = "▶"
 _SESSION_END_MESSAGES = {
@@ -246,7 +241,8 @@ class SysbarApplication(Adw.Application):
             return
         active = any(self.config.metric_placement(m) != PLACEMENT_OFF for m in TRAY_METRICS)
         self._monitor.set_tray_active(active)
-        self._refresh_tray()
+        self._refresh_tray_label()
+        self._refresh_menu()
 
     def _tray_options(self) -> TrayOptions:
         config = self.config
@@ -261,19 +257,24 @@ class SysbarApplication(Adw.Application):
         return any(self.config.metric_placement(m) == PLACEMENT_MENU for m in TRAY_METRICS)
 
     def _on_snapshot(self, _monitor: SystemMonitor, snapshot: SystemSnapshot) -> None:
-        self._refresh_tray()
+        self._refresh_tray_label()
         if self._panel is not None:
             self._panel.update_snapshot(snapshot)
-
-    def _refresh_tray(self) -> None:
-        """Refresh the label and, when metrics live in the dropdown, the menu."""
-        self._refresh_tray_label()
-        if self._has_menu_metrics():
-            self._refresh_menu()
 
     def _refresh_menu(self) -> None:
         if self._tray is not None:
             self._tray.set_menu(self._build_menu())
+
+    def _on_menu_about_to_show(self) -> bool:
+        """Rebuild the menu with fresh metric values just before it opens.
+
+        Returning ``True`` only when metrics live in the dropdown lets the host
+        re-read the layout on demand instead of us churning it on every sample.
+        """
+        if not self._has_menu_metrics():
+            return False
+        self._refresh_menu()
+        return True
 
     def _refresh_tray_label(self) -> None:
         if self._tray is None:
@@ -369,45 +370,35 @@ class SysbarApplication(Adw.Application):
         if connection is None:
             log.warning("no session bus connection; tray unavailable")
             return
-        self._tray = Tray(on_activate=self._open_panel)
+        self._tray = Tray(
+            on_activate=self._open_panel,
+            on_menu_about_to_show=self._on_menu_about_to_show,
+        )
         self._tray.register(connection)
         self._tray.set_menu(self._build_menu())
 
-    def _menu_metric_items(self) -> list[MenuItem]:
-        """Build the read-only metric rows shown at the top of the dropdown."""
+    def _menu_metric_values(self) -> dict[str, str]:
         if self._monitor is None or self._monitor.latest is None:
-            return []
-        lines = render_menu_metrics(self._monitor.latest, self._tray_options())
-        if not lines:
-            return []
-        items = [MenuItem(label=line, enabled=False) for line in lines]
-        items.append(MenuItem(item_type=TYPE_SEPARATOR))
-        return items
+            return {}
+        return menu_metric_values(self._monitor.latest, self._tray_options())
+
+    def _menu_actions(self) -> MenuActions:
+        return MenuActions(
+            toggle_keep_awake=self._toggle_keep_awake,
+            open_panel=self._open_panel,
+            open_shelf=self._open_shelf,
+            open_uninstaller=self._open_uninstaller,
+            open_settings=self._open_settings,
+            quit=self.quit,
+        )
 
     def _build_menu(self) -> MenuModel:
         keep_awake_on = self._keep_awake is not None and self._keep_awake.is_active
-        items = self._menu_metric_items()
-        items.extend(
-            [
-                MenuItem(
-                    label=_("Keep awake"),
-                    toggle_type="checkmark",
-                    toggle_state=TOGGLE_ON if keep_awake_on else TOGGLE_OFF,
-                    action=self._toggle_keep_awake,
-                ),
-                MenuItem(item_type=TYPE_SEPARATOR),
-                MenuItem(label=_("Open panel"), action=self._open_panel),
-            ]
-        )
-        if self.config.get_bool("shelf-enabled"):
-            items.append(MenuItem(label=_("Open shelf"), action=self._open_shelf))
-        items.extend(
-            [
-                MenuItem(label=_("Uninstall app…"), action=self._open_uninstaller),
-                MenuItem(label=_("Settings"), action=self._open_settings),
-                MenuItem(item_type=TYPE_SEPARATOR),
-                MenuItem(label=_("Quit"), action=self.quit),
-            ]
+        items = build_menu_items(
+            self._menu_metric_values(),
+            keep_awake_on=keep_awake_on,
+            shelf_enabled=self.config.get_bool("shelf-enabled"),
+            actions=self._menu_actions(),
         )
         return MenuModel(items)
 
