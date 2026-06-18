@@ -17,6 +17,9 @@ override_dh_auto_install:
 	python3 -m venv --system-site-packages $(VENV)
 	$(VENV)/bin/pip install --no-cache-dir --upgrade pip
 	$(VENV)/bin/pip install --no-cache-dir .
+	# pip writes console-script shebangs pointing at the staging path; rewrite
+	# them to the installed venv interpreter so they run after relocation.
+	sed -i '1s|^#!.*|#!/opt/sysbar/bin/python3|' $(VENV)/bin/sysbar
 	# Drop the venv's hardcoded build path; the wrapper sets it at runtime.
 	find $(VENV) -name '*.pyc' -delete
 
@@ -30,6 +33,11 @@ override_dh_auto_install:
 	install -d $(PKG)/usr/share/applications
 	install -m 0644 data/io.github.AndreaBonn.Sysbar.desktop \
 		$(PKG)/usr/share/applications/
+
+	# Start at login for every user; disable per-user from the desktop settings.
+	install -d $(PKG)/etc/xdg/autostart
+	install -m 0644 data/autostart/io.github.AndreaBonn.Sysbar.desktop \
+		$(PKG)/etc/xdg/autostart/
 
 	if [ -d data/locale ]; then \
 		cp -r data/locale/* $(PKG)/usr/share/locale/ 2>/dev/null || true; \

@@ -19,7 +19,7 @@ vengono implementate a milestone successive (vedi `doc_progetto/`).
 - Ubuntu/GNOME su sessione X11 (alcune feature richiedono X11; su Wayland l'app
   si avvia e disattiva quelle non supportate)
 - Python 3.11+
-- Binding GTK di sistema: `python3-gi`, `gir1.2-gtk-4.0`, `gir1.2-adwaita-1`,
+- Binding GTK di sistema: `python3-gi`, `gir1.2-gtk-4.0`, `gir1.2-adw-1`,
   `gir1.2-ayatanaappindicator3-0.1`, `gir1.2-wnck-3.0`
 - `uv` per la gestione dell'ambiente Python
 - `glib-compile-schemas` (pacchetto `libglib2.0-bin`) per compilare lo schema
@@ -27,7 +27,7 @@ vengono implementate a milestone successive (vedi `doc_progetto/`).
 Installazione dei binding di sistema su Ubuntu:
 
 ```bash
-sudo apt install python3-gi python3-gi-cairo gir1.2-gtk-4.0 gir1.2-adwaita-1 \
+sudo apt install python3-gi python3-gi-cairo gir1.2-gtk-4.0 gir1.2-adw-1 \
   gir1.2-ayatanaappindicator3-0.1 gir1.2-wnck-3.0 libglib2.0-bin
 ```
 
