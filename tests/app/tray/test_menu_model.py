@@ -25,7 +25,13 @@ def test_root_has_id_zero() -> None:
     assert model.root.item_id == ROOT_ID
 
 
-def test_ids_are_unique_and_contiguous() -> None:
+def test_ids_are_unique() -> None:
+    model = _sample_model()
+    ids = [item.item_id for item in (model.get(i) for i in range(6)) if item]
+    assert len(set(ids)) == len(ids)
+
+
+def test_ids_are_contiguous_from_zero() -> None:
     model = _sample_model()
     ids = [item.item_id for item in (model.get(i) for i in range(6)) if item]
     assert ids == [0, 1, 2, 3, 4, 5]

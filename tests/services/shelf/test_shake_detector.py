@@ -19,7 +19,7 @@ def test_small_moves_below_threshold_ignored() -> None:
     for i, dx in enumerate(signs):
         detected.append(detector.feed(2.0, i * 0.05))  # jitter, ignored
         detected.append(detector.feed(dx, i * 0.05 + 0.01))
-    assert detected.count(True) <= 1
+    assert True not in detected
 
 
 def test_rapid_reversals_within_window_trigger_shake() -> None:

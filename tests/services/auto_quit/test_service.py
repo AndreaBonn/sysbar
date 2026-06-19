@@ -177,8 +177,10 @@ def test_closing_unknown_window_is_ignored() -> None:
     assert scheduler.jobs == {}
 
 
-def test_closing_window_with_no_tracked_app_windows_is_safe() -> None:
-    # Defensive path: a window id maps to an app that has no live window set.
+def test_closing_window_whose_app_set_is_gone_is_safe() -> None:
+    # Defensive path inside handle_window_closed (`windows is None`): a window id
+    # still maps to an app whose live-window set was already dropped. No public
+    # API produces this de-synced state, so it is driven directly.
     service, _terminator, scheduler = _service()
     service._window_app[42] = "org.app"
     service.handle_window_closed(42)
@@ -186,7 +188,9 @@ def test_closing_window_with_no_tracked_app_windows_is_safe() -> None:
 
 
 def test_terminate_without_known_pid_does_nothing() -> None:
-    # Defensive path: the pid is gone by the time the grace timer fires.
+    # Defensive path inside _terminate: there is no public API to drop a pid once
+    # learned, so the only way the grace timer can fire with the pid already gone
+    # is exercised directly here. Asserting via the public terminator surface.
     service, terminator, scheduler = _service()
     service.handle_window_opened(1, "org.app", pid=4242)
     service.handle_window_closed(1)

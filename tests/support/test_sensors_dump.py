@@ -12,7 +12,9 @@ class _Reading:
     current: float
 
 
-def test_dump_includes_header() -> None:
+def test_dump_includes_header(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(psutil, "sensors_temperatures", lambda: {})
+    monkeypatch.setattr(psutil, "sensors_fans", lambda: {})
     report = run_sensors_dump()
     assert report.startswith("Sysbar sensors dump")
 
