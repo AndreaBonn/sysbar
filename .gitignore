@@ -1,5 +1,6 @@
 # Documentazione progetto (interna, non versionata)
 doc_progetto/
+docs/
 
 # Python
 __pycache__/
