@@ -104,10 +104,29 @@ packaging/    .deb e repository APT
 
 ## Installazione (.deb)
 
+### Per installare
+
+Scarica il pacchetto `.deb` dall'ultima release
+([github.com/AndreaBonn/sysbar/releases/latest](https://github.com/AndreaBonn/sysbar/releases/latest))
+e installalo con `apt`, che risolve in automatico i binding GTK di sistema:
+
+```bash
+sudo apt install ./sysbar_<versione>_all.deb
+```
+
 Il pacchetto installa un venv isolato in `/opt/sysbar` (con
 `--system-site-packages`, così riusa i binding GTK di sistema) e un wrapper
-`/usr/bin/sysbar`. Build del pacchetto da una macchina con `dpkg-dev` e
-`debhelper`:
+`/usr/bin/sysbar`. Avvia l'app dal menu applicazioni o con `sysbar`.
+
+Per disinstallare:
+
+```bash
+sudo apt remove sysbar
+```
+
+### Build del pacchetto (maintainer)
+
+Build da una macchina con `dpkg-dev` e `debhelper`:
 
 ```bash
 ./build.sh deb        # produce ../sysbar_<versione>_all.deb
