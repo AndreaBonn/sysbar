@@ -1,5 +1,5 @@
 from sysbar.app.tray.menu_builder import MenuActions, build_menu_items
-from sysbar.app.tray.menu_model import TOGGLE_OFF, TOGGLE_ON, TYPE_SEPARATOR
+from sysbar.app.tray.menu_model import TOGGLE_OFF, TOGGLE_ON, TYPE_SEPARATOR, MenuItem
 from sysbar.core.constants import TRAY_METRICS
 
 
@@ -18,7 +18,12 @@ def _actions() -> MenuActions:
     )
 
 
-def _build(metric_values=None, *, keep_awake_on=False, shelf_enabled=False):
+def _build(
+    metric_values: dict[str, str] | None = None,
+    *,
+    keep_awake_on: bool = False,
+    shelf_enabled: bool = False,
+) -> list[MenuItem]:
     return build_menu_items(
         metric_values or {},
         keep_awake_on=keep_awake_on,
