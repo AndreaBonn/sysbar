@@ -27,7 +27,9 @@ class WnckWindowSource:
         self._on_opened: WindowOpenedCallback | None = None
         self._on_closed: WindowClosedCallback | None = None
 
-    def subscribe(self, on_opened: WindowOpenedCallback, on_closed: WindowClosedCallback) -> None:
+    def subscribe(  # pragma: no cover - Wnck.Screen.get_default boundary (requires X11)
+        self, on_opened: WindowOpenedCallback, on_closed: WindowClosedCallback
+    ) -> None:
         self._on_opened = on_opened
         self._on_closed = on_closed
         screen = Wnck.Screen.get_default()

@@ -38,12 +38,12 @@ class ShakeMonitor:
         try:
             from Xlib import display
 
-            self._root = display.Display().screen().root
+            self._root = display.Display().screen().root  # pragma: no cover - requires X11
         except Exception as error:
             log.warning("shake monitor unavailable", extra={"error": str(error)})
             return False
-        self._timer = GLib.timeout_add(SHAKE_POLL_MS, self._tick)
-        return True
+        self._timer = GLib.timeout_add(SHAKE_POLL_MS, self._tick)  # pragma: no cover - requires X11
+        return True  # pragma: no cover - requires X11
 
     def stop(self) -> None:
         if self._timer:

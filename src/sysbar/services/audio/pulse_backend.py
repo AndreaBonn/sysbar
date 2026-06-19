@@ -24,7 +24,7 @@ _SINK_INPUT = "sink_input"
 class PulseAudioBackend:
     """Controls audio streams through ``pulsectl``."""
 
-    def __init__(self) -> None:
+    def __init__(self) -> None:  # pragma: no cover - pulsectl connection boundary
         import pulsectl
 
         self._pulsectl = pulsectl
@@ -36,11 +36,13 @@ class PulseAudioBackend:
     def list_sink_inputs(self) -> list[SinkInput]:
         return [self._to_sink_input(si) for si in self._pulse.sink_input_list()]
 
-    def set_volume(self, index: int, volume: float) -> None:
+    def set_volume(  # pragma: no cover - pulsectl connection boundary
+        self, index: int, volume: float
+    ) -> None:
         sink_input = self._pulse.sink_input_info(index)
         self._pulse.volume_set_all_chans(sink_input, volume)
 
-    def set_mute(self, index: int, muted: bool) -> None:
+    def set_mute(self, index: int, muted: bool) -> None:  # pragma: no cover - pulsectl boundary
         self._pulse.sink_input_mute(index, muted)
 
     def subscribe(self, callback: Callable[[], None]) -> None:
@@ -65,7 +67,7 @@ class PulseAudioBackend:
             corked=bool(raw.corked),
         )
 
-    def _listen(self) -> None:
+    def _listen(self) -> None:  # pragma: no cover - pulsectl event-loop boundary
         with self._pulsectl.Pulse(_EVENTS_CLIENT_NAME) as pulse:
             pulse.event_mask_set(_SINK_INPUT)
             pulse.event_callback_set(self._on_pulse_event)

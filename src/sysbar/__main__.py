@@ -44,5 +44,5 @@ def main(argv: list[str] | None = None) -> int:
     return int(SysbarApplication().run(None))
 
 
-if __name__ == "__main__":
+if __name__ == "__main__":  # pragma: no cover - CLI entrypoint
     sys.exit(main(sys.argv[1:]))

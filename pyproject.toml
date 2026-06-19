@@ -91,22 +91,10 @@ filterwarnings = ["error::DeprecationWarning"]
 omit = [
     "src/sysbar/ui/*",
     "src/sysbar/app/application.py",
-    "src/sysbar/app/tray/dbus_menu.py",
     "src/sysbar/app/tray/status_notifier.py",
     "src/sysbar/app/tray/tray.py",
-    "src/sysbar/services/system_monitor/adapters.py",
-    "src/sysbar/services/system_monitor/monitor.py",
     "src/sysbar/services/keep_awake/inhibitor.py",
-    "src/sysbar/services/keep_awake/scheduler.py",
-    "src/sysbar/services/audio/pulse_backend.py",
-    "src/sysbar/services/shelf/shake_monitor.py",
-    "src/sysbar/services/auto_quit/wnck_source.py",
-    "src/sysbar/services/auto_quit/os_terminator.py",
-    "src/sysbar/services/uninstall/command_query.py",
-    "src/sysbar/services/uninstall/package_remover.py",
-    "src/sysbar/services/uninstall/trash.py",
     "src/sysbar/services/notifier.py",
-    "src/sysbar/__main__.py",
 ]
 
 [tool.coverage.report]

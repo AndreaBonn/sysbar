@@ -31,16 +31,16 @@ class ProcfsReader:
     """Reads raw procfs files."""
 
     def read_stat(self) -> str:
-        return PROC_STAT.read_text()
+        return PROC_STAT.read_text()  # pragma: no cover - passthrough procfs read_text
 
     def read_meminfo(self) -> str:
-        return PROC_MEMINFO.read_text()
+        return PROC_MEMINFO.read_text()  # pragma: no cover - passthrough procfs read_text
 
     def read_uptime(self) -> str:
-        return PROC_UPTIME.read_text()
+        return PROC_UPTIME.read_text()  # pragma: no cover - passthrough procfs read_text
 
     def read_net_dev(self) -> str:
-        return PROC_NET_DEV.read_text()
+        return PROC_NET_DEV.read_text()  # pragma: no cover - passthrough procfs read_text
 
     def read_psi_memory(self) -> str | None:
         try:
