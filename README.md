@@ -173,6 +173,11 @@ The package installs an isolated virtual environment under `/opt/sysbar` (with
 `/usr/bin/sysbar` wrapper. It also registers a login autostart entry, which you
 can disable from the settings.
 
+On first launch an onboarding walks you through the features. You can re-run it
+and check the installed version from the About tab.
+
+![Settings: about and onboarding](./assets/screenshots/settings-about.png)
+
 ### From source (development)
 
 ```bash
@@ -190,7 +195,19 @@ against the local build directory.
 All runtime configuration lives in GSettings, schema
 `io.github.AndreaBonn.Sysbar`, path `/io/github/AndreaBonn/Sysbar/`. The keys are
 documented in `data/io.github.AndreaBonn.Sysbar.gschema.xml`. No secrets or
-environment variables are required in production.
+environment variables are required in production. Settings are grouped in a
+Preferences window with one tab per area.
+
+### General preferences
+
+Interface language, start at login and the optional update check.
+
+![Settings: general preferences](./assets/screenshots/settings-general.png)
+
+### Tray metric placement
+
+Each metric goes in the always-visible bar, the dropdown menu, or off; sampling
+interval, temperature unit and memory style are configured here too.
 
 ![Settings: tray metric placement](./assets/screenshots/settings-monitor.png)
 
