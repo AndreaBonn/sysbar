@@ -17,7 +17,7 @@ gi.require_version("Gio", "2.0")
 gi.require_version("GLib", "2.0")
 from gi.repository import Gio, GLib  # noqa: E402
 
-from .menu_model import MenuModel  # noqa: E402
+from .menu_model import ROOT_ID, MenuModel  # noqa: E402
 
 if TYPE_CHECKING:
     from .menu_model import MenuItem
@@ -147,18 +147,27 @@ class DBusMenuServer:
             self._on_event(*params.unpack())
             invocation.return_value(None)
         elif method == "AboutToShow":
-            invocation.return_value(GLib.Variant("(b)", (self._handle_about_to_show(),)))
+            (item_id,) = params.unpack()
+            invocation.return_value(GLib.Variant("(b)", (self._handle_about_to_show(item_id),)))
         else:
             invocation.return_error_literal(
                 Gio.dbus_error_quark(), Gio.DBusError.UNKNOWN_METHOD, method
             )
 
-    def _handle_about_to_show(self) -> bool:
+    def _handle_about_to_show(self, item_id: int) -> bool:
         """Let the app refresh live menu values before the host re-reads the layout.
 
         Returning ``True`` tells the host the layout must be re-fetched before it
         is displayed, which is how dropdown metrics stay current without polling.
+
+        Only the root popup triggers a refresh. A submenu open also fires
+        ``AboutToShow`` (with the submenu's id); refreshing there rebuilds the
+        whole menu and emits ``LayoutUpdated`` for the root, which cancels the
+        host's in-progress submenu open so it never expands. Submenu contents
+        stay current through ``ItemsPropertiesUpdated`` instead.
         """
+        if item_id != ROOT_ID:
+            return False
         if self._on_about_to_show is None:
             return False
         return bool(self._on_about_to_show())

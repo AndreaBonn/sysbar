@@ -8,7 +8,7 @@ gi.require_version("GLib", "2.0")
 from gi.repository import GLib  # noqa: E402
 
 from sysbar.app.tray.dbus_menu import DBusMenuServer, _to_variant  # noqa: E402
-from sysbar.app.tray.menu_model import MenuItem, MenuModel  # noqa: E402
+from sysbar.app.tray.menu_model import ROOT_ID, MenuItem, MenuModel  # noqa: E402
 
 GLibVariant = GLib.Variant
 
@@ -137,13 +137,13 @@ def test_props_variant_filters_by_names() -> None:
 
 def test_handle_about_to_show_returns_false_when_no_callback() -> None:
     server = DBusMenuServer(object_path="/MenuBar")
-    assert server._handle_about_to_show() is False
+    assert server._handle_about_to_show(ROOT_ID) is False
 
 
 def test_handle_about_to_show_returns_callback_result_as_bool() -> None:
     callback: Callable[[], bool] = lambda: True  # noqa: E731
     server = DBusMenuServer(object_path="/MenuBar", on_about_to_show=callback)
-    assert server._handle_about_to_show() is True
+    assert server._handle_about_to_show(ROOT_ID) is True
 
 
 def test_handle_about_to_show_coerces_truthy_result_to_bool() -> None:
@@ -152,8 +152,22 @@ def test_handle_about_to_show_coerces_truthy_result_to_bool() -> None:
     returns_int: Callable[[], int] = lambda: 1  # noqa: E731
     callback = cast("Callable[[], bool]", returns_int)
     server = DBusMenuServer(object_path="/MenuBar", on_about_to_show=callback)
-    result = server._handle_about_to_show()
+    result = server._handle_about_to_show(ROOT_ID)
     assert result is True
+
+
+def test_handle_about_to_show_submenu_skips_refresh() -> None:
+    # A submenu open must not trigger the full-menu refresh: doing so emits a
+    # root LayoutUpdated that cancels the host's in-progress submenu open.
+    calls: list[int] = []
+    callback: Callable[[], bool] = lambda: bool(calls.append(1)) or True  # noqa: E731
+    server = DBusMenuServer(object_path="/MenuBar", on_about_to_show=callback)
+    submenu_id = ROOT_ID + 1
+
+    result = server._handle_about_to_show(submenu_id)
+
+    assert result is False
+    assert calls == []
 
 
 def test_on_event_non_clicked_does_not_dispatch(mocker: MockerFixture) -> None:
