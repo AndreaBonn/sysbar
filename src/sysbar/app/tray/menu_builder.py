@@ -18,7 +18,7 @@ from __future__ import annotations
 from collections.abc import Callable
 from dataclasses import dataclass
 
-from ...core.constants import TRAY_METRICS
+from ...core.constants import AUTHOR_NAME, TRAY_METRICS
 from ...core.i18n import _
 from .menu_model import TOGGLE_OFF, TOGGLE_ON, TYPE_SEPARATOR, MenuItem
 
@@ -35,6 +35,7 @@ class MenuActions:
     open_shelf: Callable[[], None]
     open_uninstaller: Callable[[], None]
     open_settings: Callable[[], None]
+    open_github: Callable[[], None]
     quit: Callable[[], None]
 
 
@@ -116,6 +117,8 @@ def _action_rows(
         MenuItem(label=_("Settings"), action=actions.open_settings),
         MenuItem(item_type=TYPE_SEPARATOR),
         MenuItem(label=_("Quit"), action=actions.quit),
+        MenuItem(item_type=TYPE_SEPARATOR),
+        MenuItem(label=f"© {AUTHOR_NAME}", action=actions.open_github),
     ]
 
 

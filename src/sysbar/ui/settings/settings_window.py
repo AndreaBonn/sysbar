@@ -15,6 +15,7 @@ from ...core.config import Config  # noqa: E402
 from ...core.i18n import _  # noqa: E402
 from ...core.localization import install_language  # noqa: E402
 from ...services.autostart import AutostartManager  # noqa: E402
+from ..footer import build_footer  # noqa: E402
 from .widgets import ComboBinding, bound_spin, bound_switch  # noqa: E402
 
 _LANGUAGE_KEY = "app-language"
@@ -163,6 +164,10 @@ class SettingsWindow(Adw.PreferencesWindow):
         restart_row.set_activatable_widget(button)
         group.add(restart_row)
         page.add(group)
+
+        credit = Adw.PreferencesGroup()
+        credit.add(build_footer())
+        page.add(credit)
         return page
 
     def _on_autostart_toggled(self, row: Adw.SwitchRow, _param: object) -> None:

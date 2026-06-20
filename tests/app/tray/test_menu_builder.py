@@ -1,6 +1,6 @@
 from sysbar.app.tray.menu_builder import MenuActions, QuickToggleState, build_menu_items
 from sysbar.app.tray.menu_model import TOGGLE_OFF, TOGGLE_ON, TYPE_SEPARATOR, MenuItem
-from sysbar.core.constants import TRAY_METRICS
+from sysbar.core.constants import AUTHOR_NAME, TRAY_METRICS
 
 
 def _noop() -> None:
@@ -17,6 +17,7 @@ def _actions() -> MenuActions:
         open_shelf=_noop,
         open_uninstaller=_noop,
         open_settings=_noop,
+        open_github=_noop,
         quit=_noop,
     )
 
@@ -117,6 +118,7 @@ def test_action_rows_are_present_and_enabled() -> None:
         "Uninstall app…",
         "Settings",
         "Quit",
+        f"© {AUTHOR_NAME}",
     ]
 
 
@@ -159,6 +161,7 @@ def test_microphone_toggle_callback_wired() -> None:
         open_shelf=_noop,
         open_uninstaller=_noop,
         open_settings=_noop,
+        open_github=_noop,
         quit=_noop,
     )
     items = build_menu_items(
@@ -191,6 +194,7 @@ def test_action_callbacks_are_wired() -> None:
         open_shelf=lambda: calls.append("shelf"),
         open_uninstaller=lambda: calls.append("uninstall"),
         open_settings=lambda: calls.append("settings"),
+        open_github=lambda: calls.append("github"),
         quit=lambda: calls.append("quit"),
     )
     items = build_menu_items(
@@ -204,3 +208,31 @@ def test_action_callbacks_are_wired() -> None:
     assert quit_row.action is not None
     quit_row.action()
     assert calls == ["quit"]
+
+
+def test_github_credit_is_last_and_wired() -> None:
+    calls: list[str] = []
+    actions = MenuActions(
+        toggle_keep_awake=_noop,
+        toggle_microphone=_noop,
+        toggle_dnd=_noop,
+        toggle_dark_mode=_noop,
+        open_panel=_noop,
+        open_shelf=_noop,
+        open_uninstaller=_noop,
+        open_settings=_noop,
+        open_github=lambda: calls.append("github"),
+        quit=_noop,
+    )
+    items = build_menu_items(
+        {},
+        keep_awake_on=False,
+        shelf_enabled=False,
+        toggles=QuickToggleState(),
+        actions=actions,
+    )
+    credit = items[-1]
+    assert credit.label == f"© {AUTHOR_NAME}"
+    assert credit.action is not None
+    credit.action()
+    assert calls == ["github"]

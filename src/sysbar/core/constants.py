@@ -23,6 +23,10 @@ TRAY_TITLE = "Sysbar"
 GITHUB_OWNER = "AndreaBonn"
 GITHUB_REPO = "sysbar"
 
+# Author credit shown in window footers and at the bottom of the tray menu.
+AUTHOR_NAME = "Andrea Bonacci"
+AUTHOR_GITHUB_URL = f"https://github.com/{GITHUB_OWNER}"
+
 # Keep-awake durations, in minutes (0 = indefinite).
 ALLOWED_DURATIONS: tuple[int, ...] = (0, 15, 30, 60, 120, 240, 480)
 DEFAULT_DURATION_MINUTES = 0

@@ -20,6 +20,7 @@ from ...services.metrics import metric_format as mf  # noqa: E402
 from ...services.uninstall.app_uninstaller import AppUninstaller  # noqa: E402
 from ...services.uninstall.identifier import PackageQuery, identify  # noqa: E402
 from ...services.uninstall.models import AppTarget, Leftover  # noqa: E402
+from ..footer import build_footer  # noqa: E402
 
 _WINDOW_WIDTH = 560
 _WINDOW_HEIGHT = 620
@@ -77,6 +78,7 @@ class UninstallerWindow(Adw.Window):
         self._page.add(box)
 
         toolbar.set_content(self._page)
+        toolbar.add_bottom_bar(build_footer())
         self.set_content(toolbar)
         self._on_selected(self._dropdown, None)
 

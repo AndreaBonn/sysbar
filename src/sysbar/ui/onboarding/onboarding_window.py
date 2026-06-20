@@ -16,6 +16,7 @@ from gi.repository import Adw, Gtk  # noqa: E402
 
 from ...core.capabilities import Capabilities  # noqa: E402
 from ...core.i18n import _  # noqa: E402
+from ..footer import build_footer  # noqa: E402
 
 _CAPABILITY_LABELS = {
     "session_x11": "X11 session (auto-quit, shelf shake)",
@@ -65,6 +66,7 @@ class OnboardingWindow(Adw.Window):
         bottom = Gtk.Box(halign=Gtk.Align.CENTER, margin_top=8, margin_bottom=16)
         bottom.append(finish)
         toolbar.add_bottom_bar(bottom)
+        toolbar.add_bottom_bar(build_footer())
 
         self.set_content(toolbar)
 
