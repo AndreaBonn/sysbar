@@ -12,13 +12,16 @@ import threading
 from collections.abc import Callable
 from typing import Any
 
-from .models import SinkInput
+from .models import AudioDevice, SinkInput
 
 log = logging.getLogger(__name__)
 
 _CLIENT_NAME = "sysbar-mixer"
 _EVENTS_CLIENT_NAME = "sysbar-mixer-events"
 _SINK_INPUT = "sink_input"
+_MONITOR_SUFFIX = ".monitor"
+_KIND_SINK = "sink"
+_KIND_SOURCE = "source"
 
 
 class PulseAudioBackend:
@@ -35,6 +38,40 @@ class PulseAudioBackend:
 
     def list_sink_inputs(self) -> list[SinkInput]:
         return [self._to_sink_input(si) for si in self._pulse.sink_input_list()]
+
+    def list_sinks(self) -> list[AudioDevice]:  # pragma: no cover - pulsectl boundary
+        default = self._pulse.server_info().default_sink_name
+        return [self._to_device(sink, _KIND_SINK, default) for sink in self._pulse.sink_list()]
+
+    def list_sources(self) -> list[AudioDevice]:  # pragma: no cover - pulsectl boundary
+        default = self._pulse.server_info().default_source_name
+        return [
+            self._to_device(source, _KIND_SOURCE, default)
+            for source in self._pulse.source_list()
+            if not source.name.endswith(_MONITOR_SUFFIX)
+        ]
+
+    def set_default_sink(self, name: str) -> None:  # pragma: no cover - pulsectl boundary
+        self._pulse.default_set(self._pulse.get_sink_by_name(name))
+
+    def set_default_source(self, name: str) -> None:  # pragma: no cover - pulsectl boundary
+        self._pulse.default_set(self._pulse.get_source_by_name(name))
+
+    def move_sink_input(  # pragma: no cover - pulsectl boundary
+        self, input_index: int, sink_index: int
+    ) -> None:
+        self._pulse.sink_input_move(input_index, sink_index)
+
+    def _to_device(  # pragma: no cover - pulsectl boundary
+        self, raw: Any, kind: str, default_name: str
+    ) -> AudioDevice:
+        return AudioDevice(
+            index=raw.index,
+            name=raw.name,
+            description=raw.description or raw.name,
+            kind=kind,
+            is_default=raw.name == default_name,
+        )
 
     def set_volume(  # pragma: no cover - pulsectl connection boundary
         self, index: int, volume: float

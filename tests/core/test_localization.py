@@ -110,7 +110,7 @@ def test_ensure_catalogs_compiled_noop_without_msgfmt(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     po = _write_catalog(tmp_path)
-    monkeypatch.setattr(localization.shutil, "which", lambda _name: None)
+    monkeypatch.setattr("sysbar.core.localization.shutil.which", lambda _name: None)
     localization._ensure_catalogs_compiled(tmp_path)
     assert not po.with_suffix(".mo").exists()
 

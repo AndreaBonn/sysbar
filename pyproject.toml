@@ -84,6 +84,9 @@ ignore_missing_imports = true
 testpaths = ["tests"]
 addopts = "-q --cov=sysbar --cov-report=term-missing"
 filterwarnings = ["error::DeprecationWarning"]
+markers = [
+    "ui: window construction smoke tests; need a display (run under xvfb)",
+]
 
 [tool.coverage.run]
 # GUI windows and D-Bus glue are verified manually (no display in CI); coverage
@@ -98,6 +101,7 @@ omit = [
     "src/sysbar/services/quick_toggles/adapters.py",
     "src/sysbar/services/hotkey/portal.py",
     "src/sysbar/services/auto_quit/shell_extension_source.py",
+    "src/sysbar/services/clipboard/monitor.py",
 ]
 
 [tool.coverage.report]

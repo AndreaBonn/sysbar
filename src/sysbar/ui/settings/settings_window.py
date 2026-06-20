@@ -33,6 +33,14 @@ _TRAY_METRIC_ROWS = [
     ("battery", "menu-bar-battery-placement", "Battery"),
     ("power", "menu-bar-power-placement", "Power"),
 ]
+_GRAPH_ROWS = [
+    ("monitor-graph-cpu", "CPU"),
+    ("monitor-graph-gpu", "GPU"),
+    ("monitor-graph-memory", "Memory"),
+    ("monitor-graph-network", "Network"),
+    ("monitor-graph-power", "Power"),
+    ("monitor-graph-battery", "Battery"),
+]
 _DURATIONS = [(0, "Indefinite"), (15, "15 min"), (30, "30 min"), (60, "1 hour"), (120, "2 hours")]
 _BATTERY_LIMITS = [(0, "Never"), (5, "5%"), (10, "10%"), (15, "15%"), (20, "20%")]
 
@@ -85,6 +93,18 @@ class SettingsWindow(Adw.PreferencesWindow):
 
         group.add(bound_switch(self._settings, "auto-check-updates", "Check for updates"))
         page.add(group)
+
+        shortcuts = Adw.PreferencesGroup(
+            title=_("Global shortcuts"),
+            description=_("Assign the keys from your desktop's keyboard settings"),
+        )
+        shortcuts.add(bound_switch(self._settings, "hotkey-enabled", "Toggle keep awake"))
+        shortcuts.add(bound_switch(self._settings, "hotkey-shelf-enabled", "Open shelf"))
+        shortcuts.add(bound_switch(self._settings, "hotkey-clipboard-enabled", "Open clipboard"))
+        shortcuts.add(
+            bound_switch(self._settings, "hotkey-focus-scene-enabled", "Toggle Focus scene")
+        )
+        page.add(shortcuts)
         return page
 
     def _monitor_page(self) -> Adw.PreferencesPage:
@@ -109,6 +129,14 @@ class SettingsWindow(Adw.PreferencesWindow):
         options.add(self._combo("temperature-unit", "Temperature", _TEMPERATURE_UNITS, False))
         options.add(self._combo("menu-bar-memory-style", "Memory style", _MEMORY_STYLES, False))
         page.add(options)
+
+        graphs = Adw.PreferencesGroup(
+            title=_("History graphs"),
+            description=_("Show a sparkline of recent values next to each metric"),
+        )
+        for key, title in _GRAPH_ROWS:
+            graphs.add(bound_switch(self._settings, key, title))
+        page.add(graphs)
         return page
 
     def _alerts_page(self) -> Adw.PreferencesPage:
@@ -134,7 +162,6 @@ class SettingsWindow(Adw.PreferencesWindow):
         group = Adw.PreferencesGroup(title=_("Keep Awake"))
         group.add(self._combo("default-duration-minutes", "Default duration", _DURATIONS, True))
         group.add(self._combo("battery-limit-percent", "Stop below battery", _BATTERY_LIMITS, True))
-        group.add(bound_switch(self._settings, "hotkey-enabled", "Global hotkey"))
         group.add(bound_switch(self._settings, "show-countdown", "Show countdown in tray"))
         group.add(bound_switch(self._settings, "clamshell-preferred", "Keep awake with lid closed"))
         page.add(group)
@@ -149,6 +176,7 @@ class SettingsWindow(Adw.PreferencesWindow):
         group.add(bound_switch(self._settings, "auto-quit-enabled", "Auto-quit closed apps"))
         group.add(bound_switch(self._settings, "shelf-enabled", "Shelf"))
         group.add(bound_switch(self._settings, "shelf-shake-to-open", "Shelf: shake to open"))
+        group.add(bound_switch(self._settings, "clipboard-enabled", "Clipboard history"))
         page.add(group)
         return page
 

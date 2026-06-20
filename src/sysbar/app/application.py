@@ -17,13 +17,14 @@ import gi
 gi.require_version("Gtk", "4.0")
 gi.require_version("Adw", "1")
 
-from gi.repository import Adw, Gio, GLib  # noqa: E402
+from gi.repository import Adw, Gdk, Gio, GLib  # noqa: E402
 
 from ..core.capabilities import (  # noqa: E402
     GLOBAL_SHORTCUTS,
     GNOME_DESKTOP,
     PIPEWIRE_PULSE,
     POLKIT,
+    PROC_NET_STATS,
     SESSION_X11,
     WAYLAND_WINDOW_SOURCE,
     Capabilities,
@@ -34,19 +35,31 @@ from ..core.constants import (  # noqa: E402
     AUTHOR_GITHUB_URL,
     AUTO_QUIT_SYSTEM_WHITELIST,
     CAPABILITY_REFRESH_INTERVAL_SECONDS,
+    CLIPBOARD_DIR,
+    CLIPBOARD_SHORTCUT_DESCRIPTION,
+    CLIPBOARD_SHORTCUT_ID,
     CURRENT_FEATURE_SET,
+    FOCUS_SCENE_SHORTCUT_DESCRIPTION,
+    FOCUS_SCENE_SHORTCUT_ID,
     GNOME_INTERFACE_SCHEMA,
     GNOME_NOTIFICATIONS_SCHEMA,
+    GRAPH_METRICS,
     HARDWARE_OPTIONAL_METRICS,
+    KEEP_AWAKE_SHORTCUT_DESCRIPTION,
+    KEEP_AWAKE_SHORTCUT_ID,
+    NET_PROCESS_COUNT,
     PANEL_PROCESS_COUNT,
     PLACEMENT_MENU,
     PLACEMENT_OFF,
     SHELF_DIR,
+    SHELF_SHORTCUT_DESCRIPTION,
+    SHELF_SHORTCUT_ID,
     TRAY_METRICS,
 )
 from ..core.i18n import _  # noqa: E402
 from ..core.localization import install_language  # noqa: E402
 from ..services.audio.app_volume_mixer import AppVolumeMixer  # noqa: E402
+from ..services.audio.device_switcher import DeviceSwitcher  # noqa: E402
 from ..services.audio.pulse_backend import PulseAudioBackend  # noqa: E402
 from ..services.auto_quit.os_terminator import OsTerminator  # noqa: E402
 from ..services.auto_quit.ports import WindowSource  # noqa: E402
@@ -57,7 +70,9 @@ from ..services.auto_quit.source_selection import (  # noqa: E402
     choose_window_source,
 )
 from ..services.autostart import AutostartManager  # noqa: E402
-from ..services.hotkey.manager import HotkeyManager  # noqa: E402
+from ..services.clipboard.monitor import ClipboardMonitor  # noqa: E402
+from ..services.clipboard.service import ClipboardService  # noqa: E402
+from ..services.hotkey.manager import HotkeyBinding, HotkeyManager  # noqa: E402
 from ..services.keep_awake.inhibitor import SystemInhibitor  # noqa: E402
 from ..services.keep_awake.manager import KeepAwakeManager  # noqa: E402
 from ..services.keep_awake.ports import EndReason  # noqa: E402
@@ -73,11 +88,20 @@ from ..services.quick_toggles.desktop_toggles import (  # noqa: E402
     DoNotDisturbToggle,
 )
 from ..services.quick_toggles.microphone import MicrophoneToggle  # noqa: E402
+from ..services.scenes.adapters import CallbackSceneApplier, ConfigSceneWriter  # noqa: E402
+from ..services.scenes.models import SCENE_FOCUS  # noqa: E402
+from ..services.scenes.service import SceneService  # noqa: E402
 from ..services.shelf.shake_monitor import ShakeMonitor  # noqa: E402
 from ..services.shelf.shelf_service import ShelfService  # noqa: E402
 from ..services.system_monitor.adapters import SysfsPowerReader  # noqa: E402
 from ..services.system_monitor.alerting import AlertEngine, AlertThresholds  # noqa: E402
+from ..services.system_monitor.history import MetricHistory  # noqa: E402
 from ..services.system_monitor.monitor import SystemMonitor  # noqa: E402
+from ..services.system_monitor.net_per_process import (  # noqa: E402
+    NetRateTracker,
+    SsNetSampler,
+    top_by_throughput,
+)
 from ..services.system_monitor.processes import ProcessUsageService  # noqa: E402
 from ..services.system_monitor.snapshot import SystemSnapshot  # noqa: E402
 from ..services.system_monitor.termination import ProcessTerminationService  # noqa: E402
@@ -86,7 +110,12 @@ from ..services.uninstall.command_query import CommandPackageQuery  # noqa: E402
 from ..services.uninstall.package_remover import PkexecPackageRemover  # noqa: E402
 from ..services.uninstall.trash import GioTrash  # noqa: E402
 from ..services.update_service import UpdateInfo, UpdateService  # noqa: E402
-from .tray.menu_builder import MenuActions, QuickToggleState, build_menu_items  # noqa: E402
+from .tray.menu_builder import (  # noqa: E402
+    MenuActions,
+    QuickToggleState,
+    SceneMenuEntry,
+    build_menu_items,
+)
 from .tray.menu_model import MenuModel  # noqa: E402
 from .tray.tray import Tray  # noqa: E402
 from .tray_renderer import (  # noqa: E402
@@ -117,17 +146,25 @@ class SysbarApplication(Adw.Application):
         self._panel: Adw.Window | None = None
         self._settings_window: Adw.PreferencesWindow | None = None
         self._monitor: SystemMonitor | None = None
+        self._history = MetricHistory()
         self._alert_engine: AlertEngine | None = None
         self._process_usage = ProcessUsageService()
+        self._net_tracker = NetRateTracker()
+        self._net_sampler: SsNetSampler | None = None
         self._process_killer = ProcessTerminationService(OsTerminator(), GLibScheduler())
         self._keep_awake: KeepAwakeManager | None = None
         self._mixer: AppVolumeMixer | None = None
+        self._device_switcher: DeviceSwitcher | None = None
+        self._scenes: SceneService | None = None
         self._microphone: MicrophoneToggle | None = None
         self._dnd: DoNotDisturbToggle | None = None
         self._dark_mode: ColorSchemeToggle | None = None
         self._shelf: ShelfService | None = None
         self._shelf_window: Adw.Window | None = None
         self._shake_monitor: ShakeMonitor | None = None
+        self._clipboard: ClipboardService | None = None
+        self._clipboard_window: Adw.Window | None = None
+        self._clipboard_monitor: ClipboardMonitor | None = None
         self._auto_quit: AutoQuitService | None = None
         self._hotkey: HotkeyManager | None = None
         self._uninstaller: AppUninstaller | None = None
@@ -151,7 +188,9 @@ class SysbarApplication(Adw.Application):
         self._setup_hotkey()
         self._setup_mixer()
         self._setup_quick_toggles()
+        self._setup_scenes()
         self._reconcile_shelf()
+        self._reconcile_clipboard()
         self._setup_auto_quit()
         self._setup_uninstaller()
         self._setup_update_check()
@@ -162,6 +201,8 @@ class SysbarApplication(Adw.Application):
         self._monitor = SystemMonitor(self.config)
         self._monitor.connect("snapshot-updated", self._on_snapshot)
         self.config.settings.connect("changed", self._on_settings_changed)
+        if self._capabilities.has(PROC_NET_STATS):
+            self._net_sampler = SsNetSampler()
         self._update_tray_active()
 
     def _setup_alerting(self) -> None:
@@ -204,6 +245,7 @@ class SysbarApplication(Adw.Application):
             return
         self._mixer = AppVolumeMixer(backend, self.config)
         self._mixer.start()
+        self._device_switcher = DeviceSwitcher(backend)
 
     def _setup_quick_toggles(self) -> None:
         if self._capabilities.has(PIPEWIRE_PULSE):
@@ -228,6 +270,56 @@ class SysbarApplication(Adw.Application):
 
     def _has_quick_toggles(self) -> bool:
         return any((self._microphone, self._dnd, self._dark_mode))
+
+    def _setup_scenes(self) -> None:
+        applier = CallbackSceneApplier(
+            keep_awake=self._scene_set_keep_awake,
+            do_not_disturb=self._scene_set_dnd,
+            microphone_muted=self._scene_set_mic,
+        )
+        self._scenes = SceneService(
+            ConfigSceneWriter(self.config),
+            applier,
+            active_id=self.config.get_string("active-scene"),
+        )
+        self._scenes.connect("changed", lambda _s: self._refresh_menu())
+
+    def _scene_set_keep_awake(self, on: bool) -> None:
+        if self._keep_awake is not None and self._keep_awake.is_active != on:
+            self._toggle_keep_awake()
+
+    def _scene_set_dnd(self, on: bool) -> None:
+        if self._dnd is not None and self._dnd.is_active() != on:
+            self._dnd.toggle()
+
+    def _scene_set_mic(self, on: bool) -> None:
+        if self._microphone is not None and self._microphone.is_muted() != on:
+            self._microphone.toggle()
+
+    def _activate_scene(self, scene_id: str) -> None:
+        if self._scenes is not None:
+            self._scenes.activate(scene_id)
+
+    def _clear_scene(self) -> None:
+        if self._scenes is not None:
+            self._scenes.clear()
+
+    def _toggle_focus_scene(self) -> None:
+        if self._scenes is None:
+            return
+        if self._scenes.active_id == SCENE_FOCUS:
+            self._scenes.clear()
+        else:
+            self._scenes.activate(SCENE_FOCUS)
+
+    def _scene_menu_entries(self) -> tuple[SceneMenuEntry, ...]:
+        if self._scenes is None:
+            return ()
+        active = self._scenes.active_id
+        return tuple(
+            SceneMenuEntry(id=scene.id, name=scene.name, active=scene.id == active)
+            for scene in self._scenes.scenes
+        )
 
     def _toggle_microphone(self) -> None:
         if self._microphone is not None:
@@ -290,12 +382,36 @@ class SysbarApplication(Adw.Application):
         except Exception as error:
             log.warning("global shortcuts unavailable", extra={"error": str(error)})
             return
-        self._hotkey = HotkeyManager(
-            shortcuts,
-            on_trigger=self._toggle_keep_awake,
-            enabled=lambda: self.config.get_bool("hotkey-enabled"),
-        )
+        self._hotkey = HotkeyManager(shortcuts, self._hotkey_bindings())
         self._hotkey.start()
+
+    def _hotkey_bindings(self) -> list[HotkeyBinding]:
+        return [
+            HotkeyBinding(
+                KEEP_AWAKE_SHORTCUT_ID,
+                KEEP_AWAKE_SHORTCUT_DESCRIPTION,
+                self._toggle_keep_awake,
+                lambda: self.config.get_bool("hotkey-enabled"),
+            ),
+            HotkeyBinding(
+                SHELF_SHORTCUT_ID,
+                SHELF_SHORTCUT_DESCRIPTION,
+                self._open_shelf,
+                lambda: self.config.get_bool("hotkey-shelf-enabled"),
+            ),
+            HotkeyBinding(
+                CLIPBOARD_SHORTCUT_ID,
+                CLIPBOARD_SHORTCUT_DESCRIPTION,
+                self._open_clipboard,
+                lambda: self.config.get_bool("hotkey-clipboard-enabled"),
+            ),
+            HotkeyBinding(
+                FOCUS_SCENE_SHORTCUT_ID,
+                FOCUS_SCENE_SHORTCUT_DESCRIPTION,
+                self._toggle_focus_scene,
+                lambda: self.config.get_bool("hotkey-focus-scene-enabled"),
+            ),
+        ]
 
     def _setup_update_check(self) -> None:
         if not self.config.get_bool("auto-check-updates"):
@@ -375,6 +491,42 @@ class SysbarApplication(Adw.Application):
         self._shelf_window = None
         return False
 
+    def _reconcile_clipboard(self) -> None:
+        enabled = self.config.get_bool("clipboard-enabled")
+        if enabled and self._clipboard is None:
+            self._clipboard = ClipboardService(CLIPBOARD_DIR)
+            self._clipboard.load()
+            monitor = ClipboardMonitor(on_text=self._on_clipboard_text)
+            if monitor.start():
+                self._clipboard_monitor = monitor
+        if self._tray is not None:
+            self._tray.set_menu(self._build_menu())
+
+    def _open_clipboard(self) -> None:
+        if self._clipboard is None:
+            self._clipboard = ClipboardService(CLIPBOARD_DIR)
+            self._clipboard.load()
+        from ..ui.clipboard.clipboard_window import ClipboardWindow
+
+        if self._clipboard_window is None:
+            self._clipboard_window = ClipboardWindow(self._clipboard, self._copy_to_clipboard)
+            self._clipboard_window.connect("close-request", self._on_clipboard_closed)
+        self._clipboard_window.present()
+
+    def _on_clipboard_text(self, text: str) -> None:
+        if self._clipboard is not None:
+            self._clipboard.capture(text)
+
+    def _copy_to_clipboard(self, text: str) -> None:
+        """Put a history entry back on the system clipboard."""
+        display = Gdk.Display.get_default()
+        if display is not None:
+            display.get_clipboard().set(text)
+
+    def _on_clipboard_closed(self, _window: Adw.Window) -> bool:
+        self._clipboard_window = None
+        return False
+
     def _update_tray_active(self) -> None:
         if self._monitor is None:
             return
@@ -397,10 +549,28 @@ class SysbarApplication(Adw.Application):
 
     def _on_snapshot(self, _monitor: SystemMonitor, snapshot: SystemSnapshot) -> None:
         self._refresh_tray_label()
+        self._history.record(snapshot)
         self._evaluate_alerts(snapshot)
         if self._panel is not None:
             self._panel.update_snapshot(snapshot)
+            self._panel.update_history(self._history)
             self._panel.update_processes(self._process_usage.top_cpu(PANEL_PROCESS_COUNT))
+            self._update_net_processes()
+
+    def _update_net_processes(self) -> None:
+        """Refresh the panel's per-process network rows from a fresh ``ss`` read."""
+        if self._panel is None or self._net_sampler is None:
+            return
+        rates = self._net_tracker.update(
+            self._net_sampler.sample(), self.config.monitor_interval_seconds
+        )
+        self._panel.update_net_processes(top_by_throughput(rates, NET_PROCESS_COUNT))
+
+    def _graph_metrics(self) -> frozenset[str]:
+        """Metrics whose sparkline is enabled in settings (``monitor-graph-*``)."""
+        return frozenset(
+            metric for metric in GRAPH_METRICS if self.config.get_bool(f"monitor-graph-{metric}")
+        )
 
     def _refresh_menu(self) -> None:
         if self._tray is not None:
@@ -444,8 +614,13 @@ class SysbarApplication(Adw.Application):
         self._update_tray_active()
         if key.startswith("shelf-"):
             self._reconcile_shelf()
+        if key.startswith("clipboard-"):
+            self._reconcile_clipboard()
         if key.startswith("alert-"):
             self._reconcile_alerting()
+        if key.startswith("monitor-graph-") and self._panel is not None:
+            self._panel.set_graph_metrics(self._graph_metrics())
+            self._panel.update_history(self._history)
 
     def _on_keep_awake_changed(self, _manager: KeepAwakeManager) -> None:
         self._refresh_menu()
@@ -533,10 +708,13 @@ class SysbarApplication(Adw.Application):
             toggle_dark_mode=self._toggle_dark_mode,
             open_panel=self._open_panel,
             open_shelf=self._open_shelf,
+            open_clipboard=self._open_clipboard,
             open_uninstaller=self._open_uninstaller,
             open_settings=self._open_settings,
             open_github=self._open_github,
             quit=self.quit,
+            activate_scene=self._activate_scene,
+            clear_scene=self._clear_scene,
         )
 
     def _build_menu(self) -> MenuModel:
@@ -545,8 +723,10 @@ class SysbarApplication(Adw.Application):
             self._menu_metric_values(),
             keep_awake_on=keep_awake_on,
             shelf_enabled=self.config.get_bool("shelf-enabled"),
+            clipboard_enabled=self.config.get_bool("clipboard-enabled"),
             toggles=self._quick_toggle_state(),
             actions=self._menu_actions(),
+            scenes=self._scene_menu_entries(),
         )
         return MenuModel(items)
 
@@ -561,13 +741,20 @@ class SysbarApplication(Adw.Application):
                 self._panel.bind_mixer(self._mixer)
             else:
                 self._panel.set_mixer_unavailable()
+            if self._device_switcher is not None:
+                self._panel.bind_devices(self._device_switcher)
         self._panel.set_temperature_unit(self.config.temperature_unit)
         self._panel.set_show_fans(self.config.get_bool("monitor-show-fan-control-beta"))
+        self._panel.set_graph_metrics(self._graph_metrics())
+        if self._device_switcher is not None:
+            self._device_switcher.refresh()
         if self._monitor is not None:
             self._monitor.set_panel_open(True)
             if self._monitor.latest is not None:
                 self._panel.update_snapshot(self._monitor.latest)
+                self._panel.update_history(self._history)
                 self._panel.update_processes(self._process_usage.top_cpu(PANEL_PROCESS_COUNT))
+                self._update_net_processes()
         self._panel.present()
 
     def _confirm_kill_process(self, pid: int, name: str) -> None:

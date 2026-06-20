@@ -45,6 +45,16 @@
       <summary>Global hotkey to toggle keep-awake</summary>
     </key>
 
+    <key name="hotkey-shelf-enabled" type="b">
+      <default>false</default>
+      <summary>Global hotkey to open the shelf</summary>
+    </key>
+
+    <key name="hotkey-clipboard-enabled" type="b">
+      <default>false</default>
+      <summary>Global hotkey to open the clipboard history</summary>
+    </key>
+
     <key name="show-countdown" type="b">
       <default>false</default>
       <summary>Show keep-awake countdown in the tray</summary>
@@ -83,6 +93,21 @@
     <key name="shelf-shake-to-open" type="b">
       <default>true</default>
       <summary>Open the shelf by shaking the pointer (X11 only)</summary>
+    </key>
+
+    <key name="clipboard-enabled" type="b">
+      <default>false</default>
+      <summary>Clipboard history</summary>
+    </key>
+
+    <key name="active-scene" type="s">
+      <default>''</default>
+      <summary>Currently active scene id; empty means none</summary>
+    </key>
+
+    <key name="hotkey-focus-scene-enabled" type="b">
+      <default>false</default>
+      <summary>Global hotkey to toggle the Focus scene</summary>
     </key>
 
     <!-- Legacy boolean tray keys (pre-placement). Kept for one-shot migration into

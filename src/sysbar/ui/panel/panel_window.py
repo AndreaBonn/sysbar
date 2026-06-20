@@ -18,16 +18,31 @@ from gi.repository import Adw, Gtk  # noqa: E402
 from ...core.constants import DEFAULT_TEMPERATURE_UNIT  # noqa: E402
 from ...core.i18n import _  # noqa: E402
 from ...services.audio.app_volume_mixer import AppVolumeMixer  # noqa: E402
+from ...services.audio.device_switcher import DeviceSwitcher  # noqa: E402
 from ...services.metrics import metric_format as mf  # noqa: E402
+from ...services.system_monitor.history import MetricHistory  # noqa: E402
+from ...services.system_monitor.net_per_process import ProcNetRate  # noqa: E402
 from ...services.system_monitor.processes import ProcessUsage  # noqa: E402
 from ...services.system_monitor.snapshot import SystemSnapshot  # noqa: E402
 from ..footer import build_footer  # noqa: E402
+from .device_section import DeviceSection  # noqa: E402
 from .mixer_section import MixerSection  # noqa: E402
+from .sparkline import Sparkline  # noqa: E402
 
 KillCallback = Callable[[int, str], None]
 
 _PANEL_WIDTH = 380
 _PANEL_HEIGHT = 560
+
+# Maps a metric row key to the graphable metric whose sparkline it carries.
+_ROW_SPARKLINE_METRIC = {
+    "cpu": "cpu",
+    "gpu": "gpu",
+    "memory": "memory",
+    "net_speed": "network",
+    "battery": "battery",
+    "power": "power",
+}
 
 
 class PanelWindow(Adw.Window):
@@ -38,11 +53,16 @@ class PanelWindow(Adw.Window):
         self.set_default_size(_PANEL_WIDTH, _PANEL_HEIGHT)
         self._temperature_unit = DEFAULT_TEMPERATURE_UNIT
         self._rows: dict[str, Adw.ActionRow] = {}
+        self._sparklines: dict[str, Sparkline] = {}
+        self._graph_enabled: frozenset[str] = frozenset()
+        self._device_section = DeviceSection()
         self._mixer_section = MixerSection()
         self._fan_group = Adw.PreferencesGroup(title=_("Fan Control (beta)"), visible=False)
         self._fan_rows: list[Adw.ActionRow] = []
         self._process_group = Adw.PreferencesGroup(title=_("Top processes"), visible=False)
         self._process_rows: list[Adw.ActionRow] = []
+        self._net_group = Adw.PreferencesGroup(title=_("Network by process"), visible=False)
+        self._net_rows: list[Adw.ActionRow] = []
         self._on_kill: KillCallback | None = None
         self._build_content()
 
@@ -54,6 +74,9 @@ class PanelWindow(Adw.Window):
 
     def bind_mixer(self, mixer: AppVolumeMixer) -> None:
         self._mixer_section.bind(mixer)
+
+    def bind_devices(self, switcher: DeviceSwitcher) -> None:
+        self._device_section.bind(switcher)
 
     def set_mixer_unavailable(self) -> None:
         self._mixer_section.set_unavailable()
@@ -88,6 +111,8 @@ class PanelWindow(Adw.Window):
         content.append(self._group(_("Power"), (("battery", "Battery"), ("power", "Power draw"))))
         content.append(self._fan_group)
         content.append(self._process_group)
+        content.append(self._net_group)
+        content.append(self._device_section)
         content.append(self._mixer_section)
 
         scroller = Gtk.ScrolledWindow(hexpand=True, vexpand=True)
@@ -101,8 +126,34 @@ class PanelWindow(Adw.Window):
         for key, label in rows:
             row = Adw.ActionRow(title=label, subtitle="--")
             self._rows[key] = row
+            self._attach_sparkline(key, row)
             group.add(row)
         return group
+
+    def _attach_sparkline(self, key: str, row: Adw.ActionRow) -> None:
+        metric = _ROW_SPARKLINE_METRIC.get(key)
+        if metric is None:
+            return
+        sparkline = Sparkline()
+        sparkline.set_visible(False)
+        row.add_suffix(sparkline)
+        self._sparklines[metric] = sparkline
+
+    def set_graph_metrics(self, enabled: frozenset[str]) -> None:
+        """Set which metrics show a sparkline; hides the rest immediately."""
+        self._graph_enabled = enabled
+        for metric, sparkline in self._sparklines.items():
+            if metric not in enabled:
+                sparkline.set_visible(False)
+
+    def update_history(self, history: MetricHistory) -> None:
+        """Refresh every enabled sparkline from the recorded history."""
+        for metric, sparkline in self._sparklines.items():
+            series = history.series(metric)
+            visible = metric in self._graph_enabled and len(series) >= 2
+            sparkline.set_visible(visible)
+            if visible:
+                sparkline.set_values(series)
 
     def update_snapshot(self, snapshot: SystemSnapshot) -> None:
         """Refresh all metric rows; rows without data are hidden."""
@@ -167,6 +218,18 @@ class PanelWindow(Adw.Window):
     def _on_kill_clicked(self, _button: Gtk.Button, pid: int, name: str) -> None:
         if self._on_kill is not None:
             self._on_kill(pid, name)
+
+    def update_net_processes(self, rates: list[ProcNetRate]) -> None:
+        """Rebuild the per-process network rows; hidden when there is no traffic."""
+        for row in self._net_rows:
+            self._net_group.remove(row)
+        self._net_rows.clear()
+        self._net_group.set_visible(bool(rates))
+        for rate in rates:
+            subtitle = f"↓{mf.format_rate(rate.rx_rate)} ↑{mf.format_rate(rate.tx_rate)}"
+            row = Adw.ActionRow(title=rate.name or _("Unknown"), subtitle=subtitle)
+            self._net_group.add(row)
+            self._net_rows.append(row)
 
     def _set(self, key: str, value: str | None) -> None:
         row = self._rows[key]

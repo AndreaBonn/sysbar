@@ -14,6 +14,7 @@ from sysbar.core.capabilities import (
     detect_sensors,
     detect_session_x11,
 )
+from sysbar.core.constants import GNOME_INTERFACE_SCHEMA
 
 
 def test_has_returns_false_before_refresh() -> None:
@@ -116,7 +117,7 @@ def test_gnome_desktop_true_when_both_schemas_present(monkeypatch: pytest.Monkey
 
 
 def test_gnome_desktop_false_when_a_schema_missing(monkeypatch: pytest.MonkeyPatch) -> None:
-    present = capabilities.GNOME_INTERFACE_SCHEMA
+    present = GNOME_INTERFACE_SCHEMA
     source = SimpleNamespace(
         lookup=lambda schema, _recursive: object() if schema == present else None
     )
@@ -141,6 +142,16 @@ def test_polkit_true_when_pkexec_present(monkeypatch: pytest.MonkeyPatch) -> Non
 def test_polkit_false_when_pkexec_absent(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr("sysbar.core.capabilities.shutil.which", lambda name: None)
     assert detect_polkit() is False
+
+
+def test_proc_net_stats_true_when_ss_present(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr("sysbar.core.capabilities.shutil.which", lambda name: "/usr/bin/ss")
+    assert capabilities.detect_proc_net_stats() is True
+
+
+def test_proc_net_stats_false_when_ss_absent(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr("sysbar.core.capabilities.shutil.which", lambda name: None)
+    assert capabilities.detect_proc_net_stats() is False
 
 
 def test_nvml_false_when_module_unavailable(monkeypatch: pytest.MonkeyPatch) -> None:

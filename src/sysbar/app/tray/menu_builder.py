@@ -23,6 +23,14 @@ from ...core.i18n import _
 from .menu_model import TOGGLE_OFF, TOGGLE_ON, TYPE_SEPARATOR, MenuItem
 
 
+def _ignore_scene(_scene_id: str) -> None:
+    """Default no-op for the scene activation callback."""
+
+
+def _ignore() -> None:
+    """Default no-op for the clear-scene callback."""
+
+
 @dataclass(frozen=True)
 class MenuActions:
     """Activation callbacks for the fixed action rows of the tray menu."""
@@ -33,10 +41,22 @@ class MenuActions:
     toggle_dark_mode: Callable[[], None]
     open_panel: Callable[[], None]
     open_shelf: Callable[[], None]
+    open_clipboard: Callable[[], None]
     open_uninstaller: Callable[[], None]
     open_settings: Callable[[], None]
     open_github: Callable[[], None]
     quit: Callable[[], None]
+    activate_scene: Callable[[str], None] = _ignore_scene
+    clear_scene: Callable[[], None] = _ignore
+
+
+@dataclass(frozen=True)
+class SceneMenuEntry:
+    """One scene shown in the tray Scenes submenu."""
+
+    id: str
+    name: str
+    active: bool
 
 
 @dataclass(frozen=True)
@@ -57,8 +77,10 @@ def build_menu_items(
     *,
     keep_awake_on: bool,
     shelf_enabled: bool,
+    clipboard_enabled: bool,
     toggles: QuickToggleState,
     actions: MenuActions,
+    scenes: tuple[SceneMenuEntry, ...] = (),
 ) -> list[MenuItem]:
     """Return the full, fixed menu tree with per-item visibility applied.
 
@@ -81,8 +103,10 @@ def build_menu_items(
         _action_rows(
             keep_awake_on=keep_awake_on,
             shelf_enabled=shelf_enabled,
+            clipboard_enabled=clipboard_enabled,
             toggles=toggles,
             actions=actions,
+            scenes=scenes,
         )
     )
     return items
@@ -100,8 +124,15 @@ def _metric_slots(metric_values: dict[str, str]) -> list[MenuItem]:
 
 
 def _action_rows(
-    *, keep_awake_on: bool, shelf_enabled: bool, toggles: QuickToggleState, actions: MenuActions
+    *,
+    keep_awake_on: bool,
+    shelf_enabled: bool,
+    clipboard_enabled: bool,
+    toggles: QuickToggleState,
+    actions: MenuActions,
+    scenes: tuple[SceneMenuEntry, ...],
 ) -> list[MenuItem]:
+    scene_rows = [_scenes_submenu(scenes=scenes, actions=actions)] if scenes else []
     return [
         MenuItem(
             label=_("Keep awake"),
@@ -110,9 +141,11 @@ def _action_rows(
             action=actions.toggle_keep_awake,
         ),
         *_quick_toggle_rows(toggles=toggles, actions=actions),
+        *scene_rows,
         MenuItem(item_type=TYPE_SEPARATOR),
         MenuItem(label=_("Open panel"), action=actions.open_panel),
         MenuItem(label=_("Open shelf"), action=actions.open_shelf, visible=shelf_enabled),
+        MenuItem(label=_("Clipboard"), action=actions.open_clipboard, visible=clipboard_enabled),
         MenuItem(label=_("Uninstall app…"), action=actions.open_uninstaller),
         MenuItem(label=_("Settings"), action=actions.open_settings),
         MenuItem(item_type=TYPE_SEPARATOR),
@@ -120,6 +153,26 @@ def _action_rows(
         MenuItem(item_type=TYPE_SEPARATOR),
         MenuItem(label=f"© {AUTHOR_NAME}", action=actions.open_github),
     ]
+
+
+def _scene_activator(actions: MenuActions, scene_id: str) -> Callable[[], None]:
+    return lambda: actions.activate_scene(scene_id)
+
+
+def _scenes_submenu(*, scenes: tuple[SceneMenuEntry, ...], actions: MenuActions) -> MenuItem:
+    """A submenu listing each scene plus a row to clear the active one."""
+    children = [
+        MenuItem(
+            label=entry.name,
+            toggle_type="checkmark",
+            toggle_state=TOGGLE_ON if entry.active else TOGGLE_OFF,
+            action=_scene_activator(actions, entry.id),
+        )
+        for entry in scenes
+    ]
+    children.append(MenuItem(item_type=TYPE_SEPARATOR))
+    children.append(MenuItem(label=_("None"), action=actions.clear_scene))
+    return MenuItem(label=_("Scenes"), visible=bool(scenes), children=children)
 
 
 def _quick_toggle_rows(*, toggles: QuickToggleState, actions: MenuActions) -> list[MenuItem]:

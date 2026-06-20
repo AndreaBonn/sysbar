@@ -11,7 +11,7 @@
 
 # Sysbar
 
-A single Ubuntu/GNOME system tray application that bundles six local utilities.
+A Ubuntu/GNOME system tray application that bundles local utilities behind one icon.
 
 ![License: GPLv3](https://img.shields.io/badge/license-GPLv3-blue)
 ![Python](https://img.shields.io/badge/python-3.11%2B-3776ab)
@@ -21,17 +21,26 @@ A single Ubuntu/GNOME system tray application that bundles six local utilities.
 [![Tests](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/AndreaBonn/sysbar/main/badges/test-badge.json)](https://github.com/AndreaBonn/sysbar/actions/workflows/ci.yml)
 [![Coverage](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/AndreaBonn/sysbar/main/badges/coverage-badge.json)](https://github.com/AndreaBonn/sysbar/actions/workflows/ci.yml)
 
-Sysbar puts six tools behind one tray icon: a system monitor, a per-application
-volume mixer, keep awake, auto-quit, an application uninstaller and a shelf.
-Everything runs locally: no account, no telemetry. Every feature is off until
-you turn it on, and degrades with an explicit message when a system dependency
-or session capability is missing.
+Sysbar puts tools behind one tray icon: a system monitor with historical
+sparklines, a per-application volume mixer with output/input device switching,
+a clipboard history manager, configurable global hotkeys, composable scenes, keep
+awake, auto-quit, an application uninstaller and a shelf. Everything runs
+locally: no account, no telemetry. Every feature is off until you turn it on,
+and degrades with an explicit message when a system dependency or session
+capability is missing.
 
 ![Sysbar tray menu with live metrics](./assets/screenshots/tray-menu.png)
 
 ## Table of contents
 
 - [Features](#features)
+  - [System monitor](#system-monitor)
+  - [Per-application volume mixer](#per-application-volume-mixer)
+  - [Keep awake](#keep-awake)
+  - [Auto-quit, uninstaller and shelf](#auto-quit-uninstaller-and-shelf)
+  - [Global hotkeys](#global-hotkeys)
+  - [Scenes](#scenes)
+  - [Clipboard history](#clipboard-history)
 - [Tech stack](#tech-stack)
 - [Architecture](#architecture)
 - [Repository structure](#repository-structure)
@@ -55,21 +64,29 @@ placed individually in the always-visible bar, in the dropdown menu, or hidden.
 Metrics for hardware not detected on the system (GPU, battery, power) are
 disabled with an explanatory note instead of showing nothing.
 
+The panel can show historical sparklines for each metric (CPU, GPU, memory,
+network, power, battery), toggled per metric in settings. A "network per process"
+section lists the processes consuming the most bandwidth; it uses `/proc` and `ss`
+and works on a best-effort basis - it requires `ss` to be present and may not
+reflect all traffic on all configurations.
+
 ![Panel: system and network metrics](./assets/screenshots/panel-system.png)
 
 ### Per-application volume mixer
 
 Independent volume and mute per running application, over PipeWire or
 PulseAudio. The mixer appears in the panel and updates as applications open and
-close audio streams.
+close audio streams. The panel also includes a quick selector for the default
+output and input device, so you can switch audio hardware without opening the
+system sound settings.
 
 ![Panel: power and per-app mixer](./assets/screenshots/panel-mixer.png)
 
 ### Keep awake
 
-Inhibits sleep, idle and lid suspension. Supports an optional duration, a global
-hotkey, a tray countdown and a battery threshold that ends the session when the
-charge drops too low.
+Inhibits sleep, idle and lid suspension. Supports an optional duration, a tray
+countdown and a battery threshold that ends the session when the charge drops too
+low. Can be toggled with a configurable global hotkey (see Global hotkeys below).
 
 ![Settings: keep awake](./assets/screenshots/settings-keep-awake.png)
 
@@ -83,6 +100,35 @@ charge drops too low.
   persistence across sessions and an optional shake-to-open gesture.
 
 ![Settings: feature toggles](./assets/screenshots/settings-features.png)
+
+### Global hotkeys
+
+Keyboard shortcuts can be assigned to several actions from the settings: toggle
+keep awake, open the shelf, open the clipboard history, and activate the Focus
+scene. Shortcuts are registered through the XDG GlobalShortcuts portal and work
+across the desktop, not just when Sysbar has focus.
+
+### Scenes
+
+Three composable scenes are available from a "Scenes" submenu in the tray. Each
+scene activates a combination of settings in one click:
+
+- **Focus** - enables keep awake, turns on do-not-disturb, mutes the microphone.
+- **Presentation** - enables keep awake, turns on do-not-disturb.
+- **Power saving** - disables keep awake, adjusts display settings to reduce
+  power use.
+
+Scenes can also be triggered by a global hotkey.
+
+### Clipboard history
+
+A clipboard manager that keeps a searchable history of copied text. Entries can
+be pinned to keep them at the top, and clicking any entry copies it back to the
+clipboard. The history is accessible from the tray menu and from a configurable
+global hotkey. The feature is off by default and must be enabled in settings.
+
+Note on privacy: the clipboard history is stored in plain text on disk. Do not
+enable it if you regularly copy sensitive data such as passwords or tokens.
 
 ## Tech stack
 

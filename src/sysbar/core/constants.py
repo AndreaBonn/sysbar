@@ -70,6 +70,14 @@ TRAY_METRICS: tuple[str, ...] = ("cpu", "gpu", "memory", "network", "battery", "
 # first sample), so neither is disabled.
 HARDWARE_OPTIONAL_METRICS: tuple[str, ...] = ("gpu", "battery", "power")
 
+# Metrics that carry an optional history sparkline in the panel. Each has a
+# "monitor-graph-<id>" GSettings key. Order matches the schema declaration.
+GRAPH_METRICS: tuple[str, ...] = ("cpu", "gpu", "memory", "network", "power", "battery")
+
+# Number of samples retained per metric for the panel sparklines (a ring buffer).
+# At the default 2s cadence this is four minutes of history.
+HISTORY_MAX_SAMPLES = 120
+
 TEMPERATURE_CELSIUS = "celsius"
 TEMPERATURE_FAHRENHEIT = "fahrenheit"
 ALLOWED_TEMPERATURE_UNITS: tuple[str, ...] = (TEMPERATURE_CELSIUS, TEMPERATURE_FAHRENHEIT)
@@ -128,6 +136,12 @@ TOP_PROCESS_COUNT = 5
 
 # Top-N processes listed in the panel, with a kill action.
 PANEL_PROCESS_COUNT = 5
+
+# Top-N network-heavy processes shown in the panel "Network by process" section.
+NET_PROCESS_COUNT = 5
+# Command used to read per-socket byte counters with their owning process.
+# -t/-u: TCP+UDP, -n: numeric, -p: process, -i: socket info (byte counters).
+SS_COMMAND: tuple[str, ...] = ("ss", "-tunpi")
 # Escalation delay from SIGTERM to SIGKILL for a user-requested process kill.
 PROCESS_KILL_TIMEOUT_SECONDS = 5.0
 
@@ -145,6 +159,12 @@ SHOW_BANNERS_KEY = "show-banners"
 GLOBAL_SHORTCUTS_PORTAL_NAME = "org.freedesktop.portal.Desktop"
 KEEP_AWAKE_SHORTCUT_ID = "toggle-keep-awake"
 KEEP_AWAKE_SHORTCUT_DESCRIPTION = "Toggle keep awake"
+SHELF_SHORTCUT_ID = "open-shelf"
+SHELF_SHORTCUT_DESCRIPTION = "Open shelf"
+CLIPBOARD_SHORTCUT_ID = "open-clipboard"
+CLIPBOARD_SHORTCUT_DESCRIPTION = "Open clipboard history"
+FOCUS_SCENE_SHORTCUT_ID = "toggle-focus-scene"
+FOCUS_SCENE_SHORTCUT_DESCRIPTION = "Toggle the Focus scene"
 
 # GNOME Shell extension that feeds window open/close events on Wayland, where
 # there is no libwnck. The extension owns this bus name and object.
@@ -168,6 +188,13 @@ ALERT_TEMPERATURE_MAX = 150
 DATA_HOME = Path.home() / ".local" / "share" / BINARY_NAME
 SHELF_DIR = DATA_HOME / "shelf"
 SHELF_MANIFEST = SHELF_DIR / "manifest.json"
+
+# Clipboard history: persisted manifest, ring-buffer size and label length.
+CLIPBOARD_DIR = DATA_HOME / "clipboard"
+CLIPBOARD_MAX_ENTRIES = 50
+CLIP_LABEL_MAX = 60
+# Prefixes that mark a clipboard entry as a URL rather than plain text.
+URL_PREFIXES: tuple[str, ...] = ("http://", "https://")
 
 # Shake-to-open detection (pointer direction reversals within a time window).
 SHAKE_MIN_MOVE_PIXELS = 8.0

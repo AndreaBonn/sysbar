@@ -15,6 +15,7 @@ def _actions() -> MenuActions:
         toggle_dark_mode=_noop,
         open_panel=_noop,
         open_shelf=_noop,
+        open_clipboard=_noop,
         open_uninstaller=_noop,
         open_settings=_noop,
         open_github=_noop,
@@ -27,12 +28,14 @@ def _build(
     *,
     keep_awake_on: bool = False,
     shelf_enabled: bool = False,
+    clipboard_enabled: bool = False,
     toggles: QuickToggleState | None = None,
 ) -> list[MenuItem]:
     return build_menu_items(
         metric_values or {},
         keep_awake_on=keep_awake_on,
         shelf_enabled=shelf_enabled,
+        clipboard_enabled=clipboard_enabled,
         toggles=toggles or QuickToggleState(),
         actions=_actions(),
     )
@@ -104,6 +107,79 @@ def test_open_shelf_visibility_follows_flag() -> None:
     assert shelf_hidden.visible is False
 
 
+def test_clipboard_visibility_follows_flag() -> None:
+    shown = next(i for i in _build(clipboard_enabled=True) if i.label == "Clipboard")
+    hidden = next(i for i in _build(clipboard_enabled=False) if i.label == "Clipboard")
+    assert shown.visible is True
+    assert hidden.visible is False
+
+
+def test_scenes_submenu_absent_without_scenes() -> None:
+    items = _build()
+    assert all(i.label != "Scenes" for i in items)
+
+
+def test_scenes_submenu_lists_entries_and_marks_active() -> None:
+    from sysbar.app.tray.menu_builder import SceneMenuEntry, build_menu_items
+    from sysbar.app.tray.menu_model import TOGGLE_ON
+
+    scenes = (
+        SceneMenuEntry(id="focus", name="Focus", active=True),
+        SceneMenuEntry(id="relax", name="Relax", active=False),
+    )
+    items = build_menu_items(
+        {},
+        keep_awake_on=False,
+        shelf_enabled=False,
+        clipboard_enabled=False,
+        toggles=QuickToggleState(),
+        actions=_actions(),
+        scenes=scenes,
+    )
+    submenu = next(i for i in items if i.label == "Scenes")
+    child_labels = [c.label for c in submenu.children if c.label]
+    assert child_labels == ["Focus", "Relax", "None"]
+    focus = next(c for c in submenu.children if c.label == "Focus")
+    assert focus.toggle_state == TOGGLE_ON
+
+
+def test_scenes_submenu_activate_and_clear_callbacks() -> None:
+    from sysbar.app.tray.menu_builder import MenuActions, SceneMenuEntry, build_menu_items
+
+    calls: list[str] = []
+    actions = MenuActions(
+        toggle_keep_awake=_noop,
+        toggle_microphone=_noop,
+        toggle_dnd=_noop,
+        toggle_dark_mode=_noop,
+        open_panel=_noop,
+        open_shelf=_noop,
+        open_clipboard=_noop,
+        open_uninstaller=_noop,
+        open_settings=_noop,
+        open_github=_noop,
+        quit=_noop,
+        activate_scene=lambda scene_id: calls.append(f"activate:{scene_id}"),
+        clear_scene=lambda: calls.append("clear"),
+    )
+    items = build_menu_items(
+        {},
+        keep_awake_on=False,
+        shelf_enabled=False,
+        clipboard_enabled=False,
+        toggles=QuickToggleState(),
+        actions=actions,
+        scenes=(SceneMenuEntry(id="focus", name="Focus", active=False),),
+    )
+    submenu = next(i for i in items if i.label == "Scenes")
+    focus = next(c for c in submenu.children if c.label == "Focus")
+    none_row = next(c for c in submenu.children if c.label == "None")
+    assert focus.action is not None and none_row.action is not None
+    focus.action()
+    none_row.action()
+    assert calls == ["activate:focus", "clear"]
+
+
 def test_action_rows_are_present_and_enabled() -> None:
     items = _build()
     labels = [i.label for i in items if i.item_type != TYPE_SEPARATOR and i.label]
@@ -115,6 +191,7 @@ def test_action_rows_are_present_and_enabled() -> None:
         "Dark mode",
         "Open panel",
         "Open shelf",
+        "Clipboard",
         "Uninstall app…",
         "Settings",
         "Quit",
@@ -159,6 +236,7 @@ def test_microphone_toggle_callback_wired() -> None:
         toggle_dark_mode=lambda: calls.append("dark"),
         open_panel=_noop,
         open_shelf=_noop,
+        open_clipboard=_noop,
         open_uninstaller=_noop,
         open_settings=_noop,
         open_github=_noop,
@@ -168,6 +246,7 @@ def test_microphone_toggle_callback_wired() -> None:
         {},
         keep_awake_on=False,
         shelf_enabled=False,
+        clipboard_enabled=False,
         toggles=QuickToggleState(mic_available=True),
         actions=actions,
     )
@@ -192,6 +271,7 @@ def test_action_callbacks_are_wired() -> None:
         toggle_dark_mode=_noop,
         open_panel=lambda: calls.append("panel"),
         open_shelf=lambda: calls.append("shelf"),
+        open_clipboard=_noop,
         open_uninstaller=lambda: calls.append("uninstall"),
         open_settings=lambda: calls.append("settings"),
         open_github=lambda: calls.append("github"),
@@ -201,6 +281,7 @@ def test_action_callbacks_are_wired() -> None:
         {},
         keep_awake_on=False,
         shelf_enabled=False,
+        clipboard_enabled=False,
         toggles=QuickToggleState(),
         actions=actions,
     )
@@ -219,6 +300,7 @@ def test_github_credit_is_last_and_wired() -> None:
         toggle_dark_mode=_noop,
         open_panel=_noop,
         open_shelf=_noop,
+        open_clipboard=_noop,
         open_uninstaller=_noop,
         open_settings=_noop,
         open_github=lambda: calls.append("github"),
@@ -228,6 +310,7 @@ def test_github_credit_is_last_and_wired() -> None:
         {},
         keep_awake_on=False,
         shelf_enabled=False,
+        clipboard_enabled=False,
         toggles=QuickToggleState(),
         actions=actions,
     )
