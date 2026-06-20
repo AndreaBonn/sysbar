@@ -50,6 +50,7 @@ from ..core.constants import (  # noqa: E402
 from ..core.i18n import _  # noqa: E402
 from ..core.localization import install_language  # noqa: E402
 from ..services.audio.app_volume_mixer import AppVolumeMixer  # noqa: E402
+from ..services.audio.device_switcher import DeviceSwitcher  # noqa: E402
 from ..services.audio.pulse_backend import PulseAudioBackend  # noqa: E402
 from ..services.auto_quit.os_terminator import OsTerminator  # noqa: E402
 from ..services.auto_quit.ports import WindowSource  # noqa: E402
@@ -134,6 +135,7 @@ class SysbarApplication(Adw.Application):
         self._process_killer = ProcessTerminationService(OsTerminator(), GLibScheduler())
         self._keep_awake: KeepAwakeManager | None = None
         self._mixer: AppVolumeMixer | None = None
+        self._device_switcher: DeviceSwitcher | None = None
         self._microphone: MicrophoneToggle | None = None
         self._dnd: DoNotDisturbToggle | None = None
         self._dark_mode: ColorSchemeToggle | None = None
@@ -218,6 +220,7 @@ class SysbarApplication(Adw.Application):
             return
         self._mixer = AppVolumeMixer(backend, self.config)
         self._mixer.start()
+        self._device_switcher = DeviceSwitcher(backend)
 
     def _setup_quick_toggles(self) -> None:
         if self._capabilities.has(PIPEWIRE_PULSE):
@@ -596,9 +599,13 @@ class SysbarApplication(Adw.Application):
                 self._panel.bind_mixer(self._mixer)
             else:
                 self._panel.set_mixer_unavailable()
+            if self._device_switcher is not None:
+                self._panel.bind_devices(self._device_switcher)
         self._panel.set_temperature_unit(self.config.temperature_unit)
         self._panel.set_show_fans(self.config.get_bool("monitor-show-fan-control-beta"))
         self._panel.set_graph_metrics(self._graph_metrics())
+        if self._device_switcher is not None:
+            self._device_switcher.refresh()
         if self._monitor is not None:
             self._monitor.set_panel_open(True)
             if self._monitor.latest is not None:

@@ -75,6 +75,32 @@ def test_panel_window_net_processes_update(gtk: object) -> None:
     window.destroy()
 
 
+def test_device_section_binds_and_populates(gtk: object) -> None:
+    from sysbar.services.audio.device_switcher import DeviceSwitcher
+    from sysbar.services.audio.models import AudioDevice, SinkInput
+    from sysbar.ui.panel.device_section import DeviceSection
+
+    class _Backend:
+        def list_sinks(self) -> list[AudioDevice]:
+            return [AudioDevice(0, "spk", "Speakers", "sink", True)]
+
+        def list_sources(self) -> list[AudioDevice]:
+            return [AudioDevice(1, "mic", "Microphone", "source", True)]
+
+        def list_sink_inputs(self) -> list[SinkInput]:
+            return []
+
+        def set_default_sink(self, name: str) -> None: ...
+        def set_default_source(self, name: str) -> None: ...
+        def move_sink_input(self, input_index: int, sink_index: int) -> None: ...
+
+    section = DeviceSection()
+    switcher = DeviceSwitcher(_Backend())
+    section.bind(switcher)
+    switcher.refresh()
+    assert section.get_visible()
+
+
 def test_settings_window_builds(gtk: object, compiled_schema: str) -> None:
     from sysbar.ui.settings.settings_window import SettingsWindow
 

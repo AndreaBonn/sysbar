@@ -25,6 +25,21 @@ class SinkInput:
 
 
 @dataclass(frozen=True)
+class AudioDevice:
+    """A selectable audio device: an output sink or an input source.
+
+    ``name`` is the stable PulseAudio/PipeWire identifier used to set the default
+    device; ``index`` is its runtime handle, used to move streams onto it.
+    """
+
+    index: int
+    name: str
+    description: str
+    kind: str
+    is_default: bool
+
+
+@dataclass(frozen=True)
 class MixerApp:
     """All audio streams of one application, controlled together."""
 

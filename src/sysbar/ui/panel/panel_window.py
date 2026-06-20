@@ -18,12 +18,14 @@ from gi.repository import Adw, Gtk  # noqa: E402
 from ...core.constants import DEFAULT_TEMPERATURE_UNIT  # noqa: E402
 from ...core.i18n import _  # noqa: E402
 from ...services.audio.app_volume_mixer import AppVolumeMixer  # noqa: E402
+from ...services.audio.device_switcher import DeviceSwitcher  # noqa: E402
 from ...services.metrics import metric_format as mf  # noqa: E402
 from ...services.system_monitor.history import MetricHistory  # noqa: E402
 from ...services.system_monitor.net_per_process import ProcNetRate  # noqa: E402
 from ...services.system_monitor.processes import ProcessUsage  # noqa: E402
 from ...services.system_monitor.snapshot import SystemSnapshot  # noqa: E402
 from ..footer import build_footer  # noqa: E402
+from .device_section import DeviceSection  # noqa: E402
 from .mixer_section import MixerSection  # noqa: E402
 from .sparkline import Sparkline  # noqa: E402
 
@@ -53,6 +55,7 @@ class PanelWindow(Adw.Window):
         self._rows: dict[str, Adw.ActionRow] = {}
         self._sparklines: dict[str, Sparkline] = {}
         self._graph_enabled: frozenset[str] = frozenset()
+        self._device_section = DeviceSection()
         self._mixer_section = MixerSection()
         self._fan_group = Adw.PreferencesGroup(title=_("Fan Control (beta)"), visible=False)
         self._fan_rows: list[Adw.ActionRow] = []
@@ -71,6 +74,9 @@ class PanelWindow(Adw.Window):
 
     def bind_mixer(self, mixer: AppVolumeMixer) -> None:
         self._mixer_section.bind(mixer)
+
+    def bind_devices(self, switcher: DeviceSwitcher) -> None:
+        self._device_section.bind(switcher)
 
     def set_mixer_unavailable(self) -> None:
         self._mixer_section.set_unavailable()
@@ -106,6 +112,7 @@ class PanelWindow(Adw.Window):
         content.append(self._fan_group)
         content.append(self._process_group)
         content.append(self._net_group)
+        content.append(self._device_section)
         content.append(self._mixer_section)
 
         scroller = Gtk.ScrolledWindow(hexpand=True, vexpand=True)
