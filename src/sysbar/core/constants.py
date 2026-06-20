@@ -122,6 +122,17 @@ BATTERY_WATCHDOG_INTERVAL_SECONDS = 45
 # Default top-N processes shown for a given resource.
 TOP_PROCESS_COUNT = 5
 
+# System-monitor alert bounds. Percentages are clamped to [0, 100] (0 = the
+# alert is off); the sustained-CPU window and the temperature ceiling have their
+# own ranges. These cap user input read from GSettings.
+ALERT_PERCENT_MIN = 0
+ALERT_PERCENT_MAX = 100
+ALERT_CPU_SECONDS_MIN = 0
+ALERT_CPU_SECONDS_MAX = 3600
+DEFAULT_ALERT_CPU_SECONDS = 30
+ALERT_TEMPERATURE_MIN = 0
+ALERT_TEMPERATURE_MAX = 150
+
 # User data directory for shelf staging and manifest.
 DATA_HOME = Path.home() / ".local" / "share" / BINARY_NAME
 SHELF_DIR = DATA_HOME / "shelf"
@@ -143,3 +154,6 @@ POWER_SUPPLY_PATH = Path("/sys/class/power_supply")
 HWMON_PATH = Path("/sys/class/hwmon")
 DRM_PATH = Path("/sys/class/drm")
 RAPL_PATH = Path("/sys/class/powercap/intel-rapl")
+
+# Filesystem whose usage drives the disk metric and the disk-full alert.
+ROOT_FILESYSTEM_PATH = Path("/")

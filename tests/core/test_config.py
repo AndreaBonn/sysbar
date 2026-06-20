@@ -31,6 +31,26 @@ def test_invalid_stored_battery_limit_is_sanitized_on_read(config: Config) -> No
     assert config.battery_limit_percent == 10
 
 
+def test_alert_defaults_are_disabled(config: Config) -> None:
+    assert config.alert_enabled is False
+    assert config.alert_cpu_percent == 0
+    assert config.alert_cpu_seconds == 30
+    assert config.alert_memory_percent == 0
+    assert config.alert_disk_percent == 0
+    assert config.alert_temperature_celsius == 0
+    assert config.alert_battery_percent == 0
+
+
+def test_alert_percent_is_clamped_on_read(config: Config) -> None:
+    config.settings.set_int("alert-cpu-percent", 150)
+    assert config.alert_cpu_percent == 100
+
+
+def test_alert_temperature_is_clamped_on_read(config: Config) -> None:
+    config.settings.set_int("alert-temperature-celsius", 999)
+    assert config.alert_temperature_celsius == 150
+
+
 def test_set_app_volume_persists_clamped(config: Config) -> None:
     config.set_app_volume("org.example.App", 3.0)
     assert config.get_app_volumes() == {"org.example.App": 2.0}

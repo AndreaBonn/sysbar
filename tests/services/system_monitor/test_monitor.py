@@ -122,6 +122,31 @@ def test_set_tray_active_idempotent_does_not_double_start(mocker: MockerFixture)
     timeout.assert_called_once()
 
 
+def test_alerting_active_starts_sampling_with_panel_closed(mocker: MockerFixture) -> None:
+    timeout = mocker.patch(
+        "sysbar.services.system_monitor.monitor.GLib.timeout_add_seconds", return_value=42
+    )
+    monitor = _monitor()
+
+    monitor.set_alerting_active(True)
+
+    timeout.assert_called_once()
+    assert monitor._timer_id == 42
+
+
+def test_alerting_active_keeps_timer_when_panel_and_tray_inactive(mocker: MockerFixture) -> None:
+    mocker.patch("sysbar.services.system_monitor.monitor.GLib.timeout_add_seconds", return_value=42)
+    remove = mocker.patch("sysbar.services.system_monitor.monitor.GLib.source_remove")
+    monitor = _monitor()
+    monitor.set_panel_open(True)
+    monitor.set_alerting_active(True)
+
+    monitor.set_panel_open(False)
+
+    remove.assert_not_called()
+    assert monitor._timer_id == 42
+
+
 def test_tick_samples_stores_latest_and_returns_true(mocker: MockerFixture) -> None:
     mocker.patch("sysbar.services.system_monitor.monitor.GLib.timeout_add_seconds")
     monitor = _monitor()

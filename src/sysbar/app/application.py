@@ -53,6 +53,7 @@ from ..services.notifier import Notifier  # noqa: E402
 from ..services.shelf.shake_monitor import ShakeMonitor  # noqa: E402
 from ..services.shelf.shelf_service import ShelfService  # noqa: E402
 from ..services.system_monitor.adapters import SysfsPowerReader  # noqa: E402
+from ..services.system_monitor.alerting import AlertEngine, AlertThresholds  # noqa: E402
 from ..services.system_monitor.monitor import SystemMonitor  # noqa: E402
 from ..services.system_monitor.snapshot import SystemSnapshot  # noqa: E402
 from ..services.uninstall.app_uninstaller import AppUninstaller  # noqa: E402
@@ -91,6 +92,7 @@ class SysbarApplication(Adw.Application):
         self._panel: Adw.Window | None = None
         self._settings_window: Adw.PreferencesWindow | None = None
         self._monitor: SystemMonitor | None = None
+        self._alert_engine: AlertEngine | None = None
         self._keep_awake: KeepAwakeManager | None = None
         self._mixer: AppVolumeMixer | None = None
         self._shelf: ShelfService | None = None
@@ -113,6 +115,7 @@ class SysbarApplication(Adw.Application):
         self._install_actions()
         self._setup_tray()
         self._setup_monitor()
+        self._setup_alerting()
         self._setup_keep_awake()
         self._setup_mixer()
         self._reconcile_shelf()
@@ -127,6 +130,31 @@ class SysbarApplication(Adw.Application):
         self._monitor.connect("snapshot-updated", self._on_snapshot)
         self.config.settings.connect("changed", self._on_settings_changed)
         self._update_tray_active()
+
+    def _setup_alerting(self) -> None:
+        self._alert_engine = AlertEngine(thresholds=self._alert_thresholds)
+        self._reconcile_alerting()
+
+    def _alert_thresholds(self) -> AlertThresholds:
+        config = self.config
+        return AlertThresholds(
+            cpu_percent=config.alert_cpu_percent,
+            cpu_seconds=config.alert_cpu_seconds,
+            memory_percent=config.alert_memory_percent,
+            disk_percent=config.alert_disk_percent,
+            temperature_celsius=config.alert_temperature_celsius,
+            battery_percent=config.alert_battery_percent,
+        )
+
+    def _reconcile_alerting(self) -> None:
+        if self._monitor is not None:
+            self._monitor.set_alerting_active(self.config.alert_enabled)
+
+    def _evaluate_alerts(self, snapshot: SystemSnapshot) -> None:
+        if self._alert_engine is None or self._notifier is None or not self.config.alert_enabled:
+            return
+        for alert in self._alert_engine.evaluate(snapshot):
+            self._notifier.notify(alert.title, alert.body, notification_id=f"alert-{alert.key}")
 
     def _setup_keep_awake(self) -> None:
         self._keep_awake = KeepAwakeManager(SystemInhibitor(), SysfsPowerReader(), GLibScheduler())
@@ -264,6 +292,7 @@ class SysbarApplication(Adw.Application):
 
     def _on_snapshot(self, _monitor: SystemMonitor, snapshot: SystemSnapshot) -> None:
         self._refresh_tray_label()
+        self._evaluate_alerts(snapshot)
         if self._panel is not None:
             self._panel.update_snapshot(snapshot)
 
@@ -309,6 +338,8 @@ class SysbarApplication(Adw.Application):
         self._update_tray_active()
         if key.startswith("shelf-"):
             self._reconcile_shelf()
+        if key.startswith("alert-"):
+            self._reconcile_alerting()
 
     def _on_keep_awake_changed(self, _manager: KeepAwakeManager) -> None:
         self._refresh_menu()

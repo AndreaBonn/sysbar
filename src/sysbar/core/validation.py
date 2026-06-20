@@ -8,6 +8,12 @@ configuration rules can be unit-tested in isolation.
 from __future__ import annotations
 
 from .constants import (
+    ALERT_CPU_SECONDS_MAX,
+    ALERT_CPU_SECONDS_MIN,
+    ALERT_PERCENT_MAX,
+    ALERT_PERCENT_MIN,
+    ALERT_TEMPERATURE_MAX,
+    ALERT_TEMPERATURE_MIN,
     ALLOWED_BATTERY_LIMITS,
     ALLOWED_DURATIONS,
     ALLOWED_INTERVALS,
@@ -58,6 +64,21 @@ def sanitized_placement(value: str) -> str:
 def sanitized_app_volume(value: float) -> float:
     """Clamp a per-application volume into the [0.0, 2.0] range."""
     return min(max(value, MIN_APP_VOLUME), MAX_APP_VOLUME)
+
+
+def sanitized_alert_percent(value: int) -> int:
+    """Clamp an alert percentage threshold into [0, 100] (0 disables it)."""
+    return min(max(value, ALERT_PERCENT_MIN), ALERT_PERCENT_MAX)
+
+
+def sanitized_alert_cpu_seconds(value: int) -> int:
+    """Clamp the sustained-CPU alert window into [0, 3600] seconds."""
+    return min(max(value, ALERT_CPU_SECONDS_MIN), ALERT_CPU_SECONDS_MAX)
+
+
+def sanitized_alert_temperature(value: int) -> int:
+    """Clamp the temperature alert ceiling into [0, 150] °C (0 disables it)."""
+    return min(max(value, ALERT_TEMPERATURE_MIN), ALERT_TEMPERATURE_MAX)
 
 
 def sanitized_app_id_list(values: list[str]) -> list[str]:

@@ -14,7 +14,7 @@ from ... import __version__  # noqa: E402
 from ...core.config import Config  # noqa: E402
 from ...core.i18n import _  # noqa: E402
 from ...services.autostart import AutostartManager  # noqa: E402
-from .widgets import ComboBinding, bound_switch  # noqa: E402
+from .widgets import ComboBinding, bound_spin, bound_switch  # noqa: E402
 
 _LANGUAGES = [("", "System"), ("en", "English"), ("it", "Italiano")]
 _INTERVALS = [(1, "1 second"), (2, "2 seconds"), (5, "5 seconds")]
@@ -52,6 +52,7 @@ class SettingsWindow(Adw.PreferencesWindow):
 
         self.add(self._general_page())
         self.add(self._monitor_page())
+        self.add(self._alerts_page())
         self.add(self._keep_awake_page())
         self.add(self._features_page())
         self.add(self._about_page())
@@ -97,6 +98,24 @@ class SettingsWindow(Adw.PreferencesWindow):
         options.add(self._combo("temperature-unit", "Temperature", _TEMPERATURE_UNITS, False))
         options.add(self._combo("menu-bar-memory-style", "Memory style", _MEMORY_STYLES, False))
         page.add(options)
+        return page
+
+    def _alerts_page(self) -> Adw.PreferencesPage:
+        page = Adw.PreferencesPage(title=_("Alerts"), icon_name="dialog-warning-symbolic")
+        group = Adw.PreferencesGroup(
+            title="Threshold alerts",
+            description="Notify when a metric crosses a limit. 0 turns an alert off.",
+        )
+        group.add(bound_switch(self._settings, "alert-enabled", "Enable alerts"))
+        group.add(bound_spin(self._settings, "alert-cpu-percent", "CPU load (%)", 0, 100))
+        group.add(bound_spin(self._settings, "alert-cpu-seconds", "CPU sustained for (s)", 0, 3600))
+        group.add(bound_spin(self._settings, "alert-memory-percent", "Memory used (%)", 0, 100))
+        group.add(bound_spin(self._settings, "alert-disk-percent", "Disk used (%)", 0, 100))
+        group.add(
+            bound_spin(self._settings, "alert-temperature-celsius", "Temperature (°C)", 0, 150)
+        )
+        group.add(bound_spin(self._settings, "alert-battery-percent", "Battery low (%)", 0, 100))
+        page.add(group)
         return page
 
     def _keep_awake_page(self) -> Adw.PreferencesPage:

@@ -20,6 +20,24 @@ def bound_switch(settings: Gio.Settings, key: str, title: str, subtitle: str = "
     return row
 
 
+def bound_spin(
+    settings: Gio.Settings,
+    key: str,
+    title: str,
+    lower: int,
+    upper: int,
+    subtitle: str = "",
+) -> Adw.SpinRow:
+    """A spin row over an integer GSettings key, clamped to ``[lower, upper]``."""
+    adjustment = Gtk.Adjustment(lower=lower, upper=upper, step_increment=1, page_increment=10)
+    row = Adw.SpinRow(title=title, adjustment=adjustment)
+    if subtitle:
+        row.set_subtitle(subtitle)
+    row.set_value(settings.get_int(key))
+    row.connect("notify::value", lambda spin, _param: settings.set_int(key, int(spin.get_value())))
+    return row
+
+
 class ComboBinding:
     """An ``Adw.ComboRow`` bound to a string or integer GSettings key."""
 

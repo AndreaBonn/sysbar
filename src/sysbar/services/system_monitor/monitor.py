@@ -17,6 +17,7 @@ from gi.repository import GLib, GObject  # noqa: E402
 
 from ...core.config import Config  # noqa: E402
 from .adapters import (  # noqa: E402
+    DiskUsageReader,
     GpuReaderChain,
     ProcfsReader,
     PsutilSensorReader,
@@ -39,11 +40,16 @@ class SystemMonitor(GObject.Object):
         super().__init__()
         self._config = config
         self._sampler = SystemSampler(
-            ProcfsReader(), PsutilSensorReader(), GpuReaderChain(), SysfsPowerReader()
+            ProcfsReader(),
+            PsutilSensorReader(),
+            GpuReaderChain(),
+            SysfsPowerReader(),
+            DiskUsageReader(),
         )
         self._timer_id = 0
         self._panel_open = False
         self._tray_active = False
+        self._alerting_active = False
         self._latest: SystemSnapshot | None = None
 
     @property
@@ -58,8 +64,13 @@ class SystemMonitor(GObject.Object):
         self._tray_active = value
         self._reconcile()
 
+    def set_alerting_active(self, value: bool) -> None:
+        """Keep sampling alive for threshold alerts even when nothing is shown."""
+        self._alerting_active = value
+        self._reconcile()
+
     def _reconcile(self) -> None:
-        wants_sampling = self._panel_open or self._tray_active
+        wants_sampling = self._panel_open or self._tray_active or self._alerting_active
         if wants_sampling and not self._timer_id:
             self._start()
         elif not wants_sampling and self._timer_id:
