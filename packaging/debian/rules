@@ -34,6 +34,18 @@ override_dh_auto_install:
 	install -m 0644 data/io.github.AndreaBonn.Sysbar.desktop \
 		$(PKG)/usr/share/applications/
 
+	# Branded application icon, in every hicolor size present. GNOME maps the
+	# desktop "Icon=" to these for the panel/settings window and the taskbar;
+	# postinst refreshes the icon cache. Skipped silently if no icons were
+	# generated (run scripts/generate-icons.sh from a master image).
+	if [ -d data/icons/hicolor ]; then \
+		for png in $$(find data/icons/hicolor -name '*.png'); do \
+			dest=$(PKG)/usr/share/icons/$${png#data/icons/}; \
+			install -d $$(dirname $$dest); \
+			install -m 0644 $$png $$dest; \
+		done; \
+	fi
+
 	# Start at login for every user; disable per-user from the desktop settings.
 	install -d $(PKG)/etc/xdg/autostart
 	install -m 0644 data/autostart/io.github.AndreaBonn.Sysbar.desktop \

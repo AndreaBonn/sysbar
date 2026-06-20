@@ -29,7 +29,11 @@ compile_translations() {
 }
 
 run_app() {
-    GSETTINGS_SCHEMA_DIR="${SCHEMA_DIR}" uv run sysbar "$@"
+    # Prepend the repo data dir so GTK's icon theme finds data/icons/hicolor and
+    # the branded app icon resolves in a source checkout, as it does once the
+    # .deb installs it under /usr/share/icons.
+    local data_dirs="${ROOT_DIR}/data:${XDG_DATA_DIRS:-/usr/local/share:/usr/share}"
+    GSETTINGS_SCHEMA_DIR="${SCHEMA_DIR}" XDG_DATA_DIRS="${data_dirs}" uv run sysbar "$@"
 }
 
 build_deb() {

@@ -8,10 +8,12 @@ import gi
 
 gi.require_version("Gtk", "4.0")
 gi.require_version("Adw", "1")
-from gi.repository import Adw, Gio, Gtk  # noqa: E402
+from gi.repository import Adw, Gdk, Gio, Gtk  # noqa: E402
 
 from ... import __version__  # noqa: E402
+from ...core.branding import has_app_icon  # noqa: E402
 from ...core.config import Config  # noqa: E402
+from ...core.constants import APP_ICON_NAME  # noqa: E402
 from ...core.i18n import _  # noqa: E402
 from ...core.localization import install_language  # noqa: E402
 from ...services.autostart import AutostartManager  # noqa: E402
@@ -19,6 +21,7 @@ from ..footer import build_footer  # noqa: E402
 from .widgets import ComboBinding, bound_spin, bound_switch  # noqa: E402
 
 _LANGUAGE_KEY = "app-language"
+_ABOUT_LOGO_PIXELS = 96
 
 _LANGUAGES = [("", "System"), ("en", "English"), ("it", "Italiano")]
 _INTERVALS = [(1, "1 second"), (2, "2 seconds"), (5, "5 seconds")]
@@ -182,6 +185,16 @@ class SettingsWindow(Adw.PreferencesWindow):
 
     def _about_page(self) -> Adw.PreferencesPage:
         page = Adw.PreferencesPage(title=_("About"), icon_name="help-about-symbolic")
+
+        if has_app_icon(Gdk.Display.get_default()):
+            banner = Adw.PreferencesGroup()
+            logo = Gtk.Image.new_from_icon_name(APP_ICON_NAME)
+            logo.set_pixel_size(_ABOUT_LOGO_PIXELS)
+            logo.set_margin_top(12)
+            logo.set_margin_bottom(12)
+            banner.add(logo)
+            page.add(banner)
+
         group = Adw.PreferencesGroup(title=_("About"))
         group.add(Adw.ActionRow(title=_("Version"), subtitle=__version__))
 

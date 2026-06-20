@@ -1,0 +1,2 @@
+Generated app icons live here (data/icons/hicolor/<size>/apps/io.github.AndreaBonn.Sysbar.png).
+Run scripts/generate-icons.sh after saving the master to data/icon-master.png.
