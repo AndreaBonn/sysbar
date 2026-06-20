@@ -176,27 +176,28 @@ def _scenes_submenu(*, scenes: tuple[SceneMenuEntry, ...], actions: MenuActions)
 
 
 def _quick_toggle_rows(*, toggles: QuickToggleState, actions: MenuActions) -> list[MenuItem]:
-    """Fixed mic/DND/dark rows; each is hidden unless its capability is present."""
+    """Fixed mic/DND/dark rows; each is hidden unless its capability is present.
+
+    The label states the action the click performs and so encodes the current
+    state ("Unmute microphone" means it is muted now). This reads more clearly in
+    AppIndicator hosts than a checkmark, which renders inconsistently.
+    """
     return [
         MenuItem(
-            label=_("Mute microphone"),
-            toggle_type="checkmark",
-            toggle_state=TOGGLE_ON if toggles.mic_muted else TOGGLE_OFF,
+            label=_("Unmute microphone") if toggles.mic_muted else _("Mute microphone"),
             visible=toggles.mic_available,
             action=actions.toggle_microphone,
         ),
         MenuItem(label=_("Microphone in use"), enabled=False, visible=toggles.mic_in_use),
         MenuItem(
-            label=_("Do not disturb"),
-            toggle_type="checkmark",
-            toggle_state=TOGGLE_ON if toggles.dnd_active else TOGGLE_OFF,
+            label=_("Turn off Do Not Disturb")
+            if toggles.dnd_active
+            else _("Turn on Do Not Disturb"),
             visible=toggles.dnd_available,
             action=actions.toggle_dnd,
         ),
         MenuItem(
-            label=_("Dark mode"),
-            toggle_type="checkmark",
-            toggle_state=TOGGLE_ON if toggles.dark_active else TOGGLE_OFF,
+            label=_("Switch to light mode") if toggles.dark_active else _("Switch to dark mode"),
             visible=toggles.dark_available,
             action=actions.toggle_dark_mode,
         ),

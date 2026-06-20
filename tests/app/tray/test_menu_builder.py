@@ -187,8 +187,8 @@ def test_action_rows_are_present_and_enabled() -> None:
         "Keep awake",
         "Mute microphone",
         "Microphone in use",
-        "Do not disturb",
-        "Dark mode",
+        "Turn on Do Not Disturb",
+        "Switch to dark mode",
         "Open panel",
         "Open shelf",
         "Clipboard",
@@ -201,29 +201,35 @@ def test_action_rows_are_present_and_enabled() -> None:
 
 def test_quick_toggles_hidden_when_unavailable() -> None:
     items = _build()
-    for label in ("Mute microphone", "Do not disturb", "Dark mode", "Microphone in use"):
+    for label in (
+        "Mute microphone",
+        "Turn on Do Not Disturb",
+        "Switch to dark mode",
+        "Microphone in use",
+    ):
         row = next(i for i in items if i.label == label)
         assert row.visible is False
 
 
-def test_quick_toggles_visible_and_reflect_state() -> None:
+def test_quick_toggles_labels_reflect_current_state() -> None:
     toggles = QuickToggleState(
         mic_available=True,
         mic_muted=True,
         mic_in_use=True,
         dnd_available=True,
-        dnd_active=False,
+        dnd_active=True,
         dark_available=True,
-        dark_active=True,
+        dark_active=False,
     )
     items = _build(toggles=toggles)
-    mic = next(i for i in items if i.label == "Mute microphone")
-    dnd = next(i for i in items if i.label == "Do not disturb")
-    dark = next(i for i in items if i.label == "Dark mode")
+    # When a toggle is on, the label offers the inverse action.
+    mic = next(i for i in items if i.label == "Unmute microphone")
+    dnd = next(i for i in items if i.label == "Turn off Do Not Disturb")
+    dark = next(i for i in items if i.label == "Switch to dark mode")
     in_use = next(i for i in items if i.label == "Microphone in use")
-    assert mic.visible and mic.toggle_state == TOGGLE_ON
-    assert dnd.visible and dnd.toggle_state == TOGGLE_OFF
-    assert dark.visible and dark.toggle_state == TOGGLE_ON
+    assert mic.visible and mic.action is not None
+    assert dnd.visible and dnd.action is not None
+    assert dark.visible and dark.action is not None
     assert in_use.visible and in_use.enabled is False
 
 
