@@ -21,9 +21,11 @@ gi.require_version("Gio", "2.0")
 from gi.repository import Gio, GLib, GObject  # noqa: E402
 
 from .constants import (  # noqa: E402
+    GLOBAL_SHORTCUTS_PORTAL_NAME,
     GNOME_INTERFACE_SCHEMA,
     GNOME_NOTIFICATIONS_SCHEMA,
     HWMON_PATH,
+    SHELL_EXTENSION_BUS_NAME,
 )
 
 log = logging.getLogger(__name__)
@@ -37,6 +39,8 @@ LOGIND = "logind"
 UPOWER = "upower"
 POLKIT = "polkit"
 GNOME_DESKTOP = "gnome_desktop"
+WAYLAND_WINDOW_SOURCE = "wayland_window_source"
+GLOBAL_SHORTCUTS = "global_shortcuts"
 
 
 def detect_session_x11() -> bool:
@@ -101,6 +105,16 @@ def detect_gnome_desktop() -> bool:
     )
 
 
+def detect_wayland_window_source() -> bool:
+    """Whether the Sysbar GNOME Shell extension is running and exporting events."""
+    return _dbus_name_available(Gio.BusType.SESSION, SHELL_EXTENSION_BUS_NAME)
+
+
+def detect_global_shortcuts() -> bool:
+    """Whether the desktop portal that backs global shortcuts is reachable."""
+    return _dbus_name_available(Gio.BusType.SESSION, GLOBAL_SHORTCUTS_PORTAL_NAME)
+
+
 def _dbus_name_available(bus_type: Gio.BusType, name: str) -> bool:
     try:
         bus = Gio.bus_get_sync(bus_type, None)
@@ -130,6 +144,8 @@ DETECTORS: dict[str, Callable[[], bool]] = {
     UPOWER: detect_upower,
     POLKIT: detect_polkit,
     GNOME_DESKTOP: detect_gnome_desktop,
+    WAYLAND_WINDOW_SOURCE: detect_wayland_window_source,
+    GLOBAL_SHORTCUTS: detect_global_shortcuts,
 }
 
 

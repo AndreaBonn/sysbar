@@ -217,3 +217,21 @@ def test_dbus_backed_detectors_return_false_when_bus_unavailable(
     assert capabilities.detect_appindicator() is False
     assert capabilities.detect_logind() is False
     assert capabilities.detect_upower() is False
+    assert capabilities.detect_wayland_window_source() is False
+    assert capabilities.detect_global_shortcuts() is False
+
+
+def test_wayland_window_source_true_when_extension_owns_name(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    result = SimpleNamespace(unpack=lambda: (True,))
+    bus = SimpleNamespace(call_sync=lambda *args, **kwargs: result)
+    monkeypatch.setattr("sysbar.core.capabilities.Gio.bus_get_sync", lambda _type, _cancel: bus)
+    assert capabilities.detect_wayland_window_source() is True
+
+
+def test_global_shortcuts_true_when_portal_present(monkeypatch: pytest.MonkeyPatch) -> None:
+    result = SimpleNamespace(unpack=lambda: (True,))
+    bus = SimpleNamespace(call_sync=lambda *args, **kwargs: result)
+    monkeypatch.setattr("sysbar.core.capabilities.Gio.bus_get_sync", lambda _type, _cancel: bus)
+    assert capabilities.detect_global_shortcuts() is True

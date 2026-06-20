@@ -20,10 +20,12 @@ gi.require_version("Adw", "1")
 from gi.repository import Adw, Gio, GLib  # noqa: E402
 
 from ..core.capabilities import (  # noqa: E402
+    GLOBAL_SHORTCUTS,
     GNOME_DESKTOP,
     PIPEWIRE_PULSE,
     POLKIT,
     SESSION_X11,
+    WAYLAND_WINDOW_SOURCE,
     Capabilities,
 )
 from ..core.config import Config  # noqa: E402
@@ -46,8 +48,15 @@ from ..core.localization import install_language  # noqa: E402
 from ..services.audio.app_volume_mixer import AppVolumeMixer  # noqa: E402
 from ..services.audio.pulse_backend import PulseAudioBackend  # noqa: E402
 from ..services.auto_quit.os_terminator import OsTerminator  # noqa: E402
+from ..services.auto_quit.ports import WindowSource  # noqa: E402
 from ..services.auto_quit.service import AutoQuitService  # noqa: E402
+from ..services.auto_quit.source_selection import (  # noqa: E402
+    SOURCE_WAYLAND,
+    SOURCE_X11,
+    choose_window_source,
+)
 from ..services.autostart import AutostartManager  # noqa: E402
+from ..services.hotkey.manager import HotkeyManager  # noqa: E402
 from ..services.keep_awake.inhibitor import SystemInhibitor  # noqa: E402
 from ..services.keep_awake.manager import KeepAwakeManager  # noqa: E402
 from ..services.keep_awake.ports import EndReason  # noqa: E402
@@ -119,6 +128,7 @@ class SysbarApplication(Adw.Application):
         self._shelf_window: Adw.Window | None = None
         self._shake_monitor: ShakeMonitor | None = None
         self._auto_quit: AutoQuitService | None = None
+        self._hotkey: HotkeyManager | None = None
         self._uninstaller: AppUninstaller | None = None
         self._uninstaller_window: Adw.Window | None = None
         self._notifier: Notifier | None = None
@@ -137,6 +147,7 @@ class SysbarApplication(Adw.Application):
         self._setup_monitor()
         self._setup_alerting()
         self._setup_keep_awake()
+        self._setup_hotkey()
         self._setup_mixer()
         self._setup_quick_toggles()
         self._reconcile_shelf()
@@ -233,14 +244,8 @@ class SysbarApplication(Adw.Application):
             self._refresh_menu()
 
     def _setup_auto_quit(self) -> None:
-        if not self._capabilities.has(SESSION_X11):
-            return
-        try:
-            from ..services.auto_quit.wnck_source import WnckWindowSource
-
-            source = WnckWindowSource()
-        except Exception as error:
-            log.warning("auto-quit unavailable", extra={"error": str(error)})
+        source = self._create_window_source()
+        if source is None:
             return
         self._auto_quit = AutoQuitService(
             source=source,
@@ -251,6 +256,45 @@ class SysbarApplication(Adw.Application):
             enabled=lambda: self.config.get_bool("auto-quit-enabled"),
         )
         self._auto_quit.start()
+
+    def _create_window_source(self) -> WindowSource | None:
+        """Pick the X11 or Wayland-extension window source, or none if neither."""
+        kind = choose_window_source(
+            has_x11=self._capabilities.has(SESSION_X11),
+            has_wayland_source=self._capabilities.has(WAYLAND_WINDOW_SOURCE),
+        )
+        try:
+            if kind == SOURCE_X11:
+                from ..services.auto_quit.wnck_source import WnckWindowSource
+
+                return WnckWindowSource()
+            if kind == SOURCE_WAYLAND:
+                from ..services.auto_quit.shell_extension_source import (
+                    ShellExtensionWindowSource,
+                )
+
+                return ShellExtensionWindowSource()
+        except Exception as error:
+            log.warning("auto-quit window source unavailable", extra={"error": str(error)})
+            return None
+        return None
+
+    def _setup_hotkey(self) -> None:
+        if not self._capabilities.has(GLOBAL_SHORTCUTS):
+            return
+        try:
+            from ..services.hotkey.portal import PortalGlobalShortcuts
+
+            shortcuts = PortalGlobalShortcuts()
+        except Exception as error:
+            log.warning("global shortcuts unavailable", extra={"error": str(error)})
+            return
+        self._hotkey = HotkeyManager(
+            shortcuts,
+            on_trigger=self._toggle_keep_awake,
+            enabled=lambda: self.config.get_bool("hotkey-enabled"),
+        )
+        self._hotkey.start()
 
     def _setup_update_check(self) -> None:
         if not self.config.get_bool("auto-check-updates"):

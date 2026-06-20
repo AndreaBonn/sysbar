@@ -136,6 +136,19 @@ COLOR_SCHEME_DARK = "prefer-dark"
 COLOR_SCHEME_DEFAULT = "default"
 SHOW_BANNERS_KEY = "show-banners"
 
+# Global hotkey via the xdg-desktop-portal GlobalShortcuts interface (works on
+# both X11 and Wayland). The id is the stable handle the portal persists.
+GLOBAL_SHORTCUTS_PORTAL_NAME = "org.freedesktop.portal.Desktop"
+KEEP_AWAKE_SHORTCUT_ID = "toggle-keep-awake"
+KEEP_AWAKE_SHORTCUT_DESCRIPTION = "Toggle keep awake"
+
+# GNOME Shell extension that feeds window open/close events on Wayland, where
+# there is no libwnck. The extension owns this bus name and object.
+SHELL_EXTENSION_BUS_NAME = "io.github.AndreaBonn.Sysbar.Shell"
+SHELL_EXTENSION_OBJECT_PATH = "/io/github/AndreaBonn/Sysbar/Shell"
+SHELL_EXTENSION_INTERFACE = "io.github.AndreaBonn.Sysbar.WindowManager"
+SHELL_EXTENSION_UUID = "sysbar-window-manager@andreabonn.github.io"
+
 # System-monitor alert bounds. Percentages are clamped to [0, 100] (0 = the
 # alert is off); the sustained-CPU window and the temperature ceiling have their
 # own ranges. These cap user input read from GSettings.
