@@ -322,6 +322,40 @@ msgstr "Inglese"
 msgid "Off"
 msgstr "Spente"
 
+# Nomi propri / unità / valori, identici in italiano
+msgid "Italiano"
+msgstr "Italiano"
+
+msgid "Celsius"
+msgstr "Celsius"
+
+msgid "Fahrenheit"
+msgstr "Fahrenheit"
+
+msgid "CPU"
+msgstr "CPU"
+
+msgid "GPU"
+msgstr "GPU"
+
+msgid "15 min"
+msgstr "15 min"
+
+msgid "30 min"
+msgstr "30 min"
+
+msgid "5%"
+msgstr "5%"
+
+msgid "10%"
+msgstr "10%"
+
+msgid "15%"
+msgstr "15%"
+
+msgid "20%"
+msgstr "20%"
+
 # Alerts
 msgid "High CPU usage"
 msgstr "Uso CPU elevato"
