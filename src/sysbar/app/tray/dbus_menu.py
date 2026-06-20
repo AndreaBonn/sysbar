@@ -98,11 +98,19 @@ class DBusMenuServer:
         self._interface = node.lookup_interface(DBUSMENU_IFACE)
 
     def set_model(self, model: MenuModel) -> None:
-        """Replace the menu and notify subscribers that the layout changed."""
+        """Replace the menu and notify subscribers of the change.
+
+        The shape is stable across updates (only labels, visibility and toggle
+        state change), so a ``LayoutUpdated`` alone leaves many hosts showing the
+        previous labels: they refresh item properties from
+        ``ItemsPropertiesUpdated``, not by re-fetching the layout. Emitting both
+        keeps dynamic labels (e.g. "Mute" vs "Unmute") in sync everywhere.
+        """
         self._model = model
         self._revision += 1
         if self._connection is not None:
             self._emit_layout_updated()
+            self._emit_items_properties_updated()
 
     def register(self, connection: Gio.DBusConnection) -> None:
         self._connection = connection
@@ -219,4 +227,18 @@ class DBusMenuServer:
             DBUSMENU_IFACE,
             "LayoutUpdated",
             GLib.Variant("(ui)", (self._revision, 0)),
+        )
+
+    def _properties_payload(self) -> list[tuple[int, dict[str, GLib.Variant]]]:
+        """The (id, properties) pairs for every real item, for a push update."""
+        return [(item.item_id, self._props_variant(item, [])) for item in self._model.all_items()]
+
+    def _emit_items_properties_updated(self) -> None:
+        assert self._connection is not None
+        self._connection.emit_signal(
+            None,
+            self._object_path,
+            DBUSMENU_IFACE,
+            "ItemsPropertiesUpdated",
+            GLib.Variant("(a(ia{sv})a(ias))", (self._properties_payload(), [])),
         )

@@ -261,14 +261,34 @@ def test_unregister_noop_when_not_registered() -> None:
     assert connection.unregistered == []
 
 
-def test_set_model_emits_layout_updated_when_connected() -> None:
+def test_set_model_emits_layout_and_properties_updates_when_connected() -> None:
     server = DBusMenuServer(object_path="/MenuBar")
     connection = FakeConnection()
     server.register(connection)
 
     server.set_model(MenuModel([MenuItem(label="A")]))
 
-    assert len(connection.emitted) == 1
+    signal_names = [args[3] for args in connection.emitted]
+    assert signal_names == ["LayoutUpdated", "ItemsPropertiesUpdated"]
+
+
+def test_properties_payload_carries_current_labels_for_all_items() -> None:
+    server = DBusMenuServer(object_path="/MenuBar")
+    server.set_model(MenuModel([MenuItem(label="Mute microphone"), MenuItem(label="Open panel")]))
+
+    payload = server._properties_payload()
+
+    labels = [props["label"].get_string() for _id, props in payload]
+    assert labels == ["Mute microphone", "Open panel"]
+
+
+def test_properties_payload_reflects_a_relabelled_item() -> None:
+    server = DBusMenuServer(object_path="/MenuBar")
+    server.set_model(MenuModel([MenuItem(label="Mute microphone")]))
+    server.set_model(MenuModel([MenuItem(label="Unmute microphone")]))
+
+    labels = [props["label"].get_string() for _id, props in server._properties_payload()]
+    assert labels == ["Unmute microphone"]
 
 
 def test_set_model_skips_emit_when_not_connected() -> None:

@@ -64,6 +64,10 @@ class MenuModel:
     def get(self, item_id: int) -> MenuItem | None:
         return self._by_id.get(item_id)
 
+    def all_items(self) -> list[MenuItem]:
+        """Every real menu item (excluding the synthetic root), id order."""
+        return [item for item in self._by_id.values() if item.item_id != ROOT_ID]
+
     def properties(self, item: MenuItem) -> dict[str, object]:
         """Return the dbusmenu property map for an item (plain Python types)."""
         if item.item_type == TYPE_SEPARATOR:
