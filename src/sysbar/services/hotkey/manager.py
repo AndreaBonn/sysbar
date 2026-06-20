@@ -34,9 +34,20 @@ class HotkeyManager:
         self._bindings = bindings
 
     def start(self) -> None:
-        """Register every binding whose ``enabled`` predicate is currently true."""
+        """Register every binding whose ``enabled`` predicate is currently true.
+
+        A backend that lacks the GlobalShortcuts portal raises when binding; that
+        must degrade to "no hotkeys" rather than take down the application, so a
+        failing bind is logged and the remaining bindings still get a chance.
+        """
         for binding in self._bindings:
-            if binding.enabled():
-                self._shortcuts.bind(binding.shortcut_id, binding.description, binding.trigger)
-            else:
+            if not binding.enabled():
                 log.debug("global hotkey disabled; not binding", extra={"id": binding.shortcut_id})
+                continue
+            try:
+                self._shortcuts.bind(binding.shortcut_id, binding.description, binding.trigger)
+            except Exception as error:
+                log.warning(
+                    "could not register global shortcut",
+                    extra={"id": binding.shortcut_id, "error": str(error)},
+                )

@@ -44,6 +44,28 @@ def test_start_with_no_bindings_binds_nothing() -> None:
     assert shortcuts.bound == []
 
 
+def test_start_survives_a_binding_that_raises() -> None:
+    # A backend without the GlobalShortcuts portal raises on bind; that must not
+    # crash startup, and later bindings must still be attempted.
+    class RaisingShortcuts(FakeShortcuts):
+        def bind(
+            self, shortcut_id: str, description: str, on_activated: Callable[[], None]
+        ) -> None:
+            if shortcut_id == "open-shelf":
+                raise RuntimeError("GlobalShortcuts portal not available")
+            super().bind(shortcut_id, description, on_activated)
+
+    shortcuts = RaisingShortcuts()
+    bindings = [
+        _binding("open-shelf", lambda: None, enabled=True),
+        _binding("open-clipboard", lambda: None, enabled=True),
+    ]
+
+    HotkeyManager(shortcuts, bindings).start()  # must not raise
+
+    assert [sid for sid, _ in shortcuts.bound] == ["open-clipboard"]
+
+
 def test_activation_invokes_matching_trigger() -> None:
     shortcuts = FakeShortcuts()
     calls: list[str] = []

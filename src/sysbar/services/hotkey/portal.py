@@ -86,13 +86,18 @@ class PortalGlobalShortcuts:  # pragma: no cover - xdg-desktop-portal boundary
             "handle_token": GLib.Variant("s", _HANDLE_TOKEN),
             "session_handle_token": GLib.Variant("s", _SESSION_TOKEN),
         }
-        self._proxy.call_sync(
-            "CreateSession",
-            GLib.Variant("(a{sv})", (options,)),
-            Gio.DBusCallFlags.NONE,
-            -1,
-            None,
-        )
+        try:
+            self._proxy.call_sync(
+                "CreateSession",
+                GLib.Variant("(a{sv})", (options,)),
+                Gio.DBusCallFlags.NONE,
+                -1,
+                None,
+            )
+        except GLib.Error as error:
+            # Some portal backends do not implement GlobalShortcuts at all; treat
+            # it as "no global hotkeys" instead of failing application startup.
+            log.warning("global shortcuts portal unavailable", extra={"error": str(error)})
 
     def _on_session_response(
         self,
