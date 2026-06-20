@@ -32,6 +32,7 @@ from ..core.constants import (  # noqa: E402
     CAPABILITY_REFRESH_INTERVAL_SECONDS,
     CURRENT_FEATURE_SET,
     HARDWARE_OPTIONAL_METRICS,
+    PANEL_PROCESS_COUNT,
     PLACEMENT_MENU,
     PLACEMENT_OFF,
     SHELF_DIR,
@@ -55,7 +56,9 @@ from ..services.shelf.shelf_service import ShelfService  # noqa: E402
 from ..services.system_monitor.adapters import SysfsPowerReader  # noqa: E402
 from ..services.system_monitor.alerting import AlertEngine, AlertThresholds  # noqa: E402
 from ..services.system_monitor.monitor import SystemMonitor  # noqa: E402
+from ..services.system_monitor.processes import ProcessUsageService  # noqa: E402
 from ..services.system_monitor.snapshot import SystemSnapshot  # noqa: E402
+from ..services.system_monitor.termination import ProcessTerminationService  # noqa: E402
 from ..services.uninstall.app_uninstaller import AppUninstaller  # noqa: E402
 from ..services.uninstall.command_query import CommandPackageQuery  # noqa: E402
 from ..services.uninstall.package_remover import PkexecPackageRemover  # noqa: E402
@@ -93,6 +96,8 @@ class SysbarApplication(Adw.Application):
         self._settings_window: Adw.PreferencesWindow | None = None
         self._monitor: SystemMonitor | None = None
         self._alert_engine: AlertEngine | None = None
+        self._process_usage = ProcessUsageService()
+        self._process_killer = ProcessTerminationService(OsTerminator(), GLibScheduler())
         self._keep_awake: KeepAwakeManager | None = None
         self._mixer: AppVolumeMixer | None = None
         self._shelf: ShelfService | None = None
@@ -295,6 +300,7 @@ class SysbarApplication(Adw.Application):
         self._evaluate_alerts(snapshot)
         if self._panel is not None:
             self._panel.update_snapshot(snapshot)
+            self._panel.update_processes(self._process_usage.top_cpu(PANEL_PROCESS_COUNT))
 
     def _refresh_menu(self) -> None:
         if self._tray is not None:
@@ -445,6 +451,7 @@ class SysbarApplication(Adw.Application):
         if self._panel is None:
             self._panel = PanelWindow()
             self._panel.connect("close-request", self._on_panel_closed)
+            self._panel.bind_process_actions(self._confirm_kill_process)
             if self._mixer is not None:
                 self._panel.bind_mixer(self._mixer)
             else:
@@ -455,7 +462,27 @@ class SysbarApplication(Adw.Application):
             self._monitor.set_panel_open(True)
             if self._monitor.latest is not None:
                 self._panel.update_snapshot(self._monitor.latest)
+                self._panel.update_processes(self._process_usage.top_cpu(PANEL_PROCESS_COUNT))
         self._panel.present()
+
+    def _confirm_kill_process(self, pid: int, name: str) -> None:
+        """Ask before killing; a stray click should not terminate a process."""
+        dialog = Adw.MessageDialog(
+            transient_for=self._panel,
+            heading=_("End process?"),
+            body=_("Send a termination signal to “{name}” (PID {pid})?").format(name=name, pid=pid),
+        )
+        dialog.add_response("cancel", _("Cancel"))
+        dialog.add_response("end", _("End process"))
+        dialog.set_response_appearance("end", Adw.ResponseAppearance.DESTRUCTIVE)
+        dialog.set_default_response("cancel")
+        dialog.set_close_response("cancel")
+        dialog.connect("response", self._on_kill_response, pid)
+        dialog.present()
+
+    def _on_kill_response(self, _dialog: Adw.MessageDialog, response: str, pid: int) -> None:
+        if response == "end":
+            self._process_killer.terminate(pid)
 
     def _on_panel_closed(self, _window: Adw.Window) -> bool:
         self._panel = None

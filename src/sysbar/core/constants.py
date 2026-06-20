@@ -122,6 +122,11 @@ BATTERY_WATCHDOG_INTERVAL_SECONDS = 45
 # Default top-N processes shown for a given resource.
 TOP_PROCESS_COUNT = 5
 
+# Top-N processes listed in the panel, with a kill action.
+PANEL_PROCESS_COUNT = 5
+# Escalation delay from SIGTERM to SIGKILL for a user-requested process kill.
+PROCESS_KILL_TIMEOUT_SECONDS = 5.0
+
 # System-monitor alert bounds. Percentages are clamped to [0, 100] (0 = the
 # alert is off); the sustained-CPU window and the temperature ceiling have their
 # own ranges. These cap user input read from GSettings.
