@@ -13,7 +13,7 @@ from typing import TypeVar
 
 from . import parsers
 from .parsers import CpuSample
-from .ports import GpuReader, PowerReader, ProcReader, SensorReader
+from .ports import DiskReader, GpuReader, PowerReader, ProcReader, SensorReader
 from .snapshot import SystemSnapshot
 
 log = logging.getLogger(__name__)
@@ -31,11 +31,13 @@ class SystemSampler:
         sensors: SensorReader,
         gpu: GpuReader,
         power: PowerReader,
+        disk: DiskReader,
     ) -> None:
         self._proc = proc
         self._sensors = sensors
         self._gpu = gpu
         self._power = power
+        self._disk = disk
         self._prev_cpu: dict[str, CpuSample] = {}
         self._prev_net: dict[str, tuple[int, int]] = {}
 
@@ -50,6 +52,7 @@ class SystemSampler:
             gpu_temp_celsius=self._safe(self._gpu.temperature),
             memory_percent=self._memory_percent(),
             memory_pressure=self._memory_pressure(),
+            disk_percent=self._safe(self._disk.usage_percent),
             uptime_seconds=self._uptime(),
             net_rx_rate=net_rx_rate,
             net_tx_rate=net_tx_rate,

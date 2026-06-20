@@ -7,6 +7,7 @@ import pytest
 
 from sysbar.services.system_monitor import adapters
 from sysbar.services.system_monitor.adapters import (
+    DiskUsageReader,
     GpuReaderChain,
     ProcfsReader,
     PsutilSensorReader,
@@ -455,3 +456,35 @@ def test_nvml_utilization_extracts_gpu_as_float(monkeypatch: pytest.MonkeyPatch)
 def test_nvml_temperature_extracts_value_as_float(monkeypatch: pytest.MonkeyPatch) -> None:
     _install_pynvml(monkeypatch, _fake_pynvml([]))
     assert _nvml_value(_nvml_temperature) == 61.0
+
+
+# --------------------------------------------------------------------------- #
+# DiskUsageReader.usage_percent
+# --------------------------------------------------------------------------- #
+
+
+def _usage(total: int, used: int) -> types.SimpleNamespace:
+    """Stand-in for ``shutil.disk_usage`` result (total/used/free fields)."""
+    return types.SimpleNamespace(total=total, used=used, free=total - used)
+
+
+def test_usage_percent_computes_used_over_total() -> None:
+    reader = DiskUsageReader(usage=lambda _path: _usage(total=200, used=50))
+    assert reader.usage_percent() == 25.0
+
+
+def test_usage_percent_full_disk_returns_hundred() -> None:
+    reader = DiskUsageReader(usage=lambda _path: _usage(total=100, used=100))
+    assert reader.usage_percent() == 100.0
+
+
+def test_usage_percent_none_when_total_zero() -> None:
+    reader = DiskUsageReader(usage=lambda _path: _usage(total=0, used=0))
+    assert reader.usage_percent() is None
+
+
+def test_usage_percent_none_when_usage_raises() -> None:
+    def _raise(_path: str) -> types.SimpleNamespace:
+        raise OSError("path unreadable")
+
+    assert DiskUsageReader(usage=_raise).usage_percent() is None
