@@ -21,6 +21,7 @@ from ...services.audio.app_volume_mixer import AppVolumeMixer  # noqa: E402
 from ...services.metrics import metric_format as mf  # noqa: E402
 from ...services.system_monitor.processes import ProcessUsage  # noqa: E402
 from ...services.system_monitor.snapshot import SystemSnapshot  # noqa: E402
+from ..footer import build_footer  # noqa: E402
 from .mixer_section import MixerSection  # noqa: E402
 
 KillCallback = Callable[[int, str], None]
@@ -92,6 +93,7 @@ class PanelWindow(Adw.Window):
         scroller = Gtk.ScrolledWindow(hexpand=True, vexpand=True)
         scroller.set_child(content)
         toolbar.set_content(scroller)
+        toolbar.add_bottom_bar(build_footer())
         self.set_content(toolbar)
 
     def _group(self, title: str, rows: tuple[tuple[str, str], ...]) -> Adw.PreferencesGroup:

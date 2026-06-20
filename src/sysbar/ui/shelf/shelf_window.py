@@ -17,6 +17,7 @@ from gi.repository import Adw, Gdk, Gio, GLib, GObject, Gtk  # noqa: E402
 
 from ...services.shelf.models import ItemKind, ShelfItem  # noqa: E402
 from ...services.shelf.shelf_service import ShelfService  # noqa: E402
+from ..footer import build_footer  # noqa: E402
 
 _URL_SCHEMES = ("http://", "https://", "ftp://")
 _KIND_ICONS = {
@@ -57,6 +58,7 @@ class ShelfWindow(Adw.Window):
         scroller = Gtk.ScrolledWindow(hexpand=True, vexpand=True)
         scroller.set_child(self._flow)
         toolbar.set_content(scroller)
+        toolbar.add_bottom_bar(build_footer())
         self.set_content(toolbar)
 
     def _setup_drop_target(self) -> None:

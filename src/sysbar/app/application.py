@@ -31,6 +31,7 @@ from ..core.capabilities import (  # noqa: E402
 from ..core.config import Config  # noqa: E402
 from ..core.constants import (  # noqa: E402
     APP_ID,
+    AUTHOR_GITHUB_URL,
     AUTO_QUIT_SYSTEM_WHITELIST,
     CAPABILITY_REFRESH_INTERVAL_SECONDS,
     CURRENT_FEATURE_SET,
@@ -534,6 +535,7 @@ class SysbarApplication(Adw.Application):
             open_shelf=self._open_shelf,
             open_uninstaller=self._open_uninstaller,
             open_settings=self._open_settings,
+            open_github=self._open_github,
             quit=self.quit,
         )
 
@@ -605,6 +607,13 @@ class SysbarApplication(Adw.Application):
             )
             self._settings_window.connect("close-request", self._on_settings_closed)
         self._settings_window.present()
+
+    def _open_github(self) -> None:
+        """Open the author's GitHub profile from the tray menu credit row."""
+        try:
+            Gio.AppInfo.launch_default_for_uri(AUTHOR_GITHUB_URL, None)
+        except GLib.Error:
+            log.exception("Failed to open author GitHub profile")
 
     def _unavailable_metrics(self) -> frozenset[str]:
         """Hardware-optional metrics with no data in the latest snapshot.
