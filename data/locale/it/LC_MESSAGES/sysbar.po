@@ -418,3 +418,16 @@ msgstr "Annulla"
 
 msgid "Unknown"
 msgstr "Sconosciuto"
+
+# Shelf
+msgid "Shelf"
+msgstr "Shelf"
+
+msgid "Clear shelf"
+msgstr "Svuota shelf"
+
+msgid "text"
+msgstr "testo"
+
+msgid "Double-click to open"
+msgstr "Doppio click per aprire"

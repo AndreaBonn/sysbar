@@ -19,6 +19,7 @@ import gi
 gi.require_version("GLib", "2.0")
 from gi.repository import GObject  # noqa: E402
 
+from ...core.i18n import _  # noqa: E402
 from .models import ItemKind, ShelfItem  # noqa: E402
 
 log = logging.getLogger(__name__)
@@ -59,7 +60,7 @@ class ShelfService(GObject.Object):
         )
 
     def add_text(self, text: str) -> ShelfItem:
-        label = text.strip().replace("\n", " ")[:_TEXT_LABEL_MAX] or "text"
+        label = text.strip().replace("\n", " ")[:_TEXT_LABEL_MAX] or _("text")
         return self._append(
             ShelfItem(id=self._id_factory(), kind=ItemKind.TEXT, label=label, text=text)
         )

@@ -2,7 +2,7 @@ import json
 from collections.abc import Callable
 from pathlib import Path
 
-from sysbar.services.shelf.models import ItemKind
+from sysbar.services.shelf.models import ItemKind, ShelfItem
 from sysbar.services.shelf.shelf_service import ShelfService
 
 
@@ -118,3 +118,33 @@ def test_remove_does_not_unlink_image_outside_staging(tmp_path: Path) -> None:
 
     assert service.items == []
     assert external.exists()
+
+
+def test_open_uri_for_file_returns_file_scheme() -> None:
+    item = ShelfItem(id="1", kind=ItemKind.FILE, label="report.pdf", path="/home/user/report.pdf")
+    assert item.open_uri == "file:///home/user/report.pdf"
+
+
+def test_open_uri_for_file_percent_encodes_spaces() -> None:
+    item = ShelfItem(id="1", kind=ItemKind.FILE, label="a b.txt", path="/tmp/a b.txt")
+    assert item.open_uri == "file:///tmp/a%20b.txt"
+
+
+def test_open_uri_for_image_returns_file_scheme() -> None:
+    item = ShelfItem(id="1", kind=ItemKind.IMAGE, label="shot.png", path="/tmp/shot.png")
+    assert item.open_uri == "file:///tmp/shot.png"
+
+
+def test_open_uri_for_url_returns_the_url() -> None:
+    item = ShelfItem(id="1", kind=ItemKind.URL, label="x", text="https://example.com")
+    assert item.open_uri == "https://example.com"
+
+
+def test_open_uri_for_relative_path_is_none() -> None:
+    item = ShelfItem(id="1", kind=ItemKind.FILE, label="f.txt", path="relative/f.txt")
+    assert item.open_uri is None
+
+
+def test_open_uri_for_text_is_none() -> None:
+    item = ShelfItem(id="1", kind=ItemKind.TEXT, label="hello", text="hello")
+    assert item.open_uri is None

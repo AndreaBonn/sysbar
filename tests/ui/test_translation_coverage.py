@@ -201,11 +201,14 @@ def _exercise_windows(tmp_path: Path) -> None:
         def remove(self, manager: PackageManager, package_ref: str) -> bool:
             return True
 
+    shelf_service = ShelfService(tmp_path / "shelf")
+    shelf_service.add_file(str(tmp_path / "dropped.txt"))  # render a tile so its tooltip emits _()
+
     windows: list[_Destroyable] = [
         PanelWindow(),
         ClipboardWindow(ClipboardService(tmp_path / "clipboard"), on_copy=lambda _text: None),
         SettingsWindow(Config(), AutostartManager()),
-        ShelfWindow(ShelfService(tmp_path / "shelf")),
+        ShelfWindow(shelf_service),
         OnboardingWindow(Capabilities(), on_finish=lambda: None),
         UninstallerWindow(
             AppUninstaller(

@@ -6,6 +6,7 @@ undecorated and kept above where the window manager allows it.
 
 from __future__ import annotations
 
+import logging
 from collections.abc import Callable
 
 import gi
@@ -15,9 +16,12 @@ gi.require_version("Gdk", "4.0")
 gi.require_version("Adw", "1")
 from gi.repository import Adw, Gdk, Gio, GLib, GObject, Gtk  # noqa: E402
 
+from ...core.i18n import _  # noqa: E402
 from ...services.shelf.models import ItemKind, ShelfItem  # noqa: E402
 from ...services.shelf.shelf_service import ShelfService  # noqa: E402
 from ..footer import build_footer  # noqa: E402
+
+log = logging.getLogger(__name__)
 
 _URL_SCHEMES = ("http://", "https://", "ftp://")
 _KIND_ICONS = {
@@ -34,7 +38,7 @@ class ShelfWindow(Adw.Window):
     """A floating tray of dropped files, images, text and links."""
 
     def __init__(self, service: ShelfService) -> None:
-        super().__init__(title="Shelf", decorated=False)
+        super().__init__(title=_("Shelf"), decorated=False)
         self.set_default_size(_SHELF_WIDTH, _SHELF_HEIGHT)
         self._service = service
         self._flow = Gtk.FlowBox(selection_mode=Gtk.SelectionMode.NONE, min_children_per_line=1)
@@ -46,7 +50,7 @@ class ShelfWindow(Adw.Window):
     def _build_ui(self) -> None:
         toolbar = Adw.ToolbarView()
         header = Adw.HeaderBar()
-        clear = Gtk.Button(icon_name="user-trash-symbolic", tooltip_text="Clear shelf")
+        clear = Gtk.Button(icon_name="user-trash-symbolic", tooltip_text=_("Clear shelf"))
         clear.connect("clicked", lambda _b: self._service.clear())
         header.pack_end(clear)
         toolbar.add_top_bar(header)
@@ -111,7 +115,35 @@ class ShelfWindow(Adw.Window):
         source = Gtk.DragSource(actions=Gdk.DragAction.COPY)
         source.connect("prepare", self._make_prepare(item))
         box.add_controller(source)
+
+        if item.open_uri is not None:
+            box.set_tooltip_text(_("Double-click to open"))
+            click = Gtk.GestureClick()
+            click.connect("released", self._make_open_handler(item))
+            box.add_controller(click)
         return box
+
+    def _make_open_handler(
+        self, item: ShelfItem
+    ) -> Callable[[Gtk.GestureClick, int, float, float], None]:
+        def on_released(_gesture: Gtk.GestureClick, n_press: int, _x: float, _y: float) -> None:
+            if n_press == 2:
+                self._open_item(item)
+
+        return on_released
+
+    def _open_item(self, item: ShelfItem) -> None:
+        uri = item.open_uri
+        if uri is None:
+            return
+        launcher = Gtk.UriLauncher(uri=uri)
+        launcher.launch(self, None, self._on_launch_done)
+
+    def _on_launch_done(self, launcher: Gtk.UriLauncher, result: Gio.AsyncResult) -> None:
+        try:
+            launcher.launch_finish(result)
+        except GLib.Error as error:
+            log.warning("could not open shelf item", extra={"error": error.message})
 
     def _make_prepare(
         self, item: ShelfItem
