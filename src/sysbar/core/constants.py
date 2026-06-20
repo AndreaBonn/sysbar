@@ -122,6 +122,44 @@ BATTERY_WATCHDOG_INTERVAL_SECONDS = 45
 # Default top-N processes shown for a given resource.
 TOP_PROCESS_COUNT = 5
 
+# Top-N processes listed in the panel, with a kill action.
+PANEL_PROCESS_COUNT = 5
+# Escalation delay from SIGTERM to SIGKILL for a user-requested process kill.
+PROCESS_KILL_TIMEOUT_SECONDS = 5.0
+
+# External GNOME desktop schemas driven by the quick toggles. Looked up at
+# runtime; absent on non-GNOME sessions, where the toggles hide themselves.
+GNOME_INTERFACE_SCHEMA = "org.gnome.desktop.interface"
+GNOME_NOTIFICATIONS_SCHEMA = "org.gnome.desktop.notifications"
+COLOR_SCHEME_KEY = "color-scheme"
+COLOR_SCHEME_DARK = "prefer-dark"
+COLOR_SCHEME_DEFAULT = "default"
+SHOW_BANNERS_KEY = "show-banners"
+
+# Global hotkey via the xdg-desktop-portal GlobalShortcuts interface (works on
+# both X11 and Wayland). The id is the stable handle the portal persists.
+GLOBAL_SHORTCUTS_PORTAL_NAME = "org.freedesktop.portal.Desktop"
+KEEP_AWAKE_SHORTCUT_ID = "toggle-keep-awake"
+KEEP_AWAKE_SHORTCUT_DESCRIPTION = "Toggle keep awake"
+
+# GNOME Shell extension that feeds window open/close events on Wayland, where
+# there is no libwnck. The extension owns this bus name and object.
+SHELL_EXTENSION_BUS_NAME = "io.github.AndreaBonn.Sysbar.Shell"
+SHELL_EXTENSION_OBJECT_PATH = "/io/github/AndreaBonn/Sysbar/Shell"
+SHELL_EXTENSION_INTERFACE = "io.github.AndreaBonn.Sysbar.WindowManager"
+SHELL_EXTENSION_UUID = "sysbar-window-manager@andreabonn.github.io"
+
+# System-monitor alert bounds. Percentages are clamped to [0, 100] (0 = the
+# alert is off); the sustained-CPU window and the temperature ceiling have their
+# own ranges. These cap user input read from GSettings.
+ALERT_PERCENT_MIN = 0
+ALERT_PERCENT_MAX = 100
+ALERT_CPU_SECONDS_MIN = 0
+ALERT_CPU_SECONDS_MAX = 3600
+DEFAULT_ALERT_CPU_SECONDS = 30
+ALERT_TEMPERATURE_MIN = 0
+ALERT_TEMPERATURE_MAX = 150
+
 # User data directory for shelf staging and manifest.
 DATA_HOME = Path.home() / ".local" / "share" / BINARY_NAME
 SHELF_DIR = DATA_HOME / "shelf"
@@ -143,3 +181,6 @@ POWER_SUPPLY_PATH = Path("/sys/class/power_supply")
 HWMON_PATH = Path("/sys/class/hwmon")
 DRM_PATH = Path("/sys/class/drm")
 RAPL_PATH = Path("/sys/class/powercap/intel-rapl")
+
+# Filesystem whose usage drives the disk metric and the disk-full alert.
+ROOT_FILESYSTEM_PATH = Path("/")

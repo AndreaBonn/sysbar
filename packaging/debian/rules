@@ -39,6 +39,15 @@ override_dh_auto_install:
 	install -m 0644 data/autostart/io.github.AndreaBonn.Sysbar.desktop \
 		$(PKG)/etc/xdg/autostart/
 
+	# GNOME Shell extension that powers auto-quit on Wayland. Installed system
+	# wide; users enable it per-session (gnome-extensions enable, or the
+	# Extensions app). A no-op on X11, where libwnck is used instead.
+	install -d $(PKG)/usr/share/gnome-shell/extensions/sysbar-window-manager@andreabonn.github.io
+	install -m 0644 data/gnome-extension/metadata.json \
+		$(PKG)/usr/share/gnome-shell/extensions/sysbar-window-manager@andreabonn.github.io/
+	install -m 0644 data/gnome-extension/extension.js \
+		$(PKG)/usr/share/gnome-shell/extensions/sysbar-window-manager@andreabonn.github.io/
+
 	if [ -d data/locale ]; then \
 		cp -r data/locale/* $(PKG)/usr/share/locale/ 2>/dev/null || true; \
 	fi

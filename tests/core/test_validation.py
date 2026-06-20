@@ -32,6 +32,28 @@ def test_sanitized_monitor_interval_invalid_returns_default() -> None:
     assert validation.sanitized_monitor_interval(3) == 2
 
 
+@pytest.mark.parametrize("value", [0, 1, 50, 100])
+def test_sanitized_alert_percent_in_range_kept(value: int) -> None:
+    assert validation.sanitized_alert_percent(value) == value
+
+
+@pytest.mark.parametrize(("value", "expected"), [(-5, 0), (150, 100), (101, 100)])
+def test_sanitized_alert_percent_clamped(value: int, expected: int) -> None:
+    assert validation.sanitized_alert_percent(value) == expected
+
+
+@pytest.mark.parametrize(
+    ("value", "expected"), [(-1, 0), (0, 0), (30, 30), (3600, 3600), (9999, 3600)]
+)
+def test_sanitized_alert_cpu_seconds_clamped(value: int, expected: int) -> None:
+    assert validation.sanitized_alert_cpu_seconds(value) == expected
+
+
+@pytest.mark.parametrize(("value", "expected"), [(-10, 0), (85, 85), (200, 150)])
+def test_sanitized_alert_temperature_clamped(value: int, expected: int) -> None:
+    assert validation.sanitized_alert_temperature(value) == expected
+
+
 @pytest.mark.parametrize("value", ["dot", "percent", "both"])
 def test_sanitized_memory_style_allowed_kept(value: str) -> None:
     assert validation.sanitized_memory_style(value) == value

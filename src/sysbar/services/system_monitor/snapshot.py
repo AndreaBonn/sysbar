@@ -20,6 +20,7 @@ class SystemSnapshot:
     gpu_temp_celsius: float | None = None
     memory_percent: float | None = None
     memory_pressure: str | None = None
+    disk_percent: float | None = None
     uptime_seconds: float | None = None
     net_rx_rate: float | None = None
     net_tx_rate: float | None = None

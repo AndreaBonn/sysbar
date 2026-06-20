@@ -20,9 +20,12 @@ gi.require_version("Adw", "1")
 from gi.repository import Adw, Gio, GLib  # noqa: E402
 
 from ..core.capabilities import (  # noqa: E402
+    GLOBAL_SHORTCUTS,
+    GNOME_DESKTOP,
     PIPEWIRE_PULSE,
     POLKIT,
     SESSION_X11,
+    WAYLAND_WINDOW_SOURCE,
     Capabilities,
 )
 from ..core.config import Config  # noqa: E402
@@ -31,7 +34,10 @@ from ..core.constants import (  # noqa: E402
     AUTO_QUIT_SYSTEM_WHITELIST,
     CAPABILITY_REFRESH_INTERVAL_SECONDS,
     CURRENT_FEATURE_SET,
+    GNOME_INTERFACE_SCHEMA,
+    GNOME_NOTIFICATIONS_SCHEMA,
     HARDWARE_OPTIONAL_METRICS,
+    PANEL_PROCESS_COUNT,
     PLACEMENT_MENU,
     PLACEMENT_OFF,
     SHELF_DIR,
@@ -42,25 +48,44 @@ from ..core.localization import install_language  # noqa: E402
 from ..services.audio.app_volume_mixer import AppVolumeMixer  # noqa: E402
 from ..services.audio.pulse_backend import PulseAudioBackend  # noqa: E402
 from ..services.auto_quit.os_terminator import OsTerminator  # noqa: E402
+from ..services.auto_quit.ports import WindowSource  # noqa: E402
 from ..services.auto_quit.service import AutoQuitService  # noqa: E402
+from ..services.auto_quit.source_selection import (  # noqa: E402
+    SOURCE_WAYLAND,
+    SOURCE_X11,
+    choose_window_source,
+)
 from ..services.autostart import AutostartManager  # noqa: E402
+from ..services.hotkey.manager import HotkeyManager  # noqa: E402
 from ..services.keep_awake.inhibitor import SystemInhibitor  # noqa: E402
 from ..services.keep_awake.manager import KeepAwakeManager  # noqa: E402
 from ..services.keep_awake.ports import EndReason  # noqa: E402
 from ..services.keep_awake.scheduler import GLibScheduler  # noqa: E402
 from ..services.metrics import metric_format as mf  # noqa: E402
 from ..services.notifier import Notifier  # noqa: E402
+from ..services.quick_toggles.adapters import (  # noqa: E402
+    GioSettingsStore,
+    PulseMicrophoneBackend,
+)
+from ..services.quick_toggles.desktop_toggles import (  # noqa: E402
+    ColorSchemeToggle,
+    DoNotDisturbToggle,
+)
+from ..services.quick_toggles.microphone import MicrophoneToggle  # noqa: E402
 from ..services.shelf.shake_monitor import ShakeMonitor  # noqa: E402
 from ..services.shelf.shelf_service import ShelfService  # noqa: E402
 from ..services.system_monitor.adapters import SysfsPowerReader  # noqa: E402
+from ..services.system_monitor.alerting import AlertEngine, AlertThresholds  # noqa: E402
 from ..services.system_monitor.monitor import SystemMonitor  # noqa: E402
+from ..services.system_monitor.processes import ProcessUsageService  # noqa: E402
 from ..services.system_monitor.snapshot import SystemSnapshot  # noqa: E402
+from ..services.system_monitor.termination import ProcessTerminationService  # noqa: E402
 from ..services.uninstall.app_uninstaller import AppUninstaller  # noqa: E402
 from ..services.uninstall.command_query import CommandPackageQuery  # noqa: E402
 from ..services.uninstall.package_remover import PkexecPackageRemover  # noqa: E402
 from ..services.uninstall.trash import GioTrash  # noqa: E402
 from ..services.update_service import UpdateInfo, UpdateService  # noqa: E402
-from .tray.menu_builder import MenuActions, build_menu_items  # noqa: E402
+from .tray.menu_builder import MenuActions, QuickToggleState, build_menu_items  # noqa: E402
 from .tray.menu_model import MenuModel  # noqa: E402
 from .tray.tray import Tray  # noqa: E402
 from .tray_renderer import (  # noqa: E402
@@ -91,12 +116,19 @@ class SysbarApplication(Adw.Application):
         self._panel: Adw.Window | None = None
         self._settings_window: Adw.PreferencesWindow | None = None
         self._monitor: SystemMonitor | None = None
+        self._alert_engine: AlertEngine | None = None
+        self._process_usage = ProcessUsageService()
+        self._process_killer = ProcessTerminationService(OsTerminator(), GLibScheduler())
         self._keep_awake: KeepAwakeManager | None = None
         self._mixer: AppVolumeMixer | None = None
+        self._microphone: MicrophoneToggle | None = None
+        self._dnd: DoNotDisturbToggle | None = None
+        self._dark_mode: ColorSchemeToggle | None = None
         self._shelf: ShelfService | None = None
         self._shelf_window: Adw.Window | None = None
         self._shake_monitor: ShakeMonitor | None = None
         self._auto_quit: AutoQuitService | None = None
+        self._hotkey: HotkeyManager | None = None
         self._uninstaller: AppUninstaller | None = None
         self._uninstaller_window: Adw.Window | None = None
         self._notifier: Notifier | None = None
@@ -113,8 +145,11 @@ class SysbarApplication(Adw.Application):
         self._install_actions()
         self._setup_tray()
         self._setup_monitor()
+        self._setup_alerting()
         self._setup_keep_awake()
+        self._setup_hotkey()
         self._setup_mixer()
+        self._setup_quick_toggles()
         self._reconcile_shelf()
         self._setup_auto_quit()
         self._setup_uninstaller()
@@ -127,6 +162,31 @@ class SysbarApplication(Adw.Application):
         self._monitor.connect("snapshot-updated", self._on_snapshot)
         self.config.settings.connect("changed", self._on_settings_changed)
         self._update_tray_active()
+
+    def _setup_alerting(self) -> None:
+        self._alert_engine = AlertEngine(thresholds=self._alert_thresholds)
+        self._reconcile_alerting()
+
+    def _alert_thresholds(self) -> AlertThresholds:
+        config = self.config
+        return AlertThresholds(
+            cpu_percent=config.alert_cpu_percent,
+            cpu_seconds=config.alert_cpu_seconds,
+            memory_percent=config.alert_memory_percent,
+            disk_percent=config.alert_disk_percent,
+            temperature_celsius=config.alert_temperature_celsius,
+            battery_percent=config.alert_battery_percent,
+        )
+
+    def _reconcile_alerting(self) -> None:
+        if self._monitor is not None:
+            self._monitor.set_alerting_active(self.config.alert_enabled)
+
+    def _evaluate_alerts(self, snapshot: SystemSnapshot) -> None:
+        if self._alert_engine is None or self._notifier is None or not self.config.alert_enabled:
+            return
+        for alert in self._alert_engine.evaluate(snapshot):
+            self._notifier.notify(alert.title, alert.body, notification_id=f"alert-{alert.key}")
 
     def _setup_keep_awake(self) -> None:
         self._keep_awake = KeepAwakeManager(SystemInhibitor(), SysfsPowerReader(), GLibScheduler())
@@ -144,15 +204,48 @@ class SysbarApplication(Adw.Application):
         self._mixer = AppVolumeMixer(backend, self.config)
         self._mixer.start()
 
-    def _setup_auto_quit(self) -> None:
-        if not self._capabilities.has(SESSION_X11):
-            return
-        try:
-            from ..services.auto_quit.wnck_source import WnckWindowSource
+    def _setup_quick_toggles(self) -> None:
+        if self._capabilities.has(PIPEWIRE_PULSE):
+            try:
+                self._microphone = MicrophoneToggle(PulseMicrophoneBackend())
+            except Exception as error:
+                log.warning("microphone backend unavailable", extra={"error": str(error)})
+        if self._capabilities.has(GNOME_DESKTOP):
+            self._dnd = DoNotDisturbToggle(GioSettingsStore(GNOME_NOTIFICATIONS_SCHEMA))
+            self._dark_mode = ColorSchemeToggle(GioSettingsStore(GNOME_INTERFACE_SCHEMA))
 
-            source = WnckWindowSource()
-        except Exception as error:
-            log.warning("auto-quit unavailable", extra={"error": str(error)})
+    def _quick_toggle_state(self) -> QuickToggleState:
+        return QuickToggleState(
+            mic_available=self._microphone is not None,
+            mic_muted=self._microphone.is_muted() if self._microphone is not None else False,
+            mic_in_use=self._microphone.is_in_use() if self._microphone is not None else False,
+            dnd_available=self._dnd is not None,
+            dnd_active=self._dnd.is_active() if self._dnd is not None else False,
+            dark_available=self._dark_mode is not None,
+            dark_active=self._dark_mode.is_dark() if self._dark_mode is not None else False,
+        )
+
+    def _has_quick_toggles(self) -> bool:
+        return any((self._microphone, self._dnd, self._dark_mode))
+
+    def _toggle_microphone(self) -> None:
+        if self._microphone is not None:
+            self._microphone.toggle()
+            self._refresh_menu()
+
+    def _toggle_dnd(self) -> None:
+        if self._dnd is not None:
+            self._dnd.toggle()
+            self._refresh_menu()
+
+    def _toggle_dark_mode(self) -> None:
+        if self._dark_mode is not None:
+            self._dark_mode.toggle()
+            self._refresh_menu()
+
+    def _setup_auto_quit(self) -> None:
+        source = self._create_window_source()
+        if source is None:
             return
         self._auto_quit = AutoQuitService(
             source=source,
@@ -163,6 +256,45 @@ class SysbarApplication(Adw.Application):
             enabled=lambda: self.config.get_bool("auto-quit-enabled"),
         )
         self._auto_quit.start()
+
+    def _create_window_source(self) -> WindowSource | None:
+        """Pick the X11 or Wayland-extension window source, or none if neither."""
+        kind = choose_window_source(
+            has_x11=self._capabilities.has(SESSION_X11),
+            has_wayland_source=self._capabilities.has(WAYLAND_WINDOW_SOURCE),
+        )
+        try:
+            if kind == SOURCE_X11:
+                from ..services.auto_quit.wnck_source import WnckWindowSource
+
+                return WnckWindowSource()
+            if kind == SOURCE_WAYLAND:
+                from ..services.auto_quit.shell_extension_source import (
+                    ShellExtensionWindowSource,
+                )
+
+                return ShellExtensionWindowSource()
+        except Exception as error:
+            log.warning("auto-quit window source unavailable", extra={"error": str(error)})
+            return None
+        return None
+
+    def _setup_hotkey(self) -> None:
+        if not self._capabilities.has(GLOBAL_SHORTCUTS):
+            return
+        try:
+            from ..services.hotkey.portal import PortalGlobalShortcuts
+
+            shortcuts = PortalGlobalShortcuts()
+        except Exception as error:
+            log.warning("global shortcuts unavailable", extra={"error": str(error)})
+            return
+        self._hotkey = HotkeyManager(
+            shortcuts,
+            on_trigger=self._toggle_keep_awake,
+            enabled=lambda: self.config.get_bool("hotkey-enabled"),
+        )
+        self._hotkey.start()
 
     def _setup_update_check(self) -> None:
         if not self.config.get_bool("auto-check-updates"):
@@ -264,8 +396,10 @@ class SysbarApplication(Adw.Application):
 
     def _on_snapshot(self, _monitor: SystemMonitor, snapshot: SystemSnapshot) -> None:
         self._refresh_tray_label()
+        self._evaluate_alerts(snapshot)
         if self._panel is not None:
             self._panel.update_snapshot(snapshot)
+            self._panel.update_processes(self._process_usage.top_cpu(PANEL_PROCESS_COUNT))
 
     def _refresh_menu(self) -> None:
         if self._tray is not None:
@@ -277,7 +411,7 @@ class SysbarApplication(Adw.Application):
         Returning ``True`` only when metrics live in the dropdown lets the host
         re-read the layout on demand instead of us churning it on every sample.
         """
-        if not self._has_menu_metrics():
+        if not self._has_menu_metrics() and not self._has_quick_toggles():
             return False
         self._refresh_menu()
         return True
@@ -309,6 +443,8 @@ class SysbarApplication(Adw.Application):
         self._update_tray_active()
         if key.startswith("shelf-"):
             self._reconcile_shelf()
+        if key.startswith("alert-"):
+            self._reconcile_alerting()
 
     def _on_keep_awake_changed(self, _manager: KeepAwakeManager) -> None:
         self._refresh_menu()
@@ -391,6 +527,9 @@ class SysbarApplication(Adw.Application):
     def _menu_actions(self) -> MenuActions:
         return MenuActions(
             toggle_keep_awake=self._toggle_keep_awake,
+            toggle_microphone=self._toggle_microphone,
+            toggle_dnd=self._toggle_dnd,
+            toggle_dark_mode=self._toggle_dark_mode,
             open_panel=self._open_panel,
             open_shelf=self._open_shelf,
             open_uninstaller=self._open_uninstaller,
@@ -404,6 +543,7 @@ class SysbarApplication(Adw.Application):
             self._menu_metric_values(),
             keep_awake_on=keep_awake_on,
             shelf_enabled=self.config.get_bool("shelf-enabled"),
+            toggles=self._quick_toggle_state(),
             actions=self._menu_actions(),
         )
         return MenuModel(items)
@@ -414,6 +554,7 @@ class SysbarApplication(Adw.Application):
         if self._panel is None:
             self._panel = PanelWindow()
             self._panel.connect("close-request", self._on_panel_closed)
+            self._panel.bind_process_actions(self._confirm_kill_process)
             if self._mixer is not None:
                 self._panel.bind_mixer(self._mixer)
             else:
@@ -424,7 +565,27 @@ class SysbarApplication(Adw.Application):
             self._monitor.set_panel_open(True)
             if self._monitor.latest is not None:
                 self._panel.update_snapshot(self._monitor.latest)
+                self._panel.update_processes(self._process_usage.top_cpu(PANEL_PROCESS_COUNT))
         self._panel.present()
+
+    def _confirm_kill_process(self, pid: int, name: str) -> None:
+        """Ask before killing; a stray click should not terminate a process."""
+        dialog = Adw.MessageDialog(
+            transient_for=self._panel,
+            heading=_("End process?"),
+            body=_("Send a termination signal to “{name}” (PID {pid})?").format(name=name, pid=pid),
+        )
+        dialog.add_response("cancel", _("Cancel"))
+        dialog.add_response("end", _("End process"))
+        dialog.set_response_appearance("end", Adw.ResponseAppearance.DESTRUCTIVE)
+        dialog.set_default_response("cancel")
+        dialog.set_close_response("cancel")
+        dialog.connect("response", self._on_kill_response, pid)
+        dialog.present()
+
+    def _on_kill_response(self, _dialog: Adw.MessageDialog, response: str, pid: int) -> None:
+        if response == "end":
+            self._process_killer.terminate(pid)
 
     def _on_panel_closed(self, _window: Adw.Window) -> bool:
         self._panel = None

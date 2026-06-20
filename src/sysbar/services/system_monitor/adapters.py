@@ -8,9 +8,10 @@ parsers) and degrade to ``None``/empty when a source is missing. Mocked in tests
 from __future__ import annotations
 
 import logging
+import shutil
 from collections.abc import Callable
 from pathlib import Path
-from typing import Any
+from typing import Any, Protocol
 
 from ...core.constants import (
     DRM_PATH,
@@ -20,11 +21,25 @@ from ...core.constants import (
     PROC_PRESSURE_MEMORY,
     PROC_STAT,
     PROC_UPTIME,
+    ROOT_FILESYSTEM_PATH,
 )
 
 log = logging.getLogger(__name__)
 
 _CPU_TEMP_CHIPS = ("coretemp", "k10temp", "zenpower", "acpitz")
+_PERCENT_SCALE = 100.0
+
+
+class _DiskUsage(Protocol):
+    @property
+    def total(self) -> int: ...
+    @property
+    def used(self) -> int: ...
+
+
+# A ``shutil.disk_usage``-compatible callable, injected so the formula is tested
+# without touching the real filesystem.
+DiskUsageProbe = Callable[..., _DiskUsage]
 
 
 class ProcfsReader:
@@ -125,6 +140,25 @@ class SysfsPowerReader:
     def power_watts(self) -> float | None:
         microwatts = _read_sysfs_float(_battery_path("power_now"))
         return microwatts / 1_000_000.0 if microwatts is not None else None
+
+
+class DiskUsageReader:
+    """Reports root filesystem usage via ``shutil.disk_usage``."""
+
+    def __init__(
+        self, path: Path = ROOT_FILESYSTEM_PATH, usage: DiskUsageProbe = shutil.disk_usage
+    ) -> None:
+        self._path = path
+        self._usage = usage
+
+    def usage_percent(self) -> float | None:
+        try:
+            usage = self._usage(str(self._path))
+        except OSError:
+            return None
+        if usage.total <= 0:
+            return None
+        return usage.used / usage.total * _PERCENT_SCALE
 
 
 def _battery_path(leaf: str) -> Path | None:

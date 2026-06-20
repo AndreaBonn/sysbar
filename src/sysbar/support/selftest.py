@@ -7,11 +7,14 @@ from ..core.capabilities import Capabilities
 
 # Which features each capability gates, for an actionable report.
 _FEATURE_HINTS: dict[str, str] = {
-    "session_x11": "auto-quit, global hotkeys, shelf shake-to-open",
+    "session_x11": "auto-quit (X11), shelf shake-to-open",
+    "wayland_window_source": "auto-quit on Wayland (needs the Sysbar shell extension)",
+    "global_shortcuts": "global keep-awake hotkey",
     "appindicator": "tray icon",
     "sensors": "CPU/GPU temperatures",
     "nvml": "NVIDIA GPU temp/load",
-    "pipewire_pulse": "per-app volume mixer",
+    "pipewire_pulse": "per-app volume mixer, microphone toggle",
+    "gnome_desktop": "do-not-disturb and dark-mode toggles",
     "logind": "keep awake, closed-lid",
     "upower": "battery protection, battery metric",
     "polkit": "system package uninstall",

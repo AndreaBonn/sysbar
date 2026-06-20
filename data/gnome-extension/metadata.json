@@ -1,0 +1,7 @@
+{
+  "uuid": "sysbar-window-manager@andreabonn.github.io",
+  "name": "Sysbar Window Manager",
+  "description": "Exposes window open/close events over D-Bus so Sysbar's auto-quit feature works on Wayland, where there is no libwnck. Does nothing on its own; install Sysbar to use it.",
+  "shell-version": ["45", "46", "47", "48"],
+  "url": "https://github.com/AndreaBonn/sysbar"
+}

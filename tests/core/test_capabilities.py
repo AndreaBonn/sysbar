@@ -7,6 +7,7 @@ import pytest
 from sysbar.core import capabilities
 from sysbar.core.capabilities import (
     Capabilities,
+    detect_gnome_desktop,
     detect_nvml,
     detect_pipewire_pulse,
     detect_polkit,
@@ -106,6 +107,32 @@ def test_sensors_false_without_hwmon_or_binary(
     assert detect_sensors() is False
 
 
+def test_gnome_desktop_true_when_both_schemas_present(monkeypatch: pytest.MonkeyPatch) -> None:
+    source = SimpleNamespace(lookup=lambda _schema, _recursive: object())
+    monkeypatch.setattr(
+        "sysbar.core.capabilities.Gio.SettingsSchemaSource.get_default", lambda: source
+    )
+    assert detect_gnome_desktop() is True
+
+
+def test_gnome_desktop_false_when_a_schema_missing(monkeypatch: pytest.MonkeyPatch) -> None:
+    present = capabilities.GNOME_INTERFACE_SCHEMA
+    source = SimpleNamespace(
+        lookup=lambda schema, _recursive: object() if schema == present else None
+    )
+    monkeypatch.setattr(
+        "sysbar.core.capabilities.Gio.SettingsSchemaSource.get_default", lambda: source
+    )
+    assert detect_gnome_desktop() is False
+
+
+def test_gnome_desktop_false_when_no_schema_source(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(
+        "sysbar.core.capabilities.Gio.SettingsSchemaSource.get_default", lambda: None
+    )
+    assert detect_gnome_desktop() is False
+
+
 def test_polkit_true_when_pkexec_present(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr("sysbar.core.capabilities.shutil.which", lambda name: "/usr/bin/pkexec")
     assert detect_polkit() is True
@@ -190,3 +217,21 @@ def test_dbus_backed_detectors_return_false_when_bus_unavailable(
     assert capabilities.detect_appindicator() is False
     assert capabilities.detect_logind() is False
     assert capabilities.detect_upower() is False
+    assert capabilities.detect_wayland_window_source() is False
+    assert capabilities.detect_global_shortcuts() is False
+
+
+def test_wayland_window_source_true_when_extension_owns_name(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    result = SimpleNamespace(unpack=lambda: (True,))
+    bus = SimpleNamespace(call_sync=lambda *args, **kwargs: result)
+    monkeypatch.setattr("sysbar.core.capabilities.Gio.bus_get_sync", lambda _type, _cancel: bus)
+    assert capabilities.detect_wayland_window_source() is True
+
+
+def test_global_shortcuts_true_when_portal_present(monkeypatch: pytest.MonkeyPatch) -> None:
+    result = SimpleNamespace(unpack=lambda: (True,))
+    bus = SimpleNamespace(call_sync=lambda *args, **kwargs: result)
+    monkeypatch.setattr("sysbar.core.capabilities.Gio.bus_get_sync", lambda _type, _cancel: bus)
+    assert capabilities.detect_global_shortcuts() is True

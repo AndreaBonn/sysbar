@@ -63,8 +63,13 @@ class FakePower:
         return 12.5
 
 
+class FakeDisk:
+    def usage_percent(self) -> float | None:
+        return 63.0
+
+
 def _sampler(proc: FakeProc) -> SystemSampler:
-    return SystemSampler(proc, FakeSensors(), FakeGpu(), FakePower())
+    return SystemSampler(proc, FakeSensors(), FakeGpu(), FakePower(), FakeDisk())
 
 
 def test_first_snapshot_has_no_cpu_or_net_rate() -> None:
@@ -117,6 +122,18 @@ def test_optional_sources_pass_through() -> None:
     assert snap.battery_percent == 80.0
     assert snap.on_battery is True
     assert snap.power_watts == 12.5
+    assert snap.disk_percent == 63.0
+
+
+class RaisingDisk:
+    def usage_percent(self) -> float | None:
+        raise OSError("statvfs failed")
+
+
+def test_disk_percent_none_when_reader_raises() -> None:
+    sampler = SystemSampler(FakeProc(), FakeSensors(), FakeGpu(), FakePower(), RaisingDisk())
+    snap = sampler.build_snapshot(interval_seconds=2.0)
+    assert snap.disk_percent is None
 
 
 class RaisingSensors:
@@ -151,18 +168,18 @@ def test_uptime_none_when_uptime_unparseable() -> None:
 
 
 def test_temperatures_empty_when_sensor_raises() -> None:
-    sampler = SystemSampler(FakeProc(), RaisingSensors(), FakeGpu(), FakePower())
+    sampler = SystemSampler(FakeProc(), RaisingSensors(), FakeGpu(), FakePower(), FakeDisk())
     snap = sampler.build_snapshot(interval_seconds=2.0)
     assert snap.temperatures == {}
 
 
 def test_fans_empty_when_sensor_raises() -> None:
-    sampler = SystemSampler(FakeProc(), RaisingSensors(), FakeGpu(), FakePower())
+    sampler = SystemSampler(FakeProc(), RaisingSensors(), FakeGpu(), FakePower(), FakeDisk())
     snap = sampler.build_snapshot(interval_seconds=2.0)
     assert snap.fans == {}
 
 
 def test_safe_reader_returns_none_when_source_raises() -> None:
-    sampler = SystemSampler(FakeProc(), RaisingSensors(), FakeGpu(), FakePower())
+    sampler = SystemSampler(FakeProc(), RaisingSensors(), FakeGpu(), FakePower(), FakeDisk())
     snap = sampler.build_snapshot(interval_seconds=2.0)
     assert snap.cpu_temp_celsius is None

@@ -159,5 +159,37 @@
     <key name="monitor-pwr-battery" type="b"><default>true</default><summary>Power: battery</summary></key>
     <key name="monitor-pwr-health" type="b"><default>true</default><summary>Power: battery health</summary></key>
 
+    <!-- Threshold alerts: a notification fires when a metric crosses its limit.
+         Each percentage uses 0 to mean "off". CPU also requires the breach to
+         hold for "alert-cpu-seconds". -->
+    <key name="alert-enabled" type="b">
+      <default>false</default>
+      <summary>Master switch for system-monitor threshold alerts</summary>
+    </key>
+    <key name="alert-cpu-percent" type="i">
+      <default>0</default>
+      <summary>Notify when CPU load stays at/above this percent; 0 = off</summary>
+    </key>
+    <key name="alert-cpu-seconds" type="i">
+      <default>30</default>
+      <summary>How long CPU must stay above the threshold before alerting</summary>
+    </key>
+    <key name="alert-memory-percent" type="i">
+      <default>0</default>
+      <summary>Notify when memory use reaches this percent; 0 = off</summary>
+    </key>
+    <key name="alert-disk-percent" type="i">
+      <default>0</default>
+      <summary>Notify when the root filesystem is this percent full; 0 = off</summary>
+    </key>
+    <key name="alert-temperature-celsius" type="i">
+      <default>0</default>
+      <summary>Notify when temperature reaches this many °C; 0 = off</summary>
+    </key>
+    <key name="alert-battery-percent" type="i">
+      <default>0</default>
+      <summary>Notify when on battery and charge falls to this percent; 0 = off</summary>
+    </key>
+
   </schema>
 </schemalist>

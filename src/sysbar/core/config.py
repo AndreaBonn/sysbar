@@ -68,6 +68,36 @@ class Config:
     def temperature_unit(self) -> str:
         return validation.sanitized_temperature_unit(self._settings.get_string("temperature-unit"))
 
+    @property
+    def alert_enabled(self) -> bool:
+        return self.get_bool("alert-enabled")
+
+    @property
+    def alert_cpu_percent(self) -> int:
+        return validation.sanitized_alert_percent(self._settings.get_int("alert-cpu-percent"))
+
+    @property
+    def alert_cpu_seconds(self) -> int:
+        return validation.sanitized_alert_cpu_seconds(self._settings.get_int("alert-cpu-seconds"))
+
+    @property
+    def alert_memory_percent(self) -> int:
+        return validation.sanitized_alert_percent(self._settings.get_int("alert-memory-percent"))
+
+    @property
+    def alert_disk_percent(self) -> int:
+        return validation.sanitized_alert_percent(self._settings.get_int("alert-disk-percent"))
+
+    @property
+    def alert_temperature_celsius(self) -> int:
+        return validation.sanitized_alert_temperature(
+            self._settings.get_int("alert-temperature-celsius")
+        )
+
+    @property
+    def alert_battery_percent(self) -> int:
+        return validation.sanitized_alert_percent(self._settings.get_int("alert-battery-percent"))
+
     def metric_placement(self, metric: str) -> str:
         """Return where a tray metric is shown: ``off``, ``bar`` or ``menu``."""
         raw = self._settings.get_string(f"menu-bar-{metric}-placement")

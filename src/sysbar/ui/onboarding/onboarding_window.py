@@ -18,10 +18,13 @@ from ...core.capabilities import Capabilities  # noqa: E402
 from ...core.i18n import _  # noqa: E402
 
 _CAPABILITY_LABELS = {
-    "session_x11": "X11 session (auto-quit, hotkeys, shelf shake)",
+    "session_x11": "X11 session (auto-quit, shelf shake)",
+    "wayland_window_source": "Wayland auto-quit (Sysbar shell extension)",
+    "global_shortcuts": "Global keep-awake hotkey",
     "appindicator": "Tray icon support",
     "sensors": "Temperature sensors",
-    "pipewire_pulse": "Audio mixer",
+    "pipewire_pulse": "Audio mixer and microphone toggle",
+    "gnome_desktop": "Do-not-disturb and dark-mode toggles",
     "logind": "Keep awake",
     "upower": "Battery metrics",
     "polkit": "System uninstaller",

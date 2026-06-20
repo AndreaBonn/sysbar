@@ -7,6 +7,8 @@ snapshot; the Mixer section is driven by the audio service.
 
 from __future__ import annotations
 
+from collections.abc import Callable
+
 import gi
 
 gi.require_version("Gtk", "4.0")
@@ -17,8 +19,11 @@ from ...core.constants import DEFAULT_TEMPERATURE_UNIT  # noqa: E402
 from ...core.i18n import _  # noqa: E402
 from ...services.audio.app_volume_mixer import AppVolumeMixer  # noqa: E402
 from ...services.metrics import metric_format as mf  # noqa: E402
+from ...services.system_monitor.processes import ProcessUsage  # noqa: E402
 from ...services.system_monitor.snapshot import SystemSnapshot  # noqa: E402
 from .mixer_section import MixerSection  # noqa: E402
+
+KillCallback = Callable[[int, str], None]
 
 _PANEL_WIDTH = 380
 _PANEL_HEIGHT = 560
@@ -35,6 +40,9 @@ class PanelWindow(Adw.Window):
         self._mixer_section = MixerSection()
         self._fan_group = Adw.PreferencesGroup(title=_("Fan Control (beta)"), visible=False)
         self._fan_rows: list[Adw.ActionRow] = []
+        self._process_group = Adw.PreferencesGroup(title=_("Top processes"), visible=False)
+        self._process_rows: list[Adw.ActionRow] = []
+        self._on_kill: KillCallback | None = None
         self._build_content()
 
     def set_temperature_unit(self, unit: str) -> None:
@@ -48,6 +56,10 @@ class PanelWindow(Adw.Window):
 
     def set_mixer_unavailable(self) -> None:
         self._mixer_section.set_unavailable()
+
+    def bind_process_actions(self, on_kill: KillCallback) -> None:
+        """Register the callback invoked when a process row's End button is hit."""
+        self._on_kill = on_kill
 
     def _build_content(self) -> None:
         toolbar = Adw.ToolbarView()
@@ -74,6 +86,7 @@ class PanelWindow(Adw.Window):
         content.append(self._group(_("Network"), (("net_speed", "Speed"), ("net_total", "Total"))))
         content.append(self._group(_("Power"), (("battery", "Battery"), ("power", "Power draw"))))
         content.append(self._fan_group)
+        content.append(self._process_group)
         content.append(self._mixer_section)
 
         scroller = Gtk.ScrolledWindow(hexpand=True, vexpand=True)
@@ -124,6 +137,34 @@ class PanelWindow(Adw.Window):
             row = Adw.ActionRow(title=name, subtitle=f"{rpm:.0f} RPM")
             self._fan_group.add(row)
             self._fan_rows.append(row)
+
+    def update_processes(self, processes: list[ProcessUsage]) -> None:
+        """Rebuild the top-process rows; each carries an End button."""
+        for row in self._process_rows:
+            self._process_group.remove(row)
+        self._process_rows.clear()
+        self._process_group.set_visible(bool(processes))
+        for process in processes:
+            self._process_group.add(self._process_row(process))
+
+    def _process_row(self, process: ProcessUsage) -> Adw.ActionRow:
+        cpu = mf.format_percent(process.cpu_percent)
+        memory = mf.format_bytes(process.memory_bytes)
+        row = Adw.ActionRow(title=process.name or _("Unknown"), subtitle=f"{cpu} CPU · {memory}")
+        button = Gtk.Button(
+            icon_name="process-stop-symbolic",
+            tooltip_text=_("End process"),
+            valign=Gtk.Align.CENTER,
+        )
+        button.add_css_class("flat")
+        button.connect("clicked", self._on_kill_clicked, process.pid, process.name)
+        row.add_suffix(button)
+        self._process_rows.append(row)
+        return row
+
+    def _on_kill_clicked(self, _button: Gtk.Button, pid: int, name: str) -> None:
+        if self._on_kill is not None:
+            self._on_kill(pid, name)
 
     def _set(self, key: str, value: str | None) -> None:
         row = self._rows[key]

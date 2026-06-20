@@ -1,4 +1,4 @@
-from sysbar.app.tray.menu_builder import MenuActions, build_menu_items
+from sysbar.app.tray.menu_builder import MenuActions, QuickToggleState, build_menu_items
 from sysbar.app.tray.menu_model import TOGGLE_OFF, TOGGLE_ON, TYPE_SEPARATOR, MenuItem
 from sysbar.core.constants import TRAY_METRICS
 
@@ -10,6 +10,9 @@ def _noop() -> None:
 def _actions() -> MenuActions:
     return MenuActions(
         toggle_keep_awake=_noop,
+        toggle_microphone=_noop,
+        toggle_dnd=_noop,
+        toggle_dark_mode=_noop,
         open_panel=_noop,
         open_shelf=_noop,
         open_uninstaller=_noop,
@@ -23,11 +26,13 @@ def _build(
     *,
     keep_awake_on: bool = False,
     shelf_enabled: bool = False,
+    toggles: QuickToggleState | None = None,
 ) -> list[MenuItem]:
     return build_menu_items(
         metric_values or {},
         keep_awake_on=keep_awake_on,
         shelf_enabled=shelf_enabled,
+        toggles=toggles or QuickToggleState(),
         actions=_actions(),
     )
 
@@ -103,12 +108,70 @@ def test_action_rows_are_present_and_enabled() -> None:
     labels = [i.label for i in items if i.item_type != TYPE_SEPARATOR and i.label]
     assert labels == [
         "Keep awake",
+        "Mute microphone",
+        "Microphone in use",
+        "Do not disturb",
+        "Dark mode",
         "Open panel",
         "Open shelf",
         "Uninstall app…",
         "Settings",
         "Quit",
     ]
+
+
+def test_quick_toggles_hidden_when_unavailable() -> None:
+    items = _build()
+    for label in ("Mute microphone", "Do not disturb", "Dark mode", "Microphone in use"):
+        row = next(i for i in items if i.label == label)
+        assert row.visible is False
+
+
+def test_quick_toggles_visible_and_reflect_state() -> None:
+    toggles = QuickToggleState(
+        mic_available=True,
+        mic_muted=True,
+        mic_in_use=True,
+        dnd_available=True,
+        dnd_active=False,
+        dark_available=True,
+        dark_active=True,
+    )
+    items = _build(toggles=toggles)
+    mic = next(i for i in items if i.label == "Mute microphone")
+    dnd = next(i for i in items if i.label == "Do not disturb")
+    dark = next(i for i in items if i.label == "Dark mode")
+    in_use = next(i for i in items if i.label == "Microphone in use")
+    assert mic.visible and mic.toggle_state == TOGGLE_ON
+    assert dnd.visible and dnd.toggle_state == TOGGLE_OFF
+    assert dark.visible and dark.toggle_state == TOGGLE_ON
+    assert in_use.visible and in_use.enabled is False
+
+
+def test_microphone_toggle_callback_wired() -> None:
+    calls: list[str] = []
+    actions = MenuActions(
+        toggle_keep_awake=_noop,
+        toggle_microphone=lambda: calls.append("mic"),
+        toggle_dnd=lambda: calls.append("dnd"),
+        toggle_dark_mode=lambda: calls.append("dark"),
+        open_panel=_noop,
+        open_shelf=_noop,
+        open_uninstaller=_noop,
+        open_settings=_noop,
+        quit=_noop,
+    )
+    items = build_menu_items(
+        {},
+        keep_awake_on=False,
+        shelf_enabled=False,
+        toggles=QuickToggleState(mic_available=True),
+        actions=actions,
+    )
+    mic = next(i for i in items if i.label == "Mute microphone")
+    assert mic.action is not None
+    mic.action()
+    assert calls == ["mic"]
 
 
 def test_quit_appears_exactly_once() -> None:
@@ -121,13 +184,22 @@ def test_action_callbacks_are_wired() -> None:
     calls: list[str] = []
     actions = MenuActions(
         toggle_keep_awake=lambda: calls.append("toggle"),
+        toggle_microphone=_noop,
+        toggle_dnd=_noop,
+        toggle_dark_mode=_noop,
         open_panel=lambda: calls.append("panel"),
         open_shelf=lambda: calls.append("shelf"),
         open_uninstaller=lambda: calls.append("uninstall"),
         open_settings=lambda: calls.append("settings"),
         quit=lambda: calls.append("quit"),
     )
-    items = build_menu_items({}, keep_awake_on=False, shelf_enabled=False, actions=actions)
+    items = build_menu_items(
+        {},
+        keep_awake_on=False,
+        shelf_enabled=False,
+        toggles=QuickToggleState(),
+        actions=actions,
+    )
     quit_row = next(i for i in items if i.label == "Quit")
     assert quit_row.action is not None
     quit_row.action()
