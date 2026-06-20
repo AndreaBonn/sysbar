@@ -7,6 +7,7 @@ import pytest
 from sysbar.core import capabilities
 from sysbar.core.capabilities import (
     Capabilities,
+    detect_gnome_desktop,
     detect_nvml,
     detect_pipewire_pulse,
     detect_polkit,
@@ -104,6 +105,32 @@ def test_sensors_false_without_hwmon_or_binary(
     monkeypatch.setattr(capabilities, "HWMON_PATH", tmp_path)
     monkeypatch.setattr("sysbar.core.capabilities.shutil.which", lambda name: None)
     assert detect_sensors() is False
+
+
+def test_gnome_desktop_true_when_both_schemas_present(monkeypatch: pytest.MonkeyPatch) -> None:
+    source = SimpleNamespace(lookup=lambda _schema, _recursive: object())
+    monkeypatch.setattr(
+        "sysbar.core.capabilities.Gio.SettingsSchemaSource.get_default", lambda: source
+    )
+    assert detect_gnome_desktop() is True
+
+
+def test_gnome_desktop_false_when_a_schema_missing(monkeypatch: pytest.MonkeyPatch) -> None:
+    present = capabilities.GNOME_INTERFACE_SCHEMA
+    source = SimpleNamespace(
+        lookup=lambda schema, _recursive: object() if schema == present else None
+    )
+    monkeypatch.setattr(
+        "sysbar.core.capabilities.Gio.SettingsSchemaSource.get_default", lambda: source
+    )
+    assert detect_gnome_desktop() is False
+
+
+def test_gnome_desktop_false_when_no_schema_source(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(
+        "sysbar.core.capabilities.Gio.SettingsSchemaSource.get_default", lambda: None
+    )
+    assert detect_gnome_desktop() is False
 
 
 def test_polkit_true_when_pkexec_present(monkeypatch: pytest.MonkeyPatch) -> None:

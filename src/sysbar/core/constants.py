@@ -127,6 +127,15 @@ PANEL_PROCESS_COUNT = 5
 # Escalation delay from SIGTERM to SIGKILL for a user-requested process kill.
 PROCESS_KILL_TIMEOUT_SECONDS = 5.0
 
+# External GNOME desktop schemas driven by the quick toggles. Looked up at
+# runtime; absent on non-GNOME sessions, where the toggles hide themselves.
+GNOME_INTERFACE_SCHEMA = "org.gnome.desktop.interface"
+GNOME_NOTIFICATIONS_SCHEMA = "org.gnome.desktop.notifications"
+COLOR_SCHEME_KEY = "color-scheme"
+COLOR_SCHEME_DARK = "prefer-dark"
+COLOR_SCHEME_DEFAULT = "default"
+SHOW_BANNERS_KEY = "show-banners"
+
 # System-monitor alert bounds. Percentages are clamped to [0, 100] (0 = the
 # alert is off); the sustained-CPU window and the temperature ceiling have their
 # own ranges. These cap user input read from GSettings.

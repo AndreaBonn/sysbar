@@ -20,7 +20,11 @@ gi.require_version("GLib", "2.0")
 gi.require_version("Gio", "2.0")
 from gi.repository import Gio, GLib, GObject  # noqa: E402
 
-from .constants import HWMON_PATH  # noqa: E402
+from .constants import (  # noqa: E402
+    GNOME_INTERFACE_SCHEMA,
+    GNOME_NOTIFICATIONS_SCHEMA,
+    HWMON_PATH,
+)
 
 log = logging.getLogger(__name__)
 
@@ -32,6 +36,7 @@ PIPEWIRE_PULSE = "pipewire_pulse"
 LOGIND = "logind"
 UPOWER = "upower"
 POLKIT = "polkit"
+GNOME_DESKTOP = "gnome_desktop"
 
 
 def detect_session_x11() -> bool:
@@ -85,6 +90,17 @@ def detect_polkit() -> bool:
     return shutil.which("pkexec") is not None
 
 
+def detect_gnome_desktop() -> bool:
+    """Whether the GNOME schemas the quick toggles drive are installed."""
+    source = Gio.SettingsSchemaSource.get_default()
+    if source is None:
+        return False
+    return all(
+        source.lookup(schema, True) is not None
+        for schema in (GNOME_INTERFACE_SCHEMA, GNOME_NOTIFICATIONS_SCHEMA)
+    )
+
+
 def _dbus_name_available(bus_type: Gio.BusType, name: str) -> bool:
     try:
         bus = Gio.bus_get_sync(bus_type, None)
@@ -113,6 +129,7 @@ DETECTORS: dict[str, Callable[[], bool]] = {
     LOGIND: detect_logind,
     UPOWER: detect_upower,
     POLKIT: detect_polkit,
+    GNOME_DESKTOP: detect_gnome_desktop,
 }
 
 

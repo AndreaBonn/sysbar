@@ -20,6 +20,7 @@ gi.require_version("Adw", "1")
 from gi.repository import Adw, Gio, GLib  # noqa: E402
 
 from ..core.capabilities import (  # noqa: E402
+    GNOME_DESKTOP,
     PIPEWIRE_PULSE,
     POLKIT,
     SESSION_X11,
@@ -31,6 +32,8 @@ from ..core.constants import (  # noqa: E402
     AUTO_QUIT_SYSTEM_WHITELIST,
     CAPABILITY_REFRESH_INTERVAL_SECONDS,
     CURRENT_FEATURE_SET,
+    GNOME_INTERFACE_SCHEMA,
+    GNOME_NOTIFICATIONS_SCHEMA,
     HARDWARE_OPTIONAL_METRICS,
     PANEL_PROCESS_COUNT,
     PLACEMENT_MENU,
@@ -51,6 +54,15 @@ from ..services.keep_awake.ports import EndReason  # noqa: E402
 from ..services.keep_awake.scheduler import GLibScheduler  # noqa: E402
 from ..services.metrics import metric_format as mf  # noqa: E402
 from ..services.notifier import Notifier  # noqa: E402
+from ..services.quick_toggles.adapters import (  # noqa: E402
+    GioSettingsStore,
+    PulseMicrophoneBackend,
+)
+from ..services.quick_toggles.desktop_toggles import (  # noqa: E402
+    ColorSchemeToggle,
+    DoNotDisturbToggle,
+)
+from ..services.quick_toggles.microphone import MicrophoneToggle  # noqa: E402
 from ..services.shelf.shake_monitor import ShakeMonitor  # noqa: E402
 from ..services.shelf.shelf_service import ShelfService  # noqa: E402
 from ..services.system_monitor.adapters import SysfsPowerReader  # noqa: E402
@@ -64,7 +76,7 @@ from ..services.uninstall.command_query import CommandPackageQuery  # noqa: E402
 from ..services.uninstall.package_remover import PkexecPackageRemover  # noqa: E402
 from ..services.uninstall.trash import GioTrash  # noqa: E402
 from ..services.update_service import UpdateInfo, UpdateService  # noqa: E402
-from .tray.menu_builder import MenuActions, build_menu_items  # noqa: E402
+from .tray.menu_builder import MenuActions, QuickToggleState, build_menu_items  # noqa: E402
 from .tray.menu_model import MenuModel  # noqa: E402
 from .tray.tray import Tray  # noqa: E402
 from .tray_renderer import (  # noqa: E402
@@ -100,6 +112,9 @@ class SysbarApplication(Adw.Application):
         self._process_killer = ProcessTerminationService(OsTerminator(), GLibScheduler())
         self._keep_awake: KeepAwakeManager | None = None
         self._mixer: AppVolumeMixer | None = None
+        self._microphone: MicrophoneToggle | None = None
+        self._dnd: DoNotDisturbToggle | None = None
+        self._dark_mode: ColorSchemeToggle | None = None
         self._shelf: ShelfService | None = None
         self._shelf_window: Adw.Window | None = None
         self._shake_monitor: ShakeMonitor | None = None
@@ -123,6 +138,7 @@ class SysbarApplication(Adw.Application):
         self._setup_alerting()
         self._setup_keep_awake()
         self._setup_mixer()
+        self._setup_quick_toggles()
         self._reconcile_shelf()
         self._setup_auto_quit()
         self._setup_uninstaller()
@@ -176,6 +192,45 @@ class SysbarApplication(Adw.Application):
             return
         self._mixer = AppVolumeMixer(backend, self.config)
         self._mixer.start()
+
+    def _setup_quick_toggles(self) -> None:
+        if self._capabilities.has(PIPEWIRE_PULSE):
+            try:
+                self._microphone = MicrophoneToggle(PulseMicrophoneBackend())
+            except Exception as error:
+                log.warning("microphone backend unavailable", extra={"error": str(error)})
+        if self._capabilities.has(GNOME_DESKTOP):
+            self._dnd = DoNotDisturbToggle(GioSettingsStore(GNOME_NOTIFICATIONS_SCHEMA))
+            self._dark_mode = ColorSchemeToggle(GioSettingsStore(GNOME_INTERFACE_SCHEMA))
+
+    def _quick_toggle_state(self) -> QuickToggleState:
+        return QuickToggleState(
+            mic_available=self._microphone is not None,
+            mic_muted=self._microphone.is_muted() if self._microphone is not None else False,
+            mic_in_use=self._microphone.is_in_use() if self._microphone is not None else False,
+            dnd_available=self._dnd is not None,
+            dnd_active=self._dnd.is_active() if self._dnd is not None else False,
+            dark_available=self._dark_mode is not None,
+            dark_active=self._dark_mode.is_dark() if self._dark_mode is not None else False,
+        )
+
+    def _has_quick_toggles(self) -> bool:
+        return any((self._microphone, self._dnd, self._dark_mode))
+
+    def _toggle_microphone(self) -> None:
+        if self._microphone is not None:
+            self._microphone.toggle()
+            self._refresh_menu()
+
+    def _toggle_dnd(self) -> None:
+        if self._dnd is not None:
+            self._dnd.toggle()
+            self._refresh_menu()
+
+    def _toggle_dark_mode(self) -> None:
+        if self._dark_mode is not None:
+            self._dark_mode.toggle()
+            self._refresh_menu()
 
     def _setup_auto_quit(self) -> None:
         if not self._capabilities.has(SESSION_X11):
@@ -312,7 +367,7 @@ class SysbarApplication(Adw.Application):
         Returning ``True`` only when metrics live in the dropdown lets the host
         re-read the layout on demand instead of us churning it on every sample.
         """
-        if not self._has_menu_metrics():
+        if not self._has_menu_metrics() and not self._has_quick_toggles():
             return False
         self._refresh_menu()
         return True
@@ -428,6 +483,9 @@ class SysbarApplication(Adw.Application):
     def _menu_actions(self) -> MenuActions:
         return MenuActions(
             toggle_keep_awake=self._toggle_keep_awake,
+            toggle_microphone=self._toggle_microphone,
+            toggle_dnd=self._toggle_dnd,
+            toggle_dark_mode=self._toggle_dark_mode,
             open_panel=self._open_panel,
             open_shelf=self._open_shelf,
             open_uninstaller=self._open_uninstaller,
@@ -441,6 +499,7 @@ class SysbarApplication(Adw.Application):
             self._menu_metric_values(),
             keep_awake_on=keep_awake_on,
             shelf_enabled=self.config.get_bool("shelf-enabled"),
+            toggles=self._quick_toggle_state(),
             actions=self._menu_actions(),
         )
         return MenuModel(items)

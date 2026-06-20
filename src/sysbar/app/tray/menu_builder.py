@@ -28,6 +28,9 @@ class MenuActions:
     """Activation callbacks for the fixed action rows of the tray menu."""
 
     toggle_keep_awake: Callable[[], None]
+    toggle_microphone: Callable[[], None]
+    toggle_dnd: Callable[[], None]
+    toggle_dark_mode: Callable[[], None]
     open_panel: Callable[[], None]
     open_shelf: Callable[[], None]
     open_uninstaller: Callable[[], None]
@@ -35,11 +38,25 @@ class MenuActions:
     quit: Callable[[], None]
 
 
+@dataclass(frozen=True)
+class QuickToggleState:
+    """Availability and on/off state of the quick system toggles."""
+
+    mic_available: bool = False
+    mic_muted: bool = False
+    mic_in_use: bool = False
+    dnd_available: bool = False
+    dnd_active: bool = False
+    dark_available: bool = False
+    dark_active: bool = False
+
+
 def build_menu_items(
     metric_values: dict[str, str],
     *,
     keep_awake_on: bool,
     shelf_enabled: bool,
+    toggles: QuickToggleState,
     actions: MenuActions,
 ) -> list[MenuItem]:
     """Return the full, fixed menu tree with per-item visibility applied.
@@ -60,7 +77,12 @@ def build_menu_items(
     items = _metric_slots(metric_values)
     items.append(MenuItem(item_type=TYPE_SEPARATOR, visible=bool(metric_values)))
     items.extend(
-        _action_rows(keep_awake_on=keep_awake_on, shelf_enabled=shelf_enabled, actions=actions)
+        _action_rows(
+            keep_awake_on=keep_awake_on,
+            shelf_enabled=shelf_enabled,
+            toggles=toggles,
+            actions=actions,
+        )
     )
     return items
 
@@ -77,7 +99,7 @@ def _metric_slots(metric_values: dict[str, str]) -> list[MenuItem]:
 
 
 def _action_rows(
-    *, keep_awake_on: bool, shelf_enabled: bool, actions: MenuActions
+    *, keep_awake_on: bool, shelf_enabled: bool, toggles: QuickToggleState, actions: MenuActions
 ) -> list[MenuItem]:
     return [
         MenuItem(
@@ -86,6 +108,7 @@ def _action_rows(
             toggle_state=TOGGLE_ON if keep_awake_on else TOGGLE_OFF,
             action=actions.toggle_keep_awake,
         ),
+        *_quick_toggle_rows(toggles=toggles, actions=actions),
         MenuItem(item_type=TYPE_SEPARATOR),
         MenuItem(label=_("Open panel"), action=actions.open_panel),
         MenuItem(label=_("Open shelf"), action=actions.open_shelf, visible=shelf_enabled),
@@ -93,4 +116,32 @@ def _action_rows(
         MenuItem(label=_("Settings"), action=actions.open_settings),
         MenuItem(item_type=TYPE_SEPARATOR),
         MenuItem(label=_("Quit"), action=actions.quit),
+    ]
+
+
+def _quick_toggle_rows(*, toggles: QuickToggleState, actions: MenuActions) -> list[MenuItem]:
+    """Fixed mic/DND/dark rows; each is hidden unless its capability is present."""
+    return [
+        MenuItem(
+            label=_("Mute microphone"),
+            toggle_type="checkmark",
+            toggle_state=TOGGLE_ON if toggles.mic_muted else TOGGLE_OFF,
+            visible=toggles.mic_available,
+            action=actions.toggle_microphone,
+        ),
+        MenuItem(label=_("Microphone in use"), enabled=False, visible=toggles.mic_in_use),
+        MenuItem(
+            label=_("Do not disturb"),
+            toggle_type="checkmark",
+            toggle_state=TOGGLE_ON if toggles.dnd_active else TOGGLE_OFF,
+            visible=toggles.dnd_available,
+            action=actions.toggle_dnd,
+        ),
+        MenuItem(
+            label=_("Dark mode"),
+            toggle_type="checkmark",
+            toggle_state=TOGGLE_ON if toggles.dark_active else TOGGLE_OFF,
+            visible=toggles.dark_available,
+            action=actions.toggle_dark_mode,
+        ),
     ]
