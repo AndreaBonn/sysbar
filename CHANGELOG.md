@@ -5,6 +5,14 @@ All notable changes to Sysbar are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Fixed
+- Debian package: the Italian UI stayed in English even with `it` selected. The
+  install rules copied `data/locale/*` into a not-yet-existing destination, so
+  `cp` renamed the `it/` directory to `locale/`, flattening the language level
+  that gettext needs. The destination is now created before the copy.
+
 ## [1.0.0] - 2026-06-20
 
 First stable release.

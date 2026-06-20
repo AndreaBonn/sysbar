@@ -48,6 +48,10 @@ override_dh_auto_install:
 	install -m 0644 data/gnome-extension/extension.js \
 		$(PKG)/usr/share/gnome-shell/extensions/sysbar-window-manager@andreabonn.github.io/
 
+	# The destination must exist first: with a single language dir as source,
+	# cp into a missing target would rename it (it/ -> locale/), flattening the
+	# language level and breaking gettext lookup.
+	install -d $(PKG)/usr/share/locale
 	if [ -d data/locale ]; then \
 		cp -r data/locale/* $(PKG)/usr/share/locale/ 2>/dev/null || true; \
 	fi
