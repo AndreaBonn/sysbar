@@ -19,6 +19,7 @@ sei utility locali.
 ![Platform](https://img.shields.io/badge/platform-Ubuntu%2FGNOME-e95420)
 ![Release](https://img.shields.io/github/v/release/AndreaBonn/sysbar)
 ![CI](https://github.com/AndreaBonn/sysbar/actions/workflows/ci.yml/badge.svg)
+[![Coverage](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/AndreaBonn/sysbar/main/badges/coverage-badge.json)](https://github.com/AndreaBonn/sysbar/actions/workflows/ci.yml)
 
 Sysbar mette sei strumenti dietro una sola icona nel tray: un monitor di sistema,
 un mixer del volume per applicazione, keep awake, auto-quit, un disinstallatore di
