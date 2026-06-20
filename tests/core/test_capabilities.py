@@ -14,6 +14,7 @@ from sysbar.core.capabilities import (
     detect_sensors,
     detect_session_x11,
 )
+from sysbar.core.constants import GNOME_INTERFACE_SCHEMA
 
 
 def test_has_returns_false_before_refresh() -> None:
@@ -116,7 +117,7 @@ def test_gnome_desktop_true_when_both_schemas_present(monkeypatch: pytest.Monkey
 
 
 def test_gnome_desktop_false_when_a_schema_missing(monkeypatch: pytest.MonkeyPatch) -> None:
-    present = capabilities.GNOME_INTERFACE_SCHEMA
+    present = GNOME_INTERFACE_SCHEMA
     source = SimpleNamespace(
         lookup=lambda schema, _recursive: object() if schema == present else None
     )
