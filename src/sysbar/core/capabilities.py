@@ -41,6 +41,7 @@ POLKIT = "polkit"
 GNOME_DESKTOP = "gnome_desktop"
 WAYLAND_WINDOW_SOURCE = "wayland_window_source"
 GLOBAL_SHORTCUTS = "global_shortcuts"
+PROC_NET_STATS = "proc_net_stats"
 
 
 def detect_session_x11() -> bool:
@@ -115,6 +116,11 @@ def detect_global_shortcuts() -> bool:
     return _dbus_name_available(Gio.BusType.SESSION, GLOBAL_SHORTCUTS_PORTAL_NAME)
 
 
+def detect_proc_net_stats() -> bool:
+    """Whether ``ss`` is available for per-process network throughput."""
+    return shutil.which("ss") is not None
+
+
 def _dbus_name_available(bus_type: Gio.BusType, name: str) -> bool:
     try:
         bus = Gio.bus_get_sync(bus_type, None)
@@ -146,6 +152,7 @@ DETECTORS: dict[str, Callable[[], bool]] = {
     GNOME_DESKTOP: detect_gnome_desktop,
     WAYLAND_WINDOW_SOURCE: detect_wayland_window_source,
     GLOBAL_SHORTCUTS: detect_global_shortcuts,
+    PROC_NET_STATS: detect_proc_net_stats,
 }
 
 

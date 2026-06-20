@@ -144,6 +144,16 @@ def test_polkit_false_when_pkexec_absent(monkeypatch: pytest.MonkeyPatch) -> Non
     assert detect_polkit() is False
 
 
+def test_proc_net_stats_true_when_ss_present(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr("sysbar.core.capabilities.shutil.which", lambda name: "/usr/bin/ss")
+    assert capabilities.detect_proc_net_stats() is True
+
+
+def test_proc_net_stats_false_when_ss_absent(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr("sysbar.core.capabilities.shutil.which", lambda name: None)
+    assert capabilities.detect_proc_net_stats() is False
+
+
 def test_nvml_false_when_module_unavailable(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setitem(sys.modules, "pynvml", None)  # import raises -> caught
     assert detect_nvml() is False

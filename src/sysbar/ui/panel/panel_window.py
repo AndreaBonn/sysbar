@@ -20,6 +20,7 @@ from ...core.i18n import _  # noqa: E402
 from ...services.audio.app_volume_mixer import AppVolumeMixer  # noqa: E402
 from ...services.metrics import metric_format as mf  # noqa: E402
 from ...services.system_monitor.history import MetricHistory  # noqa: E402
+from ...services.system_monitor.net_per_process import ProcNetRate  # noqa: E402
 from ...services.system_monitor.processes import ProcessUsage  # noqa: E402
 from ...services.system_monitor.snapshot import SystemSnapshot  # noqa: E402
 from ..footer import build_footer  # noqa: E402
@@ -57,6 +58,8 @@ class PanelWindow(Adw.Window):
         self._fan_rows: list[Adw.ActionRow] = []
         self._process_group = Adw.PreferencesGroup(title=_("Top processes"), visible=False)
         self._process_rows: list[Adw.ActionRow] = []
+        self._net_group = Adw.PreferencesGroup(title=_("Network by process"), visible=False)
+        self._net_rows: list[Adw.ActionRow] = []
         self._on_kill: KillCallback | None = None
         self._build_content()
 
@@ -102,6 +105,7 @@ class PanelWindow(Adw.Window):
         content.append(self._group(_("Power"), (("battery", "Battery"), ("power", "Power draw"))))
         content.append(self._fan_group)
         content.append(self._process_group)
+        content.append(self._net_group)
         content.append(self._mixer_section)
 
         scroller = Gtk.ScrolledWindow(hexpand=True, vexpand=True)
@@ -207,6 +211,18 @@ class PanelWindow(Adw.Window):
     def _on_kill_clicked(self, _button: Gtk.Button, pid: int, name: str) -> None:
         if self._on_kill is not None:
             self._on_kill(pid, name)
+
+    def update_net_processes(self, rates: list[ProcNetRate]) -> None:
+        """Rebuild the per-process network rows; hidden when there is no traffic."""
+        for row in self._net_rows:
+            self._net_group.remove(row)
+        self._net_rows.clear()
+        self._net_group.set_visible(bool(rates))
+        for rate in rates:
+            subtitle = f"↓{mf.format_rate(rate.rx_rate)} ↑{mf.format_rate(rate.tx_rate)}"
+            row = Adw.ActionRow(title=rate.name or _("Unknown"), subtitle=subtitle)
+            self._net_group.add(row)
+            self._net_rows.append(row)
 
     def _set(self, key: str, value: str | None) -> None:
         row = self._rows[key]

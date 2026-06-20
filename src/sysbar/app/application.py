@@ -24,6 +24,7 @@ from ..core.capabilities import (  # noqa: E402
     GNOME_DESKTOP,
     PIPEWIRE_PULSE,
     POLKIT,
+    PROC_NET_STATS,
     SESSION_X11,
     WAYLAND_WINDOW_SOURCE,
     Capabilities,
@@ -39,6 +40,7 @@ from ..core.constants import (  # noqa: E402
     GNOME_NOTIFICATIONS_SCHEMA,
     GRAPH_METRICS,
     HARDWARE_OPTIONAL_METRICS,
+    NET_PROCESS_COUNT,
     PANEL_PROCESS_COUNT,
     PLACEMENT_MENU,
     PLACEMENT_OFF,
@@ -80,6 +82,11 @@ from ..services.system_monitor.adapters import SysfsPowerReader  # noqa: E402
 from ..services.system_monitor.alerting import AlertEngine, AlertThresholds  # noqa: E402
 from ..services.system_monitor.history import MetricHistory  # noqa: E402
 from ..services.system_monitor.monitor import SystemMonitor  # noqa: E402
+from ..services.system_monitor.net_per_process import (  # noqa: E402
+    NetRateTracker,
+    SsNetSampler,
+    top_by_throughput,
+)
 from ..services.system_monitor.processes import ProcessUsageService  # noqa: E402
 from ..services.system_monitor.snapshot import SystemSnapshot  # noqa: E402
 from ..services.system_monitor.termination import ProcessTerminationService  # noqa: E402
@@ -122,6 +129,8 @@ class SysbarApplication(Adw.Application):
         self._history = MetricHistory()
         self._alert_engine: AlertEngine | None = None
         self._process_usage = ProcessUsageService()
+        self._net_tracker = NetRateTracker()
+        self._net_sampler: SsNetSampler | None = None
         self._process_killer = ProcessTerminationService(OsTerminator(), GLibScheduler())
         self._keep_awake: KeepAwakeManager | None = None
         self._mixer: AppVolumeMixer | None = None
@@ -165,6 +174,8 @@ class SysbarApplication(Adw.Application):
         self._monitor = SystemMonitor(self.config)
         self._monitor.connect("snapshot-updated", self._on_snapshot)
         self.config.settings.connect("changed", self._on_settings_changed)
+        if self._capabilities.has(PROC_NET_STATS):
+            self._net_sampler = SsNetSampler()
         self._update_tray_active()
 
     def _setup_alerting(self) -> None:
@@ -406,6 +417,16 @@ class SysbarApplication(Adw.Application):
             self._panel.update_snapshot(snapshot)
             self._panel.update_history(self._history)
             self._panel.update_processes(self._process_usage.top_cpu(PANEL_PROCESS_COUNT))
+            self._update_net_processes()
+
+    def _update_net_processes(self) -> None:
+        """Refresh the panel's per-process network rows from a fresh ``ss`` read."""
+        if self._panel is None or self._net_sampler is None:
+            return
+        rates = self._net_tracker.update(
+            self._net_sampler.sample(), self.config.monitor_interval_seconds
+        )
+        self._panel.update_net_processes(top_by_throughput(rates, NET_PROCESS_COUNT))
 
     def _graph_metrics(self) -> frozenset[str]:
         """Metrics whose sparkline is enabled in settings (``monitor-graph-*``)."""
@@ -584,6 +605,7 @@ class SysbarApplication(Adw.Application):
                 self._panel.update_snapshot(self._monitor.latest)
                 self._panel.update_history(self._history)
                 self._panel.update_processes(self._process_usage.top_cpu(PANEL_PROCESS_COUNT))
+                self._update_net_processes()
         self._panel.present()
 
     def _confirm_kill_process(self, pid: int, name: str) -> None:

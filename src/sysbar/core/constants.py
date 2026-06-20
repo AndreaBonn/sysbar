@@ -136,6 +136,12 @@ TOP_PROCESS_COUNT = 5
 
 # Top-N processes listed in the panel, with a kill action.
 PANEL_PROCESS_COUNT = 5
+
+# Top-N network-heavy processes shown in the panel "Network by process" section.
+NET_PROCESS_COUNT = 5
+# Command used to read per-socket byte counters with their owning process.
+# -t/-u: TCP+UDP, -n: numeric, -p: process, -i: socket info (byte counters).
+SS_COMMAND: tuple[str, ...] = ("ss", "-tunpi")
 # Escalation delay from SIGTERM to SIGKILL for a user-requested process kill.
 PROCESS_KILL_TIMEOUT_SECONDS = 5.0
 

@@ -66,6 +66,15 @@ def test_panel_window_sparklines_update(gtk: object) -> None:
     window.destroy()
 
 
+def test_panel_window_net_processes_update(gtk: object) -> None:
+    from sysbar.services.system_monitor.net_per_process import ProcNetRate
+    from sysbar.ui.panel.panel_window import PanelWindow
+
+    window = PanelWindow()
+    window.update_net_processes([ProcNetRate(pid=1, name="firefox", rx_rate=2048.0, tx_rate=512.0)])
+    window.destroy()
+
+
 def test_settings_window_builds(gtk: object, compiled_schema: str) -> None:
     from sysbar.ui.settings.settings_window import SettingsWindow
 
