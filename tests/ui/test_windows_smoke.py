@@ -52,6 +52,20 @@ def test_panel_window_builds(gtk: object) -> None:
     window.destroy()
 
 
+def test_panel_window_sparklines_update(gtk: object) -> None:
+    from sysbar.services.system_monitor.history import MetricHistory
+    from sysbar.services.system_monitor.snapshot import SystemSnapshot
+    from sysbar.ui.panel.panel_window import PanelWindow
+
+    window = PanelWindow()
+    window.set_graph_metrics(frozenset({"cpu"}))
+    history = MetricHistory()
+    history.record(SystemSnapshot(cpu_percent=10.0))
+    history.record(SystemSnapshot(cpu_percent=20.0))
+    window.update_history(history)
+    window.destroy()
+
+
 def test_settings_window_builds(gtk: object, compiled_schema: str) -> None:
     from sysbar.ui.settings.settings_window import SettingsWindow
 

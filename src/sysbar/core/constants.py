@@ -70,6 +70,14 @@ TRAY_METRICS: tuple[str, ...] = ("cpu", "gpu", "memory", "network", "battery", "
 # first sample), so neither is disabled.
 HARDWARE_OPTIONAL_METRICS: tuple[str, ...] = ("gpu", "battery", "power")
 
+# Metrics that carry an optional history sparkline in the panel. Each has a
+# "monitor-graph-<id>" GSettings key. Order matches the schema declaration.
+GRAPH_METRICS: tuple[str, ...] = ("cpu", "gpu", "memory", "network", "power", "battery")
+
+# Number of samples retained per metric for the panel sparklines (a ring buffer).
+# At the default 2s cadence this is four minutes of history.
+HISTORY_MAX_SAMPLES = 120
+
 TEMPERATURE_CELSIUS = "celsius"
 TEMPERATURE_FAHRENHEIT = "fahrenheit"
 ALLOWED_TEMPERATURE_UNITS: tuple[str, ...] = (TEMPERATURE_CELSIUS, TEMPERATURE_FAHRENHEIT)

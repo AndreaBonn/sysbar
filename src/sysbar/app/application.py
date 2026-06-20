@@ -37,6 +37,7 @@ from ..core.constants import (  # noqa: E402
     CURRENT_FEATURE_SET,
     GNOME_INTERFACE_SCHEMA,
     GNOME_NOTIFICATIONS_SCHEMA,
+    GRAPH_METRICS,
     HARDWARE_OPTIONAL_METRICS,
     PANEL_PROCESS_COUNT,
     PLACEMENT_MENU,
@@ -77,6 +78,7 @@ from ..services.shelf.shake_monitor import ShakeMonitor  # noqa: E402
 from ..services.shelf.shelf_service import ShelfService  # noqa: E402
 from ..services.system_monitor.adapters import SysfsPowerReader  # noqa: E402
 from ..services.system_monitor.alerting import AlertEngine, AlertThresholds  # noqa: E402
+from ..services.system_monitor.history import MetricHistory  # noqa: E402
 from ..services.system_monitor.monitor import SystemMonitor  # noqa: E402
 from ..services.system_monitor.processes import ProcessUsageService  # noqa: E402
 from ..services.system_monitor.snapshot import SystemSnapshot  # noqa: E402
@@ -117,6 +119,7 @@ class SysbarApplication(Adw.Application):
         self._panel: Adw.Window | None = None
         self._settings_window: Adw.PreferencesWindow | None = None
         self._monitor: SystemMonitor | None = None
+        self._history = MetricHistory()
         self._alert_engine: AlertEngine | None = None
         self._process_usage = ProcessUsageService()
         self._process_killer = ProcessTerminationService(OsTerminator(), GLibScheduler())
@@ -397,10 +400,18 @@ class SysbarApplication(Adw.Application):
 
     def _on_snapshot(self, _monitor: SystemMonitor, snapshot: SystemSnapshot) -> None:
         self._refresh_tray_label()
+        self._history.record(snapshot)
         self._evaluate_alerts(snapshot)
         if self._panel is not None:
             self._panel.update_snapshot(snapshot)
+            self._panel.update_history(self._history)
             self._panel.update_processes(self._process_usage.top_cpu(PANEL_PROCESS_COUNT))
+
+    def _graph_metrics(self) -> frozenset[str]:
+        """Metrics whose sparkline is enabled in settings (``monitor-graph-*``)."""
+        return frozenset(
+            metric for metric in GRAPH_METRICS if self.config.get_bool(f"monitor-graph-{metric}")
+        )
 
     def _refresh_menu(self) -> None:
         if self._tray is not None:
@@ -446,6 +457,9 @@ class SysbarApplication(Adw.Application):
             self._reconcile_shelf()
         if key.startswith("alert-"):
             self._reconcile_alerting()
+        if key.startswith("monitor-graph-") and self._panel is not None:
+            self._panel.set_graph_metrics(self._graph_metrics())
+            self._panel.update_history(self._history)
 
     def _on_keep_awake_changed(self, _manager: KeepAwakeManager) -> None:
         self._refresh_menu()
@@ -563,10 +577,12 @@ class SysbarApplication(Adw.Application):
                 self._panel.set_mixer_unavailable()
         self._panel.set_temperature_unit(self.config.temperature_unit)
         self._panel.set_show_fans(self.config.get_bool("monitor-show-fan-control-beta"))
+        self._panel.set_graph_metrics(self._graph_metrics())
         if self._monitor is not None:
             self._monitor.set_panel_open(True)
             if self._monitor.latest is not None:
                 self._panel.update_snapshot(self._monitor.latest)
+                self._panel.update_history(self._history)
                 self._panel.update_processes(self._process_usage.top_cpu(PANEL_PROCESS_COUNT))
         self._panel.present()
 

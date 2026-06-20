@@ -33,6 +33,14 @@ _TRAY_METRIC_ROWS = [
     ("battery", "menu-bar-battery-placement", "Battery"),
     ("power", "menu-bar-power-placement", "Power"),
 ]
+_GRAPH_ROWS = [
+    ("monitor-graph-cpu", "CPU"),
+    ("monitor-graph-gpu", "GPU"),
+    ("monitor-graph-memory", "Memory"),
+    ("monitor-graph-network", "Network"),
+    ("monitor-graph-power", "Power"),
+    ("monitor-graph-battery", "Battery"),
+]
 _DURATIONS = [(0, "Indefinite"), (15, "15 min"), (30, "30 min"), (60, "1 hour"), (120, "2 hours")]
 _BATTERY_LIMITS = [(0, "Never"), (5, "5%"), (10, "10%"), (15, "15%"), (20, "20%")]
 
@@ -109,6 +117,14 @@ class SettingsWindow(Adw.PreferencesWindow):
         options.add(self._combo("temperature-unit", "Temperature", _TEMPERATURE_UNITS, False))
         options.add(self._combo("menu-bar-memory-style", "Memory style", _MEMORY_STYLES, False))
         page.add(options)
+
+        graphs = Adw.PreferencesGroup(
+            title=_("History graphs"),
+            description=_("Show a sparkline of recent values next to each metric"),
+        )
+        for key, title in _GRAPH_ROWS:
+            graphs.add(bound_switch(self._settings, key, title))
+        page.add(graphs)
         return page
 
     def _alerts_page(self) -> Adw.PreferencesPage:
