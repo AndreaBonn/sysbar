@@ -291,8 +291,17 @@ uv run pytest
 
 Coverage tracks the framework-agnostic business logic (config sanitization,
 capability detection, log formatting). System boundaries (psutil, pulsectl, X11,
-D-Bus) sit behind interfaces and are mocked. The GTK UI is not tested in CI; it
-is verified manually with `--selftest` on a real session.
+D-Bus) sit behind interfaces and are mocked. Window construction smoke tests run
+under a virtual display (`xvfb`) in CI to catch broken widget trees; deeper UI
+behavior is still verified manually with `--selftest` on a real session.
+
+The UI smoke tests run in their own interpreter, because GTK 4 (the panels) and
+GTK 3 (pulled in by libwnck in the auto-quit tests) cannot coexist in one
+process:
+
+```bash
+xvfb-run -a uv run pytest tests/ui -o addopts=""
+```
 
 Lint and type check:
 
@@ -307,7 +316,8 @@ uv run mypy
 The CI workflow (`.github/workflows/ci.yml`) runs on `ubuntu-24.04` for every
 push to `main` and every pull request. It installs the system GI bindings,
 creates a `--system-site-packages` virtual environment, then runs ruff lint,
-ruff format check, mypy and pytest.
+ruff format check, mypy, the test suite and the GTK window smoke tests under
+`xvfb`.
 
 Releases ship the `.deb` as a GitHub release asset. Updates can also be
 delivered through a signed APT repository; see `packaging/apt-repo/README.md`.
