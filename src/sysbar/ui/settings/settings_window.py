@@ -93,6 +93,15 @@ class SettingsWindow(Adw.PreferencesWindow):
 
         group.add(bound_switch(self._settings, "auto-check-updates", "Check for updates"))
         page.add(group)
+
+        shortcuts = Adw.PreferencesGroup(
+            title=_("Global shortcuts"),
+            description=_("Assign the keys from your desktop's keyboard settings"),
+        )
+        shortcuts.add(bound_switch(self._settings, "hotkey-enabled", "Toggle keep awake"))
+        shortcuts.add(bound_switch(self._settings, "hotkey-shelf-enabled", "Open shelf"))
+        shortcuts.add(bound_switch(self._settings, "hotkey-clipboard-enabled", "Open clipboard"))
+        page.add(shortcuts)
         return page
 
     def _monitor_page(self) -> Adw.PreferencesPage:
@@ -150,7 +159,6 @@ class SettingsWindow(Adw.PreferencesWindow):
         group = Adw.PreferencesGroup(title=_("Keep Awake"))
         group.add(self._combo("default-duration-minutes", "Default duration", _DURATIONS, True))
         group.add(self._combo("battery-limit-percent", "Stop below battery", _BATTERY_LIMITS, True))
-        group.add(bound_switch(self._settings, "hotkey-enabled", "Global hotkey"))
         group.add(bound_switch(self._settings, "show-countdown", "Show countdown in tray"))
         group.add(bound_switch(self._settings, "clamshell-preferred", "Keep awake with lid closed"))
         page.add(group)

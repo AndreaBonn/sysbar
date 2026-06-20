@@ -36,16 +36,22 @@ from ..core.constants import (  # noqa: E402
     AUTO_QUIT_SYSTEM_WHITELIST,
     CAPABILITY_REFRESH_INTERVAL_SECONDS,
     CLIPBOARD_DIR,
+    CLIPBOARD_SHORTCUT_DESCRIPTION,
+    CLIPBOARD_SHORTCUT_ID,
     CURRENT_FEATURE_SET,
     GNOME_INTERFACE_SCHEMA,
     GNOME_NOTIFICATIONS_SCHEMA,
     GRAPH_METRICS,
     HARDWARE_OPTIONAL_METRICS,
+    KEEP_AWAKE_SHORTCUT_DESCRIPTION,
+    KEEP_AWAKE_SHORTCUT_ID,
     NET_PROCESS_COUNT,
     PANEL_PROCESS_COUNT,
     PLACEMENT_MENU,
     PLACEMENT_OFF,
     SHELF_DIR,
+    SHELF_SHORTCUT_DESCRIPTION,
+    SHELF_SHORTCUT_ID,
     TRAY_METRICS,
 )
 from ..core.i18n import _  # noqa: E402
@@ -64,7 +70,7 @@ from ..services.auto_quit.source_selection import (  # noqa: E402
 from ..services.autostart import AutostartManager  # noqa: E402
 from ..services.clipboard.monitor import ClipboardMonitor  # noqa: E402
 from ..services.clipboard.service import ClipboardService  # noqa: E402
-from ..services.hotkey.manager import HotkeyManager  # noqa: E402
+from ..services.hotkey.manager import HotkeyBinding, HotkeyManager  # noqa: E402
 from ..services.keep_awake.inhibitor import SystemInhibitor  # noqa: E402
 from ..services.keep_awake.manager import KeepAwakeManager  # noqa: E402
 from ..services.keep_awake.ports import EndReason  # noqa: E402
@@ -314,12 +320,30 @@ class SysbarApplication(Adw.Application):
         except Exception as error:
             log.warning("global shortcuts unavailable", extra={"error": str(error)})
             return
-        self._hotkey = HotkeyManager(
-            shortcuts,
-            on_trigger=self._toggle_keep_awake,
-            enabled=lambda: self.config.get_bool("hotkey-enabled"),
-        )
+        self._hotkey = HotkeyManager(shortcuts, self._hotkey_bindings())
         self._hotkey.start()
+
+    def _hotkey_bindings(self) -> list[HotkeyBinding]:
+        return [
+            HotkeyBinding(
+                KEEP_AWAKE_SHORTCUT_ID,
+                KEEP_AWAKE_SHORTCUT_DESCRIPTION,
+                self._toggle_keep_awake,
+                lambda: self.config.get_bool("hotkey-enabled"),
+            ),
+            HotkeyBinding(
+                SHELF_SHORTCUT_ID,
+                SHELF_SHORTCUT_DESCRIPTION,
+                self._open_shelf,
+                lambda: self.config.get_bool("hotkey-shelf-enabled"),
+            ),
+            HotkeyBinding(
+                CLIPBOARD_SHORTCUT_ID,
+                CLIPBOARD_SHORTCUT_DESCRIPTION,
+                self._open_clipboard,
+                lambda: self.config.get_bool("hotkey-clipboard-enabled"),
+            ),
+        ]
 
     def _setup_update_check(self) -> None:
         if not self.config.get_bool("auto-check-updates"):

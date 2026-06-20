@@ -2,8 +2,7 @@ from __future__ import annotations
 
 from collections.abc import Callable
 
-from sysbar.core.constants import KEEP_AWAKE_SHORTCUT_ID
-from sysbar.services.hotkey.manager import HotkeyManager
+from sysbar.services.hotkey.manager import HotkeyBinding, HotkeyManager
 
 
 class FakeShortcuts:
@@ -19,23 +18,41 @@ class FakeShortcuts:
         self._callbacks[shortcut_id]()
 
 
-def test_start_binds_keep_awake_shortcut_when_enabled() -> None:
-    shortcuts = FakeShortcuts()
-    HotkeyManager(shortcuts, on_trigger=lambda: None, enabled=lambda: True).start()
-    assert [sid for sid, _ in shortcuts.bound] == [KEEP_AWAKE_SHORTCUT_ID]
+def _binding(shortcut_id: str, trigger: Callable[[], None], *, enabled: bool) -> HotkeyBinding:
+    return HotkeyBinding(
+        shortcut_id=shortcut_id,
+        description=shortcut_id.replace("-", " ").title(),
+        trigger=trigger,
+        enabled=lambda: enabled,
+    )
 
 
-def test_start_does_not_bind_when_disabled() -> None:
+def test_start_binds_only_enabled_shortcuts() -> None:
     shortcuts = FakeShortcuts()
-    HotkeyManager(shortcuts, on_trigger=lambda: None, enabled=lambda: False).start()
+    bindings = [
+        _binding("toggle-keep-awake", lambda: None, enabled=True),
+        _binding("open-shelf", lambda: None, enabled=False),
+        _binding("open-clipboard", lambda: None, enabled=True),
+    ]
+    HotkeyManager(shortcuts, bindings).start()
+    assert [sid for sid, _ in shortcuts.bound] == ["toggle-keep-awake", "open-clipboard"]
+
+
+def test_start_with_no_bindings_binds_nothing() -> None:
+    shortcuts = FakeShortcuts()
+    HotkeyManager(shortcuts, []).start()
     assert shortcuts.bound == []
 
 
-def test_activation_invokes_trigger() -> None:
+def test_activation_invokes_matching_trigger() -> None:
     shortcuts = FakeShortcuts()
     calls: list[str] = []
-    HotkeyManager(
-        shortcuts, on_trigger=lambda: calls.append("toggled"), enabled=lambda: True
-    ).start()
-    shortcuts.activate(KEEP_AWAKE_SHORTCUT_ID)
-    assert calls == ["toggled"]
+    bindings = [
+        _binding("toggle-keep-awake", lambda: calls.append("awake"), enabled=True),
+        _binding("open-shelf", lambda: calls.append("shelf"), enabled=True),
+    ]
+    HotkeyManager(shortcuts, bindings).start()
+
+    shortcuts.activate("open-shelf")
+
+    assert calls == ["shelf"]

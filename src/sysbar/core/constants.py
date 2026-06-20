@@ -159,6 +159,10 @@ SHOW_BANNERS_KEY = "show-banners"
 GLOBAL_SHORTCUTS_PORTAL_NAME = "org.freedesktop.portal.Desktop"
 KEEP_AWAKE_SHORTCUT_ID = "toggle-keep-awake"
 KEEP_AWAKE_SHORTCUT_DESCRIPTION = "Toggle keep awake"
+SHELF_SHORTCUT_ID = "open-shelf"
+SHELF_SHORTCUT_DESCRIPTION = "Open shelf"
+CLIPBOARD_SHORTCUT_ID = "open-clipboard"
+CLIPBOARD_SHORTCUT_DESCRIPTION = "Open clipboard history"
 
 # GNOME Shell extension that feeds window open/close events on Wayland, where
 # there is no libwnck. The extension owns this bus name and object.

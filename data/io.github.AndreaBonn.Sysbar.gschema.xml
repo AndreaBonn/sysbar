@@ -45,6 +45,16 @@
       <summary>Global hotkey to toggle keep-awake</summary>
     </key>
 
+    <key name="hotkey-shelf-enabled" type="b">
+      <default>false</default>
+      <summary>Global hotkey to open the shelf</summary>
+    </key>
+
+    <key name="hotkey-clipboard-enabled" type="b">
+      <default>false</default>
+      <summary>Global hotkey to open the clipboard history</summary>
+    </key>
+
     <key name="show-countdown" type="b">
       <default>false</default>
       <summary>Show keep-awake countdown in the tray</summary>
