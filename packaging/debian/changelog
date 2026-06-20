@@ -1,3 +1,18 @@
+sysbar (1.0.0) noble; urgency=medium
+
+  * Clipboard history manager: searchable, pinnable, persisted; opened from the
+    tray and a configurable global hotkey. Off by default (plain-text storage).
+  * System monitor: per-metric history sparklines in the panel.
+  * System monitor: per-process network throughput section (best-effort via ss).
+  * Audio: default output/input device switcher in the panel.
+  * Configurable global shortcuts for keep awake, shelf, clipboard and the
+    Focus scene.
+  * Composable scenes (Focus, Presentation, Power saving) from a tray submenu.
+  * CI: GTK window construction smoke tests under xvfb.
+  * First stable release.
+
+ -- AndreaBonn <andreabonacci95@protonmail.com>  Sat, 20 Jun 2026 12:00:00 +0200
+
 sysbar (0.3.0) noble; urgency=medium
 
   * Settings: tray metric placement combos for hardware not detected on the
