@@ -163,6 +163,8 @@ SHELF_SHORTCUT_ID = "open-shelf"
 SHELF_SHORTCUT_DESCRIPTION = "Open shelf"
 CLIPBOARD_SHORTCUT_ID = "open-clipboard"
 CLIPBOARD_SHORTCUT_DESCRIPTION = "Open clipboard history"
+FOCUS_SCENE_SHORTCUT_ID = "toggle-focus-scene"
+FOCUS_SCENE_SHORTCUT_DESCRIPTION = "Toggle the Focus scene"
 
 # GNOME Shell extension that feeds window open/close events on Wayland, where
 # there is no libwnck. The extension owns this bus name and object.

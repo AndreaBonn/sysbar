@@ -39,6 +39,8 @@ from ..core.constants import (  # noqa: E402
     CLIPBOARD_SHORTCUT_DESCRIPTION,
     CLIPBOARD_SHORTCUT_ID,
     CURRENT_FEATURE_SET,
+    FOCUS_SCENE_SHORTCUT_DESCRIPTION,
+    FOCUS_SCENE_SHORTCUT_ID,
     GNOME_INTERFACE_SCHEMA,
     GNOME_NOTIFICATIONS_SCHEMA,
     GRAPH_METRICS,
@@ -86,6 +88,9 @@ from ..services.quick_toggles.desktop_toggles import (  # noqa: E402
     DoNotDisturbToggle,
 )
 from ..services.quick_toggles.microphone import MicrophoneToggle  # noqa: E402
+from ..services.scenes.adapters import CallbackSceneApplier, ConfigSceneWriter  # noqa: E402
+from ..services.scenes.models import SCENE_FOCUS  # noqa: E402
+from ..services.scenes.service import SceneService  # noqa: E402
 from ..services.shelf.shake_monitor import ShakeMonitor  # noqa: E402
 from ..services.shelf.shelf_service import ShelfService  # noqa: E402
 from ..services.system_monitor.adapters import SysfsPowerReader  # noqa: E402
@@ -105,7 +110,12 @@ from ..services.uninstall.command_query import CommandPackageQuery  # noqa: E402
 from ..services.uninstall.package_remover import PkexecPackageRemover  # noqa: E402
 from ..services.uninstall.trash import GioTrash  # noqa: E402
 from ..services.update_service import UpdateInfo, UpdateService  # noqa: E402
-from .tray.menu_builder import MenuActions, QuickToggleState, build_menu_items  # noqa: E402
+from .tray.menu_builder import (  # noqa: E402
+    MenuActions,
+    QuickToggleState,
+    SceneMenuEntry,
+    build_menu_items,
+)
 from .tray.menu_model import MenuModel  # noqa: E402
 from .tray.tray import Tray  # noqa: E402
 from .tray_renderer import (  # noqa: E402
@@ -145,6 +155,7 @@ class SysbarApplication(Adw.Application):
         self._keep_awake: KeepAwakeManager | None = None
         self._mixer: AppVolumeMixer | None = None
         self._device_switcher: DeviceSwitcher | None = None
+        self._scenes: SceneService | None = None
         self._microphone: MicrophoneToggle | None = None
         self._dnd: DoNotDisturbToggle | None = None
         self._dark_mode: ColorSchemeToggle | None = None
@@ -177,6 +188,7 @@ class SysbarApplication(Adw.Application):
         self._setup_hotkey()
         self._setup_mixer()
         self._setup_quick_toggles()
+        self._setup_scenes()
         self._reconcile_shelf()
         self._reconcile_clipboard()
         self._setup_auto_quit()
@@ -258,6 +270,56 @@ class SysbarApplication(Adw.Application):
 
     def _has_quick_toggles(self) -> bool:
         return any((self._microphone, self._dnd, self._dark_mode))
+
+    def _setup_scenes(self) -> None:
+        applier = CallbackSceneApplier(
+            keep_awake=self._scene_set_keep_awake,
+            do_not_disturb=self._scene_set_dnd,
+            microphone_muted=self._scene_set_mic,
+        )
+        self._scenes = SceneService(
+            ConfigSceneWriter(self.config),
+            applier,
+            active_id=self.config.get_string("active-scene"),
+        )
+        self._scenes.connect("changed", lambda _s: self._refresh_menu())
+
+    def _scene_set_keep_awake(self, on: bool) -> None:
+        if self._keep_awake is not None and self._keep_awake.is_active != on:
+            self._toggle_keep_awake()
+
+    def _scene_set_dnd(self, on: bool) -> None:
+        if self._dnd is not None and self._dnd.is_active() != on:
+            self._dnd.toggle()
+
+    def _scene_set_mic(self, on: bool) -> None:
+        if self._microphone is not None and self._microphone.is_muted() != on:
+            self._microphone.toggle()
+
+    def _activate_scene(self, scene_id: str) -> None:
+        if self._scenes is not None:
+            self._scenes.activate(scene_id)
+
+    def _clear_scene(self) -> None:
+        if self._scenes is not None:
+            self._scenes.clear()
+
+    def _toggle_focus_scene(self) -> None:
+        if self._scenes is None:
+            return
+        if self._scenes.active_id == SCENE_FOCUS:
+            self._scenes.clear()
+        else:
+            self._scenes.activate(SCENE_FOCUS)
+
+    def _scene_menu_entries(self) -> tuple[SceneMenuEntry, ...]:
+        if self._scenes is None:
+            return ()
+        active = self._scenes.active_id
+        return tuple(
+            SceneMenuEntry(id=scene.id, name=scene.name, active=scene.id == active)
+            for scene in self._scenes.scenes
+        )
 
     def _toggle_microphone(self) -> None:
         if self._microphone is not None:
@@ -342,6 +404,12 @@ class SysbarApplication(Adw.Application):
                 CLIPBOARD_SHORTCUT_DESCRIPTION,
                 self._open_clipboard,
                 lambda: self.config.get_bool("hotkey-clipboard-enabled"),
+            ),
+            HotkeyBinding(
+                FOCUS_SCENE_SHORTCUT_ID,
+                FOCUS_SCENE_SHORTCUT_DESCRIPTION,
+                self._toggle_focus_scene,
+                lambda: self.config.get_bool("hotkey-focus-scene-enabled"),
             ),
         ]
 
@@ -645,6 +713,8 @@ class SysbarApplication(Adw.Application):
             open_settings=self._open_settings,
             open_github=self._open_github,
             quit=self.quit,
+            activate_scene=self._activate_scene,
+            clear_scene=self._clear_scene,
         )
 
     def _build_menu(self) -> MenuModel:
@@ -656,6 +726,7 @@ class SysbarApplication(Adw.Application):
             clipboard_enabled=self.config.get_bool("clipboard-enabled"),
             toggles=self._quick_toggle_state(),
             actions=self._menu_actions(),
+            scenes=self._scene_menu_entries(),
         )
         return MenuModel(items)
 

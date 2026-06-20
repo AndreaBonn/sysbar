@@ -101,6 +101,9 @@ class SettingsWindow(Adw.PreferencesWindow):
         shortcuts.add(bound_switch(self._settings, "hotkey-enabled", "Toggle keep awake"))
         shortcuts.add(bound_switch(self._settings, "hotkey-shelf-enabled", "Open shelf"))
         shortcuts.add(bound_switch(self._settings, "hotkey-clipboard-enabled", "Open clipboard"))
+        shortcuts.add(
+            bound_switch(self._settings, "hotkey-focus-scene-enabled", "Toggle Focus scene")
+        )
         page.add(shortcuts)
         return page
 
