@@ -226,3 +226,161 @@ msgstr "Riavvia"
 
 msgid "Restart Sysbar to apply the language"
 msgstr "Riavvia Sysbar per applicare la lingua"
+
+# Tray — quick toggles
+msgid "Mute microphone"
+msgstr "Disattiva microfono"
+
+msgid "Unmute microphone"
+msgstr "Riattiva microfono"
+
+msgid "Microphone in use"
+msgstr "Microfono in uso"
+
+msgid "Turn on Do Not Disturb"
+msgstr "Attiva Non disturbare"
+
+msgid "Turn off Do Not Disturb"
+msgstr "Disattiva Non disturbare"
+
+msgid "Switch to dark mode"
+msgstr "Passa al tema scuro"
+
+msgid "Switch to light mode"
+msgstr "Passa al tema chiaro"
+
+# Tray — scenes
+msgid "Scenes"
+msgstr "Scene"
+
+msgid "None"
+msgstr "Nessuna"
+
+# Nome proprio, identico in italiano
+msgid "Focus"
+msgstr "Focus"
+
+msgid "Presentation"
+msgstr "Presentazione"
+
+msgid "Power saving"
+msgstr "Risparmio energia"
+
+# Tray — entries
+msgid "Clipboard"
+msgstr "Appunti"
+
+# Settings — Global shortcuts
+msgid "Global shortcuts"
+msgstr "Scorciatoie globali"
+
+msgid "Assign the keys from your desktop's keyboard settings"
+msgstr "Assegna i tasti dalle impostazioni della tastiera del sistema"
+
+msgid "Toggle keep awake"
+msgstr "Attiva/disattiva Tieni sveglio"
+
+msgid "Toggle Focus scene"
+msgstr "Attiva/disattiva scena Focus"
+
+msgid "Open clipboard"
+msgstr "Apri appunti"
+
+# Settings — Features
+msgid "Clipboard history"
+msgstr "Cronologia appunti"
+
+msgid "Shelf"
+msgstr "Shelf"
+
+# Settings — Monitor extras
+msgid "Audio devices"
+msgstr "Dispositivi audio"
+
+msgid "Input"
+msgstr "Ingresso"
+
+msgid "Output"
+msgstr "Uscita"
+
+msgid "History graphs"
+msgstr "Grafici cronologia"
+
+msgid "Show a sparkline of recent values next to each metric"
+msgstr "Mostra uno sparkline dei valori recenti accanto a ogni metrica"
+
+msgid "Network by process"
+msgstr "Rete per processo"
+
+msgid "Top processes"
+msgstr "Processi principali"
+
+# Settings — combo options
+msgid "English"
+msgstr "Inglese"
+
+msgid "Off"
+msgstr "Spente"
+
+# Alerts
+msgid "High CPU usage"
+msgstr "Uso CPU elevato"
+
+msgid "High memory usage"
+msgstr "Uso memoria elevato"
+
+msgid "High temperature"
+msgstr "Temperatura elevata"
+
+msgid "Low battery"
+msgstr "Batteria scarica"
+
+msgid "Low disk space"
+msgstr "Spazio su disco insufficiente"
+
+msgid "Battery is at {value}% (threshold {threshold}%)."
+msgstr "La batteria è al {value}% (soglia {threshold}%)."
+
+msgid "Memory usage is {value}% (threshold {threshold}%)."
+msgstr "L'uso della memoria è al {value}% (soglia {threshold}%)."
+
+msgid "Temperature is {value}°C (threshold {threshold}°C)."
+msgstr "La temperatura è di {value}°C (soglia {threshold}°C)."
+
+msgid "Root filesystem is {value}% full (threshold {threshold}%)."
+msgstr "Il filesystem radice è pieno al {value}% (soglia {threshold}%)."
+
+msgid "CPU has stayed above {threshold}% for {seconds}s (now {value}%)."
+msgstr "La CPU è rimasta sopra il {threshold}% per {seconds}s (ora {value}%)."
+
+# Clipboard window
+msgid "Search clipboard"
+msgstr "Cerca negli appunti"
+
+msgid "Pin"
+msgstr "Fissa"
+
+msgid "Unpin"
+msgstr "Sblocca"
+
+msgid "Remove"
+msgstr "Rimuovi"
+
+msgid "Clear unpinned"
+msgstr "Cancella non fissati"
+
+# Process termination / uninstaller
+msgid "End process"
+msgstr "Termina processo"
+
+msgid "End process?"
+msgstr "Terminare il processo?"
+
+msgid "Send a termination signal to “{name}” (PID {pid})?"
+msgstr "Inviare un segnale di terminazione a “{name}” (PID {pid})?"
+
+msgid "Cancel"
+msgstr "Annulla"
+
+msgid "Unknown"
+msgstr "Sconosciuto"
