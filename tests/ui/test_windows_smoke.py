@@ -101,6 +101,17 @@ def test_device_section_binds_and_populates(gtk: object) -> None:
     assert section.get_visible()
 
 
+def test_clipboard_window_builds(gtk: object, tmp_path: Path) -> None:
+    from sysbar.services.clipboard.service import ClipboardService
+    from sysbar.ui.clipboard.clipboard_window import ClipboardWindow
+
+    service = ClipboardService(tmp_path / "clipboard")
+    service.capture("hello")
+    window = ClipboardWindow(service, on_copy=lambda _text: None)
+    assert window.get_title()
+    window.destroy()
+
+
 def test_settings_window_builds(gtk: object, compiled_schema: str) -> None:
     from sysbar.ui.settings.settings_window import SettingsWindow
 

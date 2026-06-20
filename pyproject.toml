@@ -101,6 +101,7 @@ omit = [
     "src/sysbar/services/quick_toggles/adapters.py",
     "src/sysbar/services/hotkey/portal.py",
     "src/sysbar/services/auto_quit/shell_extension_source.py",
+    "src/sysbar/services/clipboard/monitor.py",
 ]
 
 [tool.coverage.report]

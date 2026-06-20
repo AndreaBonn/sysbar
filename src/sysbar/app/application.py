@@ -17,7 +17,7 @@ import gi
 gi.require_version("Gtk", "4.0")
 gi.require_version("Adw", "1")
 
-from gi.repository import Adw, Gio, GLib  # noqa: E402
+from gi.repository import Adw, Gdk, Gio, GLib  # noqa: E402
 
 from ..core.capabilities import (  # noqa: E402
     GLOBAL_SHORTCUTS,
@@ -35,6 +35,7 @@ from ..core.constants import (  # noqa: E402
     AUTHOR_GITHUB_URL,
     AUTO_QUIT_SYSTEM_WHITELIST,
     CAPABILITY_REFRESH_INTERVAL_SECONDS,
+    CLIPBOARD_DIR,
     CURRENT_FEATURE_SET,
     GNOME_INTERFACE_SCHEMA,
     GNOME_NOTIFICATIONS_SCHEMA,
@@ -61,6 +62,8 @@ from ..services.auto_quit.source_selection import (  # noqa: E402
     choose_window_source,
 )
 from ..services.autostart import AutostartManager  # noqa: E402
+from ..services.clipboard.monitor import ClipboardMonitor  # noqa: E402
+from ..services.clipboard.service import ClipboardService  # noqa: E402
 from ..services.hotkey.manager import HotkeyManager  # noqa: E402
 from ..services.keep_awake.inhibitor import SystemInhibitor  # noqa: E402
 from ..services.keep_awake.manager import KeepAwakeManager  # noqa: E402
@@ -142,6 +145,9 @@ class SysbarApplication(Adw.Application):
         self._shelf: ShelfService | None = None
         self._shelf_window: Adw.Window | None = None
         self._shake_monitor: ShakeMonitor | None = None
+        self._clipboard: ClipboardService | None = None
+        self._clipboard_window: Adw.Window | None = None
+        self._clipboard_monitor: ClipboardMonitor | None = None
         self._auto_quit: AutoQuitService | None = None
         self._hotkey: HotkeyManager | None = None
         self._uninstaller: AppUninstaller | None = None
@@ -166,6 +172,7 @@ class SysbarApplication(Adw.Application):
         self._setup_mixer()
         self._setup_quick_toggles()
         self._reconcile_shelf()
+        self._reconcile_clipboard()
         self._setup_auto_quit()
         self._setup_uninstaller()
         self._setup_update_check()
@@ -392,6 +399,42 @@ class SysbarApplication(Adw.Application):
         self._shelf_window = None
         return False
 
+    def _reconcile_clipboard(self) -> None:
+        enabled = self.config.get_bool("clipboard-enabled")
+        if enabled and self._clipboard is None:
+            self._clipboard = ClipboardService(CLIPBOARD_DIR)
+            self._clipboard.load()
+            monitor = ClipboardMonitor(on_text=self._on_clipboard_text)
+            if monitor.start():
+                self._clipboard_monitor = monitor
+        if self._tray is not None:
+            self._tray.set_menu(self._build_menu())
+
+    def _open_clipboard(self) -> None:
+        if self._clipboard is None:
+            self._clipboard = ClipboardService(CLIPBOARD_DIR)
+            self._clipboard.load()
+        from ..ui.clipboard.clipboard_window import ClipboardWindow
+
+        if self._clipboard_window is None:
+            self._clipboard_window = ClipboardWindow(self._clipboard, self._copy_to_clipboard)
+            self._clipboard_window.connect("close-request", self._on_clipboard_closed)
+        self._clipboard_window.present()
+
+    def _on_clipboard_text(self, text: str) -> None:
+        if self._clipboard is not None:
+            self._clipboard.capture(text)
+
+    def _copy_to_clipboard(self, text: str) -> None:
+        """Put a history entry back on the system clipboard."""
+        display = Gdk.Display.get_default()
+        if display is not None:
+            display.get_clipboard().set(text)
+
+    def _on_clipboard_closed(self, _window: Adw.Window) -> bool:
+        self._clipboard_window = None
+        return False
+
     def _update_tray_active(self) -> None:
         if self._monitor is None:
             return
@@ -479,6 +522,8 @@ class SysbarApplication(Adw.Application):
         self._update_tray_active()
         if key.startswith("shelf-"):
             self._reconcile_shelf()
+        if key.startswith("clipboard-"):
+            self._reconcile_clipboard()
         if key.startswith("alert-"):
             self._reconcile_alerting()
         if key.startswith("monitor-graph-") and self._panel is not None:
@@ -571,6 +616,7 @@ class SysbarApplication(Adw.Application):
             toggle_dark_mode=self._toggle_dark_mode,
             open_panel=self._open_panel,
             open_shelf=self._open_shelf,
+            open_clipboard=self._open_clipboard,
             open_uninstaller=self._open_uninstaller,
             open_settings=self._open_settings,
             open_github=self._open_github,
@@ -583,6 +629,7 @@ class SysbarApplication(Adw.Application):
             self._menu_metric_values(),
             keep_awake_on=keep_awake_on,
             shelf_enabled=self.config.get_bool("shelf-enabled"),
+            clipboard_enabled=self.config.get_bool("clipboard-enabled"),
             toggles=self._quick_toggle_state(),
             actions=self._menu_actions(),
         )

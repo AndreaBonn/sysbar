@@ -165,6 +165,7 @@ class SettingsWindow(Adw.PreferencesWindow):
         group.add(bound_switch(self._settings, "auto-quit-enabled", "Auto-quit closed apps"))
         group.add(bound_switch(self._settings, "shelf-enabled", "Shelf"))
         group.add(bound_switch(self._settings, "shelf-shake-to-open", "Shelf: shake to open"))
+        group.add(bound_switch(self._settings, "clipboard-enabled", "Clipboard history"))
         page.add(group)
         return page
 

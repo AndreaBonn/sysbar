@@ -183,6 +183,13 @@ DATA_HOME = Path.home() / ".local" / "share" / BINARY_NAME
 SHELF_DIR = DATA_HOME / "shelf"
 SHELF_MANIFEST = SHELF_DIR / "manifest.json"
 
+# Clipboard history: persisted manifest, ring-buffer size and label length.
+CLIPBOARD_DIR = DATA_HOME / "clipboard"
+CLIPBOARD_MAX_ENTRIES = 50
+CLIP_LABEL_MAX = 60
+# Prefixes that mark a clipboard entry as a URL rather than plain text.
+URL_PREFIXES: tuple[str, ...] = ("http://", "https://")
+
 # Shake-to-open detection (pointer direction reversals within a time window).
 SHAKE_MIN_MOVE_PIXELS = 8.0
 SHAKE_WINDOW_SECONDS = 0.6

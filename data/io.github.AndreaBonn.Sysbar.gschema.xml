@@ -85,6 +85,11 @@
       <summary>Open the shelf by shaking the pointer (X11 only)</summary>
     </key>
 
+    <key name="clipboard-enabled" type="b">
+      <default>false</default>
+      <summary>Clipboard history</summary>
+    </key>
+
     <!-- Legacy boolean tray keys (pre-placement). Kept for one-shot migration into
          the "*-placement" keys below; no longer read by the UI. -->
     <key name="menu-bar-cpu" type="b"><default>false</default><summary>Deprecated: show CPU in tray</summary></key>

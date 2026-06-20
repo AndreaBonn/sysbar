@@ -33,6 +33,7 @@ class MenuActions:
     toggle_dark_mode: Callable[[], None]
     open_panel: Callable[[], None]
     open_shelf: Callable[[], None]
+    open_clipboard: Callable[[], None]
     open_uninstaller: Callable[[], None]
     open_settings: Callable[[], None]
     open_github: Callable[[], None]
@@ -57,6 +58,7 @@ def build_menu_items(
     *,
     keep_awake_on: bool,
     shelf_enabled: bool,
+    clipboard_enabled: bool,
     toggles: QuickToggleState,
     actions: MenuActions,
 ) -> list[MenuItem]:
@@ -81,6 +83,7 @@ def build_menu_items(
         _action_rows(
             keep_awake_on=keep_awake_on,
             shelf_enabled=shelf_enabled,
+            clipboard_enabled=clipboard_enabled,
             toggles=toggles,
             actions=actions,
         )
@@ -100,7 +103,12 @@ def _metric_slots(metric_values: dict[str, str]) -> list[MenuItem]:
 
 
 def _action_rows(
-    *, keep_awake_on: bool, shelf_enabled: bool, toggles: QuickToggleState, actions: MenuActions
+    *,
+    keep_awake_on: bool,
+    shelf_enabled: bool,
+    clipboard_enabled: bool,
+    toggles: QuickToggleState,
+    actions: MenuActions,
 ) -> list[MenuItem]:
     return [
         MenuItem(
@@ -113,6 +121,7 @@ def _action_rows(
         MenuItem(item_type=TYPE_SEPARATOR),
         MenuItem(label=_("Open panel"), action=actions.open_panel),
         MenuItem(label=_("Open shelf"), action=actions.open_shelf, visible=shelf_enabled),
+        MenuItem(label=_("Clipboard"), action=actions.open_clipboard, visible=clipboard_enabled),
         MenuItem(label=_("Uninstall app…"), action=actions.open_uninstaller),
         MenuItem(label=_("Settings"), action=actions.open_settings),
         MenuItem(item_type=TYPE_SEPARATOR),
