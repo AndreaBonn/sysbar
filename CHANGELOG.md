@@ -5,6 +5,23 @@ All notable changes to Sysbar are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+- Clipboard history manager: search, pin and re-copy entries, persisted across sessions.
+  Accessible from the tray and via a configurable global hotkey. Disabled by default;
+  must be enabled explicitly in Settings (history is stored in plain text on disk).
+- History sparklines for CPU, GPU, memory, network, power and battery in the panel,
+  toggleable per metric.
+- Per-process network throughput section in the panel, best-effort via `ss`.
+- Default audio output and input device switcher in the panel.
+- Configurable global shortcuts for keep-awake, shelf, clipboard manager and Focus scene,
+  replacing the single hardcoded keep-awake hotkey.
+- Composable scenes (Focus, Presentation, Power saving) applied from a tray Scenes
+  submenu: each scene sets keep-awake, do-not-disturb, mic mute and display settings
+  in a single action.
+- Window construction smoke tests run under `xvfb` in CI.
+
 ## [0.3.0] - 2026-06-18
 
 ### Changed
