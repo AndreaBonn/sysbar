@@ -1,3 +1,5 @@
+import os
+import shutil
 from collections.abc import Iterator
 from pathlib import Path
 
@@ -67,3 +69,58 @@ def test_locale_dir_uses_fallback_when_no_candidate_exists(
     fake = (Path("/nonexistent/a"), Path("/nonexistent/b"))
     monkeypatch.setattr(localization, "_LOCALE_CANDIDATES", fake)
     assert localization._locale_dir() == fake[-1]
+
+
+_PO_SOURCE = """msgid ""
+msgstr "Content-Type: text/plain; charset=UTF-8\\n"
+
+msgid "Start at login"
+msgstr "Avvia all'accesso"
+"""
+
+
+def _write_catalog(locale_dir: Path) -> Path:
+    messages = locale_dir / "it" / "LC_MESSAGES"
+    messages.mkdir(parents=True)
+    po = messages / "sysbar.po"
+    po.write_text(_PO_SOURCE, encoding="utf-8")
+    return po
+
+
+def test_ensure_catalogs_compiled_creates_missing_mo(tmp_path: Path) -> None:
+    if shutil.which("msgfmt") is None:
+        pytest.skip("msgfmt not available")
+    po = _write_catalog(tmp_path)
+    localization._ensure_catalogs_compiled(tmp_path)
+    assert po.with_suffix(".mo").exists()
+
+
+def test_ensure_catalogs_compiled_recompiles_stale_mo(tmp_path: Path) -> None:
+    if shutil.which("msgfmt") is None:
+        pytest.skip("msgfmt not available")
+    po = _write_catalog(tmp_path)
+    mo = po.with_suffix(".mo")
+    mo.write_bytes(b"stale")
+    os.utime(mo, (0, 0))  # force the .mo older than the .po
+    localization._ensure_catalogs_compiled(tmp_path)
+    assert mo.read_bytes() != b"stale"
+
+
+def test_ensure_catalogs_compiled_noop_without_msgfmt(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    po = _write_catalog(tmp_path)
+    monkeypatch.setattr(localization.shutil, "which", lambda _name: None)
+    localization._ensure_catalogs_compiled(tmp_path)
+    assert not po.with_suffix(".mo").exists()
+
+
+def test_install_language_translates_after_on_demand_compile(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    if shutil.which("msgfmt") is None:
+        pytest.skip("msgfmt not available")
+    _write_catalog(tmp_path)
+    monkeypatch.setattr(localization, "_LOCALE_CANDIDATES", (tmp_path,))
+    localization.install_language("it")
+    assert i18n._("Start at login") == "Avvia all'accesso"

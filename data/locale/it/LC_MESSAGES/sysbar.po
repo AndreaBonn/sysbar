@@ -73,3 +73,156 @@ msgstr "Alimentazione"
 
 msgid "Fan Control (beta)"
 msgstr "Controllo ventole (beta)"
+
+# Settings — General page
+msgid "Language"
+msgstr "Lingua"
+
+msgid "Start at login"
+msgstr "Avvia all'accesso"
+
+msgid "Check for updates"
+msgstr "Controlla aggiornamenti"
+
+# Settings — Monitor page
+msgid "Monitor"
+msgstr "Monitoraggio"
+
+msgid "Tray metrics"
+msgstr "Metriche nel tray"
+
+msgid "Off, in the always-visible bar, or in the dropdown menu"
+msgstr "Spente, nella barra sempre visibile o nel menu a tendina"
+
+msgid "Not detected on this system"
+msgstr "Non rilevato su questo sistema"
+
+msgid "Bar"
+msgstr "Barra"
+
+msgid "Menu"
+msgstr "Menu"
+
+msgid "Memory"
+msgstr "Memoria"
+
+msgid "Battery"
+msgstr "Batteria"
+
+msgid "Sampling"
+msgstr "Campionamento"
+
+msgid "Interval"
+msgstr "Intervallo"
+
+msgid "1 second"
+msgstr "1 secondo"
+
+msgid "2 seconds"
+msgstr "2 secondi"
+
+msgid "5 seconds"
+msgstr "5 secondi"
+
+msgid "Temperature"
+msgstr "Temperatura"
+
+msgid "Memory style"
+msgstr "Stile memoria"
+
+msgid "Dot"
+msgstr "Punto"
+
+msgid "Percent"
+msgstr "Percentuale"
+
+msgid "Both"
+msgstr "Entrambi"
+
+# Settings — Alerts page
+msgid "Alerts"
+msgstr "Avvisi"
+
+msgid "Threshold alerts"
+msgstr "Avvisi a soglia"
+
+msgid "Notify when a metric crosses a limit. 0 turns an alert off."
+msgstr "Avvisa quando una metrica supera un limite. 0 disattiva l'avviso."
+
+msgid "Enable alerts"
+msgstr "Abilita avvisi"
+
+msgid "CPU load (%)"
+msgstr "Carico CPU (%)"
+
+msgid "CPU sustained for (s)"
+msgstr "CPU sostenuta per (s)"
+
+msgid "Memory used (%)"
+msgstr "Memoria usata (%)"
+
+msgid "Disk used (%)"
+msgstr "Disco usato (%)"
+
+msgid "Temperature (°C)"
+msgstr "Temperatura (°C)"
+
+msgid "Battery low (%)"
+msgstr "Batteria scarica (%)"
+
+# Settings — Keep Awake page
+msgid "Keep Awake"
+msgstr "Tieni sveglio"
+
+msgid "Default duration"
+msgstr "Durata predefinita"
+
+msgid "Indefinite"
+msgstr "Indefinita"
+
+msgid "1 hour"
+msgstr "1 ora"
+
+msgid "2 hours"
+msgstr "2 ore"
+
+msgid "Stop below battery"
+msgstr "Ferma sotto batteria"
+
+msgid "Never"
+msgstr "Mai"
+
+msgid "Global hotkey"
+msgstr "Scorciatoia globale"
+
+msgid "Show countdown in tray"
+msgstr "Mostra conto alla rovescia nel tray"
+
+msgid "Keep awake with lid closed"
+msgstr "Tieni sveglio a coperchio chiuso"
+
+# Settings — Features page
+msgid "Each feature is off by default"
+msgstr "Ogni funzione è disattivata di default"
+
+msgid "Volume mixer"
+msgstr "Mixer del volume"
+
+msgid "Auto-quit closed apps"
+msgstr "Chiudi automaticamente le app chiuse"
+
+msgid "Shelf: shake to open"
+msgstr "Shelf: scuoti per aprire"
+
+# Settings — About page
+msgid "Version"
+msgstr "Versione"
+
+msgid "Run onboarding again"
+msgstr "Riesegui l'onboarding"
+
+msgid "Restart"
+msgstr "Riavvia"
+
+msgid "Restart Sysbar to apply the language"
+msgstr "Riavvia Sysbar per applicare la lingua"
