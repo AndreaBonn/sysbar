@@ -1,4 +1,8 @@
-"""Reusable settings rows bound to GSettings."""
+"""Reusable settings rows bound to GSettings.
+
+Titles, subtitles and option labels are passed as English source strings and
+translated here via :func:`sysbar.core.i18n._`, so callers stay declarative.
+"""
 
 from __future__ import annotations
 
@@ -10,12 +14,14 @@ gi.require_version("Gtk", "4.0")
 gi.require_version("Adw", "1")
 from gi.repository import Adw, Gio, Gtk  # noqa: E402
 
+from ...core.i18n import _  # noqa: E402
+
 
 def bound_switch(settings: Gio.Settings, key: str, title: str, subtitle: str = "") -> Adw.SwitchRow:
     """A switch row whose state is two-way bound to a boolean GSettings key."""
-    row = Adw.SwitchRow(title=title)
+    row = Adw.SwitchRow(title=_(title))
     if subtitle:
-        row.set_subtitle(subtitle)
+        row.set_subtitle(_(subtitle))
     settings.bind(key, row, "active", Gio.SettingsBindFlags.DEFAULT)
     return row
 
@@ -30,9 +36,9 @@ def bound_spin(
 ) -> Adw.SpinRow:
     """A spin row over an integer GSettings key, clamped to ``[lower, upper]``."""
     adjustment = Gtk.Adjustment(lower=lower, upper=upper, step_increment=1, page_increment=10)
-    row = Adw.SpinRow(title=title, adjustment=adjustment)
+    row = Adw.SpinRow(title=_(title), adjustment=adjustment)
     if subtitle:
-        row.set_subtitle(subtitle)
+        row.set_subtitle(_(subtitle))
     row.set_value(settings.get_int(key))
     row.connect("notify::value", lambda spin, _param: settings.set_int(key, int(spin.get_value())))
     return row
@@ -52,12 +58,12 @@ class ComboBinding:
         self._settings = settings
         self._key = key
         self._is_int = is_int
-        self._values = [value for value, _ in options]
+        self._values = [value for value, _label in options]
 
         labels = Gtk.StringList()
-        for _, label in options:
-            labels.append(label)
-        self.row = Adw.ComboRow(title=title, model=labels)
+        for _value, label in options:
+            labels.append(_(label))
+        self.row = Adw.ComboRow(title=_(title), model=labels)
         self.row.set_selected(self._current_index())
         self.row.connect("notify::selected", self._on_selected)
 
