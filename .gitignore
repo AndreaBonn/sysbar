@@ -12,6 +12,7 @@ venv/
 .mypy_cache/
 .coverage
 coverage/
+test-results.xml
 htmlcov/
 *.egg-info/
 dist/

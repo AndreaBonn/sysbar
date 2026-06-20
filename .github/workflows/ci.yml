@@ -40,7 +40,29 @@ jobs:
         run: uv run mypy
 
       - name: Tests
-        run: uv run pytest
+        run: uv run pytest --junitxml=test-results.xml
+
+      - name: Generate test badge
+        if: github.ref == 'refs/heads/main'
+        run: |
+          python3 -c "
+          import json, os, xml.etree.ElementTree as ET
+          root = ET.parse('test-results.xml').getroot()
+          suites = root.findall('testsuite') if root.tag == 'testsuites' else [root]
+          tests = sum(int(s.attrib.get('tests', 0)) for s in suites)
+          failures = sum(int(s.attrib.get('failures', 0)) for s in suites)
+          errors = sum(int(s.attrib.get('errors', 0)) for s in suites)
+          passed = tests - failures - errors
+          badge = {
+              'schemaVersion': 1,
+              'label': 'tests',
+              'message': f'{passed}/{tests} passed' if failures + errors > 0 else f'{passed} passed',
+              'color': 'red' if failures + errors > 0 else 'brightgreen',
+          }
+          os.makedirs('badges', exist_ok=True)
+          with open('badges/test-badge.json', 'w') as f:
+              json.dump(badge, f)
+          "
 
       - name: Run tests with coverage
         if: github.ref == 'refs/heads/main'
@@ -65,11 +87,11 @@ jobs:
               json.dump(badge, f)
           "
 
-      - name: Commit coverage badge
+      - name: Commit badges
         if: github.ref == 'refs/heads/main'
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add badges/coverage-badge.json
-          git diff --cached --quiet || git commit -m "ci: update coverage badge [skip ci]"
+          git add badges/test-badge.json badges/coverage-badge.json
+          git diff --cached --quiet || git commit -m "ci: update badges [skip ci]"
           git push

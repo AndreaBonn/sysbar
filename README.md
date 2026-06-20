@@ -18,6 +18,7 @@ A single Ubuntu/GNOME system tray application that bundles six local utilities.
 ![Platform](https://img.shields.io/badge/platform-Ubuntu%2FGNOME-e95420)
 ![Release](https://img.shields.io/github/v/release/AndreaBonn/sysbar)
 ![CI](https://github.com/AndreaBonn/sysbar/actions/workflows/ci.yml/badge.svg)
+[![Tests](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/AndreaBonn/sysbar/main/badges/test-badge.json)](https://github.com/AndreaBonn/sysbar/actions/workflows/ci.yml)
 [![Coverage](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/AndreaBonn/sysbar/main/badges/coverage-badge.json)](https://github.com/AndreaBonn/sysbar/actions/workflows/ci.yml)
 
 Sysbar puts six tools behind one tray icon: a system monitor, a per-application
