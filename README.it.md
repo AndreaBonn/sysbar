@@ -11,8 +11,7 @@
 
 # Sysbar
 
-Una singola applicazione nella barra di sistema di Ubuntu/GNOME che raggruppa
-sei utility locali.
+Un'applicazione nella barra di sistema di Ubuntu/GNOME che raggruppa utility locali dietro una sola icona.
 
 ![License: GPLv3](https://img.shields.io/badge/license-GPLv3-blue)
 ![Python](https://img.shields.io/badge/python-3.11%2B-3776ab)
@@ -22,18 +21,27 @@ sei utility locali.
 [![Tests](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/AndreaBonn/sysbar/main/badges/test-badge.json)](https://github.com/AndreaBonn/sysbar/actions/workflows/ci.yml)
 [![Coverage](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/AndreaBonn/sysbar/main/badges/coverage-badge.json)](https://github.com/AndreaBonn/sysbar/actions/workflows/ci.yml)
 
-Sysbar mette sei strumenti dietro una sola icona nel tray: un monitor di sistema,
-un mixer del volume per applicazione, keep awake, auto-quit, un disinstallatore di
+Sysbar mette gli strumenti dietro una sola icona nel tray: un monitor di sistema
+con sparkline storiche, un mixer del volume per applicazione con selettore
+dispositivo audio, una cronologia degli appunti, scorciatoie globali
+configurabili, scene componibili, keep awake, auto-quit, un disinstallatore di
 applicazioni e uno shelf. Tutto gira in locale: nessun account, nessuna
-telemetria. Ogni feature è disattivata finché non la attivi, e si degrada con un
-messaggio esplicito quando manca una dipendenza di sistema o una capability della
-sessione.
+telemetria. Ogni funzionalità è disattivata finché non la attivi, e si degrada
+con un messaggio esplicito quando manca una dipendenza di sistema o una capability
+della sessione.
 
 ![Menu tray di Sysbar con metriche live](./assets/screenshots/tray-menu.png)
 
 ## Indice
 
 - [Funzionalità](#funzionalità)
+  - [Monitor di sistema](#monitor-di-sistema)
+  - [Mixer del volume per applicazione](#mixer-del-volume-per-applicazione)
+  - [Keep awake](#keep-awake)
+  - [Auto-quit, disinstallatore e shelf](#auto-quit-disinstallatore-e-shelf)
+  - [Scorciatoie globali](#scorciatoie-globali)
+  - [Scene](#scene)
+  - [Cronologia degli appunti](#cronologia-degli-appunti)
 - [Stack tecnologico](#stack-tecnologico)
 - [Architettura](#architettura)
 - [Struttura del repository](#struttura-del-repository)
@@ -58,21 +66,31 @@ a tendina, oppure nascosta. Le metriche per hardware non rilevato sul sistema
 (GPU, batteria, alimentazione) sono disabilitate con una nota esplicativa invece
 di non mostrare nulla.
 
+Il pannello può mostrare sparkline storiche per ciascuna metrica (CPU, GPU,
+memoria, rete, alimentazione, batteria), attivabili singolarmente nelle
+impostazioni. Una sezione "rete per processo" elenca i processi che consumano
+piu banda; usa `/proc` e `ss` e funziona in modalità best-effort - richiede che
+`ss` sia installato e potrebbe non rilevare tutto il traffico in tutte le
+configurazioni.
+
 ![Pannello: metriche di sistema e rete](./assets/screenshots/panel-system.png)
 
 ### Mixer del volume per applicazione
 
 Volume e mute indipendenti per ogni applicazione in esecuzione, tramite PipeWire
 o PulseAudio. Il mixer compare nel pannello e si aggiorna man mano che le
-applicazioni aprono e chiudono stream audio.
+applicazioni aprono e chiudono stream audio. Il pannello include anche un
+selettore rapido per il dispositivo di uscita e di ingresso predefinito, cosi da
+cambiare l'hardware audio senza aprire le impostazioni audio di sistema.
 
 ![Pannello: alimentazione e mixer per app](./assets/screenshots/panel-mixer.png)
 
 ### Keep awake
 
 Inibisce sospensione, idle e chiusura del coperchio. Supporta una durata
-opzionale, una scorciatoia globale, un countdown nel tray e una soglia di
-batteria che termina la sessione quando la carica scende troppo.
+opzionale, un countdown nel tray e una soglia di batteria che termina la
+sessione quando la carica scende troppo. Può essere attivato con una scorciatoia
+globale configurabile (vedi Scorciatoie globali di seguito).
 
 ![Impostazioni: keep awake](./assets/screenshots/settings-keep-awake.png)
 
@@ -86,6 +104,38 @@ batteria che termina la sessione quando la carica scende troppo.
   persistenza tra le sessioni e un gesto opzionale shake-to-open.
 
 ![Impostazioni: interruttori delle feature](./assets/screenshots/settings-features.png)
+
+### Scorciatoie globali
+
+Dalle impostazioni è possibile assegnare scorciatoie da tastiera a piu azioni:
+attivare keep awake, aprire lo shelf, aprire la cronologia degli appunti e
+attivare la scena Focus. Le scorciatoie vengono registrate tramite il portale
+XDG GlobalShortcuts e funzionano su tutto il desktop, non solo quando Sysbar ha
+il focus.
+
+### Scene
+
+Tre scene componibili sono disponibili dal sottomenu "Scenes" nel tray. Ogni
+scena attiva una combinazione di impostazioni con un solo clic:
+
+- **Focus** - attiva keep awake, abilita il non-disturbare, silenzia il
+  microfono.
+- **Presentation** - attiva keep awake, abilita il non-disturbare.
+- **Power saving** - disattiva keep awake, riduce le impostazioni del display
+  per risparmiare energia.
+
+Le scene possono essere attivate anche tramite scorciatoia globale.
+
+### Cronologia degli appunti
+
+Un gestore degli appunti che mantiene una cronologia ricercabile dei testi
+copiati. Le voci possono essere fissate in cima all'elenco, e cliccarne una la
+copia di nuovo negli appunti. La cronologia è accessibile dal menu tray e da una
+scorciatoia globale configurabile. La funzionalità è disattivata per impostazione
+predefinita e va abilitata nelle impostazioni.
+
+Nota sulla privacy: la cronologia degli appunti è salvata in chiaro su disco.
+Non abilitarla se copi regolarmente dati sensibili come password o token.
 
 ## Stack tecnologico
 
