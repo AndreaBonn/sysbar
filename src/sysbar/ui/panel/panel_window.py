@@ -13,9 +13,10 @@ import gi
 
 gi.require_version("Gtk", "4.0")
 gi.require_version("Adw", "1")
-from gi.repository import Adw, Gtk  # noqa: E402
+from gi.repository import Adw, Gdk, Gtk  # noqa: E402
 
-from ...core.constants import DEFAULT_TEMPERATURE_UNIT  # noqa: E402
+from ...core.branding import has_app_icon  # noqa: E402
+from ...core.constants import APP_ICON_NAME, DEFAULT_TEMPERATURE_UNIT  # noqa: E402
 from ...core.i18n import _  # noqa: E402
 from ...services.audio.app_volume_mixer import AppVolumeMixer  # noqa: E402
 from ...services.audio.device_switcher import DeviceSwitcher  # noqa: E402
@@ -33,6 +34,25 @@ KillCallback = Callable[[int, str], None]
 
 _PANEL_WIDTH = 380
 _PANEL_HEIGHT = 560
+_HEADER_LOGO_PIXELS = 20
+
+
+def _title_widget() -> Gtk.Widget:
+    """Header title: the branded logo next to the app name.
+
+    The logo is shown only when the icon resolves; otherwise the plain name is
+    used, so a checkout without a generated icon shows no broken-image glyph.
+    """
+    label = Gtk.Label(label="Sysbar")
+    if not has_app_icon(Gdk.Display.get_default()):
+        return label
+    box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=8)
+    logo = Gtk.Image.new_from_icon_name(APP_ICON_NAME)
+    logo.set_pixel_size(_HEADER_LOGO_PIXELS)
+    box.append(logo)
+    box.append(label)
+    return box
+
 
 # Maps a metric row key to the graphable metric whose sparkline it carries.
 _ROW_SPARKLINE_METRIC = {
@@ -88,7 +108,7 @@ class PanelWindow(Adw.Window):
     def _build_content(self) -> None:
         toolbar = Adw.ToolbarView()
         header = Adw.HeaderBar(show_start_title_buttons=False)
-        header.set_title_widget(Gtk.Label(label="Sysbar"))
+        header.set_title_widget(_title_widget())
         toolbar.add_top_bar(header)
 
         content = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=12)

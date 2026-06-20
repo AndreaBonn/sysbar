@@ -163,7 +163,7 @@ def _scenes_submenu(*, scenes: tuple[SceneMenuEntry, ...], actions: MenuActions)
     """A submenu listing each scene plus a row to clear the active one."""
     children = [
         MenuItem(
-            label=entry.name,
+            label=_(entry.name),
             toggle_type="checkmark",
             toggle_state=TOGGLE_ON if entry.active else TOGGLE_OFF,
             action=_scene_activator(actions, entry.id),

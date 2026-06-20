@@ -10,6 +10,10 @@ from pathlib import Path
 
 APP_ID = "io.github.AndreaBonn.Sysbar"
 APP_NAME = "Sysbar"
+# Themed name of the branded application icon: matches the .desktop "Icon=" and
+# the installed hicolor file. Used for in-window logos via Gtk.Image so the panel
+# and settings show the brand rather than GNOME's generic fallback.
+APP_ICON_NAME = APP_ID
 BINARY_NAME = "sysbar"
 GETTEXT_DOMAIN = "sysbar"
 GSETTINGS_PATH = "/io/github/AndreaBonn/Sysbar/"

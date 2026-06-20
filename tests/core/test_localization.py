@@ -115,6 +115,28 @@ def test_ensure_catalogs_compiled_noop_without_msgfmt(
     assert not po.with_suffix(".mo").exists()
 
 
+@pytest.mark.parametrize(
+    ("source", "italian"),
+    [
+        ("Mute microphone", "Disattiva microfono"),
+        ("Unmute microphone", "Riattiva microfono"),
+        ("Turn on Do Not Disturb", "Attiva Non disturbare"),
+        ("Switch to light mode", "Passa al tema chiaro"),
+        ("Scenes", "Scene"),
+        ("None", "Nessuna"),
+        ("Clipboard", "Appunti"),
+        ("Presentation", "Presentazione"),
+        ("Power saving", "Risparmio energia"),
+        ("End process", "Termina processo"),
+    ],
+)
+def test_italian_catalog_translates_tray_and_dynamic_labels(source: str, italian: str) -> None:
+    if shutil.which("msgfmt") is None:
+        pytest.skip("msgfmt not available")
+    localization.install_language("it")
+    assert i18n._(source) == italian
+
+
 def test_install_language_translates_after_on_demand_compile(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:

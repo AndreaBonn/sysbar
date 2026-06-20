@@ -19,6 +19,7 @@ gi.require_version("Adw", "1")
 
 from gi.repository import Adw, Gdk, Gio, GLib  # noqa: E402
 
+from ..core.branding import register_app_icons  # noqa: E402
 from ..core.capabilities import (  # noqa: E402
     GLOBAL_SHORTCUTS,
     GNOME_DESKTOP,
@@ -175,6 +176,7 @@ class SysbarApplication(Adw.Application):
 
     def do_startup(self) -> None:
         Adw.Application.do_startup(self)
+        register_app_icons(Gdk.Display.get_default())
         self._config = Config()
         self._config.migrate_legacy_placements()
         install_language(self._config.get_string("app-language"))
