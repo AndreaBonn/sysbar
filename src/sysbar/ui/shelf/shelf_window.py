@@ -119,6 +119,9 @@ class ShelfWindow(Adw.Window):
         if item.open_uri is not None:
             box.set_tooltip_text(_("Double-click to open"))
             click = Gtk.GestureClick()
+            # Capture phase so the double-click is seen before the DragSource
+            # (bubble phase) can claim the sequence and cancel the gesture.
+            click.set_propagation_phase(Gtk.PropagationPhase.CAPTURE)
             click.connect("released", self._make_open_handler(item))
             box.add_controller(click)
         return box
@@ -133,17 +136,19 @@ class ShelfWindow(Adw.Window):
         return on_released
 
     def _open_item(self, item: ShelfItem) -> None:
-        uri = item.open_uri
-        if uri is None:
-            return
-        launcher = Gtk.UriLauncher(uri=uri)
-        launcher.launch(self, None, self._on_launch_done)
+        if item.kind in (ItemKind.FILE, ItemKind.IMAGE) and item.path:
+            file = Gio.File.new_for_path(item.path)
+            Gtk.FileLauncher(file=file).launch(self, None, self._on_launch_done)
+        elif item.kind is ItemKind.URL and item.text:
+            Gtk.UriLauncher(uri=item.text).launch(self, None, self._on_launch_done)
 
-    def _on_launch_done(self, launcher: Gtk.UriLauncher, result: Gio.AsyncResult) -> None:
+    def _on_launch_done(
+        self, launcher: Gtk.FileLauncher | Gtk.UriLauncher, result: Gio.AsyncResult
+    ) -> None:
         try:
             launcher.launch_finish(result)
         except GLib.Error as error:
-            log.warning("could not open shelf item", extra={"error": error.message})
+            log.warning("could not open shelf item: %s", error.message)
 
     def _make_prepare(
         self, item: ShelfItem
