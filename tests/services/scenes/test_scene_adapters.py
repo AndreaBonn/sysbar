@@ -17,6 +17,17 @@ def test_config_writer_dispatches_by_value_type(compiled_schema: str) -> None:
     assert config.get_string("active-scene") == "focus"
 
 
+def test_config_writer_ignores_unsupported_value_type(compiled_schema: str) -> None:
+    config = Config()
+    writer = ConfigSceneWriter(config)
+    config.settings.set_int("monitor-interval-seconds", 5)
+
+    # A float matches none of bool/int/str, so the write is a silent no-op.
+    writer.set("monitor-interval-seconds", 3.5)
+
+    assert config.get_int("monitor-interval-seconds") == 5
+
+
 def test_callback_applier_routes_each_toggle() -> None:
     calls: dict[str, bool] = {}
     applier = CallbackSceneApplier(

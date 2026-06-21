@@ -115,6 +115,24 @@ def test_ensure_catalogs_compiled_noop_without_msgfmt(
     assert not po.with_suffix(".mo").exists()
 
 
+def test_compile_catalog_logs_and_cleans_up_when_msgfmt_fails(
+    tmp_path: Path, caplog: pytest.LogCaptureFixture
+) -> None:
+    po = tmp_path / "sysbar.po"
+    po.write_text(_PO_SOURCE, encoding="utf-8")
+    mo = po.with_suffix(".mo")
+    tmp = mo.with_name(f"{mo.name}.tmp")
+
+    # A missing compiler makes subprocess.run raise FileNotFoundError (an OSError):
+    # the failure must be swallowed with a warning, leaving no partial output.
+    with caplog.at_level("WARNING"):
+        localization._compile_catalog(msgfmt="/nonexistent/msgfmt-binary", po=po, mo=mo)
+
+    assert not mo.exists()
+    assert not tmp.exists()
+    assert "could not compile translation" in caplog.text
+
+
 @pytest.mark.parametrize(
     ("source", "italian"),
     [

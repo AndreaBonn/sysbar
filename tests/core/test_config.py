@@ -130,6 +130,15 @@ def test_default_duration_minutes_is_sanitized(config: Config) -> None:
     assert config.default_duration_minutes == 30
 
 
+def test_show_device_batteries_default_is_false(config: Config) -> None:
+    assert config.show_device_batteries is False
+
+
+def test_show_device_batteries_reads_stored_true(config: Config) -> None:
+    config.set_bool("menu-show-device-batteries", True)
+    assert config.show_device_batteries is True
+
+
 def test_constructs_without_backend_from_installed_schema(compiled_schema: str) -> None:
     # Exercises the no-backend branch: the schema resolves via GSETTINGS_SCHEMA_DIR.
     config = Config(schema_id=APP_ID)

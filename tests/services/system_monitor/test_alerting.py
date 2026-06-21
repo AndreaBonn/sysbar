@@ -137,6 +137,22 @@ def test_battery_above_threshold_does_not_fire() -> None:
     assert engine.evaluate(SystemSnapshot(battery_percent=40.0, on_battery=True)) == []
 
 
+def test_battery_sustained_low_fires_only_on_the_rising_edge() -> None:
+    engine = _engine(AlertThresholds(battery_percent=15))
+    first = engine.evaluate(SystemSnapshot(battery_percent=12.0, on_battery=True))
+    second = engine.evaluate(SystemSnapshot(battery_percent=11.0, on_battery=True))
+    assert [a.key for a in first] == [ALERT_BATTERY]
+    assert second == []
+
+
+def test_battery_rearms_after_recovering_above_threshold() -> None:
+    engine = _engine(AlertThresholds(battery_percent=15))
+    engine.evaluate(SystemSnapshot(battery_percent=12.0, on_battery=True))
+    engine.evaluate(SystemSnapshot(battery_percent=40.0, on_battery=True))
+    refired = engine.evaluate(SystemSnapshot(battery_percent=10.0, on_battery=True))
+    assert [a.key for a in refired] == [ALERT_BATTERY]
+
+
 # --------------------------------------------------------------------------- #
 # Disabled thresholds and missing data
 # --------------------------------------------------------------------------- #
