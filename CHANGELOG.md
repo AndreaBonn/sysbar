@@ -7,7 +7,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.1.1] - 2026-06-21
+
 ### Fixed
+- Window icon: the panel and settings windows showed GNOME's generic icon in
+  the dock and window switcher. The window class now matches the desktop entry
+  so the Sysbar icon is used.
+- Version display: the About screen, `--version`, the self-test and the update
+  check reported a stale `1.0.0`. The version is now derived from the installed
+  package metadata, keeping `pyproject.toml` the single source of truth.
+
+## [1.1.0] - 2026-06-21
+
+### Added
+- Tray: peripheral device batteries (mouse, keyboard, headset and more) in the
+  menu, with a settings toggle to hide them.
+- Shelf: open dropped items with the system default application on double-click.
+- Branding: ship and register the Sysbar application icon, replacing the generic
+  GNOME gear.
+
+### Fixed
+- Scenes submenu no longer collapses when opened.
+- Italian: the remaining tray, scenes, settings and alert strings that rendered
+  in English are now translated.
 - Debian package: the Italian UI stayed in English even with `it` selected. The
   install rules copied `data/locale/*` into a not-yet-existing destination, so
   `cp` renamed the `it/` directory to `locale/`, flattening the language level
@@ -80,6 +102,9 @@ First stable release.
 - Local only: no account, no telemetry. Every feature is opt-in and degrades
   gracefully when a dependency, extension or session capability is missing.
 
+[1.1.1]: https://github.com/AndreaBonn/sysbar/releases/tag/v1.1.1
+[1.1.0]: https://github.com/AndreaBonn/sysbar/releases/tag/v1.1.0
+[1.0.0]: https://github.com/AndreaBonn/sysbar/releases/tag/v1.0.0
 [0.3.0]: https://github.com/AndreaBonn/sysbar/releases/tag/v0.3.0
 [0.2.2]: https://github.com/AndreaBonn/sysbar/releases/tag/v0.2.2
 [0.2.1]: https://github.com/AndreaBonn/sysbar/releases/tag/v0.2.1

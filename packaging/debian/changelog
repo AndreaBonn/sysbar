@@ -1,3 +1,14 @@
+sysbar (1.1.1) noble; urgency=medium
+
+  * Fix: the panel and settings windows showed GNOME's generic icon in the
+    dock and window switcher instead of the Sysbar icon. The window class now
+    matches the desktop entry so the branded icon is used.
+  * Fix: the About screen, --version, the self-test and the update check
+    reported a stale version. The version is now read from the package
+    metadata, keeping pyproject.toml the single source of truth.
+
+ -- AndreaBonn <andreabonacci95@protonmail.com>  Sun, 21 Jun 2026 03:18:12 +0200
+
 sysbar (1.1.0) noble; urgency=medium
 
   * Tray: show peripheral device batteries (mouse, keyboard, headset and more)
