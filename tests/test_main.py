@@ -76,6 +76,7 @@ def test_main_default_launches_application(
     mocker: MockerFixture, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     mocker.patch("sysbar.core.logging_setup.configure_logging")
+    mocker.patch("sysbar.__main__.configure_window_identity")
     app_class = mocker.Mock()
     app_class.return_value.run.return_value = 0
     _install_fake_application(monkeypatch, app_class)
@@ -85,3 +86,41 @@ def test_main_default_launches_application(
     assert result == 0
     app_class.assert_called_once_with()
     app_class.return_value.run.assert_called_once_with(None)
+
+
+def test_main_default_pins_window_identity_before_launch(
+    mocker: MockerFixture, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    mocker.patch("sysbar.core.logging_setup.configure_logging")
+    identity = mocker.patch("sysbar.__main__.configure_window_identity")
+    app_class = mocker.Mock()
+    app_class.return_value.run.return_value = 0
+    _install_fake_application(monkeypatch, app_class)
+
+    __main__.main([])
+
+    identity.assert_called_once_with()
+
+
+def test_main_diagnostic_skips_window_identity(
+    mocker: MockerFixture, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    mocker.patch("sysbar.core.logging_setup.configure_logging")
+    mocker.patch("sysbar.support.selftest.run_selftest", return_value="report")
+    identity = mocker.patch("sysbar.__main__.configure_window_identity")
+    _install_fake_application(monkeypatch, mocker.Mock())
+
+    __main__.main(["--selftest"])
+
+    identity.assert_not_called()
+
+
+def test_configure_window_identity_sets_prgname_to_app_id(mocker: MockerFixture) -> None:
+    from sysbar.core.constants import APP_ID, APP_NAME
+
+    glib = mocker.patch("gi.repository.GLib")
+
+    __main__.configure_window_identity()
+
+    glib.set_prgname.assert_called_once_with(APP_ID)
+    glib.set_application_name.assert_called_once_with(APP_NAME)

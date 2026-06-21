@@ -13,6 +13,28 @@ from . import __version__
 from .core.logging_setup import configure_logging
 
 
+def configure_window_identity() -> None:
+    """Pin the process name to ``APP_ID`` so the desktop shell shows the brand.
+
+    On X11 GTK derives a window's ``WM_CLASS`` from the program name. Launched
+    through the installed console script the interpreter name (``python3``)
+    leaks in, so the shell cannot match the window to
+    ``io.github.AndreaBonn.Sysbar.desktop`` and falls back to a generic icon.
+    Forcing the program name to ``APP_ID`` before any window is realised makes
+    the ``WM_CLASS`` match the desktop entry, restoring the branded icon in the
+    dock and window switcher.
+    """
+    import gi
+
+    gi.require_version("GLib", "2.0")
+    from gi.repository import GLib
+
+    from .core.constants import APP_ID, APP_NAME
+
+    GLib.set_prgname(APP_ID)
+    GLib.set_application_name(APP_NAME)
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="sysbar", description="Sysbar system tray toolkit.")
     parser.add_argument("--version", action="version", version=f"sysbar {__version__}")
@@ -38,6 +60,8 @@ def main(argv: list[str] | None = None) -> int:
 
         print(run_sensors_dump())
         return 0
+
+    configure_window_identity()
 
     from .app.application import SysbarApplication
 
