@@ -160,7 +160,11 @@ def test_handle_about_to_show_submenu_skips_refresh() -> None:
     # A submenu open must not trigger the full-menu refresh: doing so emits a
     # root LayoutUpdated that cancels the host's in-progress submenu open.
     calls: list[int] = []
-    callback: Callable[[], bool] = lambda: bool(calls.append(1)) or True  # noqa: E731
+
+    def callback() -> bool:
+        calls.append(1)
+        return True
+
     server = DBusMenuServer(object_path="/MenuBar", on_about_to_show=callback)
     submenu_id = ROOT_ID + 1
 
