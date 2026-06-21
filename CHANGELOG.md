@@ -48,7 +48,12 @@ First stable release.
 - Per-process network throughput section in the panel, best-effort via `ss`.
 - Default audio output and input device switcher in the panel.
 - Configurable global shortcuts for keep-awake, shelf, clipboard manager and Focus scene,
-  replacing the single hardcoded keep-awake hotkey.
+  replacing the single hardcoded keep-awake hotkey. Registered through the XDG
+  GlobalShortcuts portal, so they work on both X11 and Wayland.
+- Wayland support for auto-quit through a bundled GNOME Shell extension
+  (`sysbar-window-manager@andreabonn.github.io`) that exposes window open/close
+  events over D-Bus. The extension is installed by the `.deb` and enabled once
+  per user; on X11, libwnck is used and the extension is not needed.
 - Composable scenes (Focus, Presentation, Power saving) applied from a tray Scenes
   submenu: each scene sets keep-awake, do-not-disturb, mic mute and display settings
   in a single action.

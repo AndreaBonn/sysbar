@@ -97,7 +97,9 @@ globale configurabile (vedi Scorciatoie globali di seguito).
 ### Auto-quit, disinstallatore e shelf
 
 - **Auto-quit**: chiude automaticamente le applicazioni tracciate, con
-  escalation graduale `SIGTERM` poi `SIGKILL` e una lista di eccezioni.
+  escalation graduale `SIGTERM` poi `SIGKILL` e una lista di eccezioni. Traccia
+  le finestre tramite libwnck su X11 e tramite la GNOME Shell extension inclusa
+  su Wayland (vedi [Installazione](#installazione)).
 - **Disinstallatore**: rimuove le applicazioni desktop e i loro file residui; la
   rimozione del pacchetto è protetta da polkit.
 - **Shelf**: un'area temporanea dove trascinare file, link, testo e immagini, con
@@ -111,7 +113,7 @@ Dalle impostazioni è possibile assegnare scorciatoie da tastiera a piu azioni:
 attivare keep awake, aprire lo shelf, aprire la cronologia degli appunti e
 attivare la scena Focus. Le scorciatoie vengono registrate tramite il portale
 XDG GlobalShortcuts e funzionano su tutto il desktop, non solo quando Sysbar ha
-il focus.
+il focus, sia su X11 sia su Wayland.
 
 ### Scene
 
@@ -144,7 +146,7 @@ Non abilitarla se copi regolarmente dati sensibili come password o token.
 | Linguaggio | Python 3.11+ |
 | UI | GTK 4, libadwaita (PyGObject) |
 | Tray | AyatanaAppIndicator3 con StatusNotifier e DBusMenu |
-| Accesso al sistema | psutil, libwnck, python-xlib, pulsectl, pynvml opzionale (NVIDIA) |
+| Accesso al sistema | psutil, libwnck (X11), python-xlib, pulsectl, pynvml opzionale (NVIDIA), GNOME Shell extension (auto-quit su Wayland) |
 | Configurazione | GSettings (schema GLib `io.github.AndreaBonn.Sysbar`) |
 | Build | hatchling, uv |
 | Packaging | Debian `.deb`, repository APT `reprepro` |
@@ -177,7 +179,8 @@ flowchart LR
 
 Ogni feature viene cablata in `app/application.py` all'avvio e attivata in base
 alle capability rilevate per la sessione in corso (per esempio, il mixer richiede
-PipeWire/PulseAudio e l'auto-quit richiede una sessione X11).
+PipeWire/PulseAudio, e l'auto-quit usa libwnck su X11 oppure la GNOME Shell
+extension inclusa su Wayland).
 
 ## Struttura del repository
 
@@ -189,15 +192,17 @@ src/sysbar/
   ui/         finestre GTK4: pannello, settings, onboarding, shelf, disinstallatore
   support/    diagnostica (selftest, dump sensori)
 tests/        mirror di src/sysbar
-data/         schema GSettings, file .desktop, autostart, traduzioni
+data/         schema GSettings, file .desktop, autostart, icone app, GNOME Shell extension, traduzioni
 packaging/    sorgenti .deb Debian e repository APT
 assets/       screenshot
 ```
 
 ## Prerequisiti
 
-- Ubuntu/GNOME su sessione X11 (alcune feature richiedono X11; su Wayland l'app
-  si avvia e disattiva quelle non supportate)
+- Ubuntu/GNOME, su sessione X11 oppure Wayland. La maggior parte delle feature
+  funziona su entrambe; su Wayland l'auto-quit richiede in più la GNOME Shell
+  extension inclusa, attivata (il `.deb` la installa, vedi
+  [Installazione](#installazione))
 - Python 3.11+
 - Binding GTK di sistema: `python3-gi`, `gir1.2-gtk-4.0`, `gir1.2-adw-1`,
   `gir1.2-ayatanaappindicator3-0.1`, `gir1.2-wnck-3.0`
@@ -210,29 +215,78 @@ gli utenti finali non devono installarli a mano.
 
 ### Per utenti finali (.deb)
 
-Scarica `sysbar_<versione>_all.deb` dall'ultima release
-([github.com/AndreaBonn/sysbar/releases/latest](https://github.com/AndreaBonn/sysbar/releases/latest))
-e installalo con `apt`, che risolve in automatico i binding GTK di sistema:
+È il modo consigliato per installare Sysbar. Il pacchetto include tutto il
+necessario e trascina i binding GTK di sistema come dipendenze.
+
+**Passo 1 - Scarica il pacchetto**
+
+Apri l'[ultima release](https://github.com/AndreaBonn/sysbar/releases/latest) e
+scarica l'asset `sysbar_<versione>_all.deb` (per esempio
+`sysbar_1.1.1_all.deb`).
+
+**Passo 2 - Installalo**
+
+Dalla cartella dove l'hai scaricato, esegui (sostituisci la versione con il file
+che hai scaricato):
 
 ```bash
-sudo apt install ./sysbar_0.3.0_all.deb
+sudo apt install ./sysbar_1.1.1_all.deb
 ```
 
-Avvia dal menu applicazioni o con `sysbar`. Per rimuovere:
+`apt` risolve in automatico i binding GTK di sistema. Evita `sudo dpkg -i`: non
+installa le dipendenze.
+
+Il pacchetto configura:
+
+- un ambiente virtuale Python isolato in `/opt/sysbar` (creato con
+  `--system-site-packages`, così riusa i binding GTK di sistema);
+- un launcher `/usr/bin/sysbar`;
+- l'icona dell'applicazione brandizzata, registrata nel tema delle icone così che
+  il pannello, la finestra delle impostazioni e la dock mostrino il logo Sysbar
+  al posto del generico ingranaggio GNOME;
+- un avvio automatico al login, disattivabile dalle impostazioni;
+- una GNOME Shell extension usata dall'auto-quit su Wayland (attivata al passo 4).
+
+**Passo 3 - Avvia Sysbar**
+
+Aprila dal menu applicazioni, oppure esegui `sysbar` in un terminale. L'icona
+nel tray compare nella barra superiore. Al primo avvio un onboarding ti
+accompagna tra le funzionalità; puoi rieseguirlo e controllare la versione
+installata dalla scheda About.
+
+![Impostazioni: about e onboarding](./assets/screenshots/settings-about.png)
+
+**Passo 4 - Solo su Wayland: attiva l'extension per l'auto-quit**
+
+Su una sessione X11 funziona tutto da subito. Su una sessione Wayland l'auto-quit
+richiede la GNOME Shell extension inclusa, che il pacchetto installa a livello di
+sistema ma che va attivata una volta per ogni utente:
+
+```bash
+gnome-extensions enable sysbar-window-manager@andreabonn.github.io
+```
+
+Poi disconnettiti e riaccedi, così GNOME carica l'extension all'avvio della
+sessione. Puoi attivarla anche dall'app Estensioni. Tutte le altre funzionalità,
+incluse le scorciatoie globali, funzionano già su Wayland senza l'extension.
+
+Non sai su quale sessione sei? Controlla con:
+
+```bash
+echo $XDG_SESSION_TYPE   # stampa "x11" o "wayland"
+```
+
+#### Aggiornamento
+
+Scarica il `.deb` più recente dalla pagina delle release e installalo come al
+passo 2; sostituisce la versione precedente. Le impostazioni vivono in GSettings
+e si conservano tra un aggiornamento e l'altro.
+
+#### Disinstallazione
 
 ```bash
 sudo apt remove sysbar
 ```
-
-Il pacchetto installa un ambiente virtuale isolato in `/opt/sysbar` (con
-`--system-site-packages`, così riusa i binding GTK di sistema) e un wrapper
-`/usr/bin/sysbar`. Registra anche un avvio automatico al login, disattivabile
-dalle impostazioni.
-
-Al primo avvio un onboarding ti accompagna tra le funzionalità. Puoi rieseguirlo
-e controllare la versione installata dalla scheda About.
-
-![Impostazioni: about e onboarding](./assets/screenshots/settings-about.png)
 
 ### Da sorgente (sviluppo)
 
