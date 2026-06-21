@@ -420,9 +420,6 @@ msgid "Unknown"
 msgstr "Sconosciuto"
 
 # Shelf
-msgid "Shelf"
-msgstr "Shelf"
-
 msgid "Clear shelf"
 msgstr "Svuota shelf"
 
@@ -431,3 +428,49 @@ msgstr "testo"
 
 msgid "Double-click to open"
 msgstr "Doppio click per aprire"
+
+# Device batteries (tray menu)
+msgid "Device batteries"
+msgstr "Batteria dispositivi"
+
+msgid "List connected keyboards, mice and headsets in the menu"
+msgstr "Elenca tastiere, mouse e cuffie collegati nel menu"
+
+msgid "Mouse"
+msgstr "Mouse"
+
+msgid "Keyboard"
+msgstr "Tastiera"
+
+msgid "Phone"
+msgstr "Telefono"
+
+msgid "Tablet"
+msgstr "Tablet"
+
+msgid "Game controller"
+msgstr "Controller di gioco"
+
+msgid "Pen"
+msgstr "Penna"
+
+msgid "Touchpad"
+msgstr "Touchpad"
+
+msgid "Headset"
+msgstr "Auricolare"
+
+msgid "Speakers"
+msgstr "Altoparlanti"
+
+msgid "Headphones"
+msgstr "Cuffie"
+
+msgid "Audio device"
+msgstr "Dispositivo audio"
+
+msgid "Wearable"
+msgstr "Indossabile"
+
+msgid "Device"
+msgstr "Dispositivo"

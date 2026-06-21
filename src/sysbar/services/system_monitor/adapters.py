@@ -22,7 +22,14 @@ from ...core.constants import (
     PROC_STAT,
     PROC_UPTIME,
     ROOT_FILESYSTEM_PATH,
+    UPOWER_BUS_NAME,
+    UPOWER_DBUS_TIMEOUT_MS,
+    UPOWER_DEVICE_INTERFACE,
+    UPOWER_INTERFACE,
+    UPOWER_OBJECT_PATH,
 )
+from . import parsers
+from .models import PeripheralBattery
 
 log = logging.getLogger(__name__)
 
@@ -159,6 +166,57 @@ class DiskUsageReader:
         if usage.total <= 0:
             return None
         return usage.used / usage.total * _PERCENT_SCALE
+
+
+class UPowerPeripheralReader:
+    """Lists peripheral batteries via the UPower DBus service (system bus).
+
+    Enumerates UPower devices and reads each one's properties, then delegates the
+    filtering/mapping to the pure :func:`parsers.parse_upower_devices`. Any DBus
+    failure (service absent, timeout) degrades to an empty tuple.
+    """
+
+    def batteries(self) -> tuple[PeripheralBattery, ...]:
+        try:
+            from gi.repository import Gio, GLib
+
+            bus = Gio.bus_get_sync(Gio.BusType.SYSTEM, None)
+            paths = self._enumerate(bus, Gio, GLib)
+            devices = [self._properties(bus, Gio, GLib, path) for path in paths]
+            return parsers.parse_upower_devices(devices)
+        except Exception:
+            log.debug("UPower peripheral read failed", exc_info=True)
+            return ()
+
+    @staticmethod
+    def _enumerate(bus: Any, gio: Any, glib: Any) -> list[str]:
+        result = bus.call_sync(
+            UPOWER_BUS_NAME,
+            UPOWER_OBJECT_PATH,
+            UPOWER_INTERFACE,
+            "EnumerateDevices",
+            None,
+            glib.VariantType("(ao)"),
+            gio.DBusCallFlags.NONE,
+            UPOWER_DBUS_TIMEOUT_MS,
+            None,
+        )
+        return list(result.unpack()[0])
+
+    @staticmethod
+    def _properties(bus: Any, gio: Any, glib: Any, path: str) -> dict[str, Any]:
+        result = bus.call_sync(
+            UPOWER_BUS_NAME,
+            path,
+            "org.freedesktop.DBus.Properties",
+            "GetAll",
+            glib.Variant("(s)", (UPOWER_DEVICE_INTERFACE,)),
+            glib.VariantType("(a{sv})"),
+            gio.DBusCallFlags.NONE,
+            UPOWER_DBUS_TIMEOUT_MS,
+            None,
+        )
+        return dict(result.unpack()[0])
 
 
 def _battery_path(leaf: str) -> Path | None:

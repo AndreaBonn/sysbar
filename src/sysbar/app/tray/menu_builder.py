@@ -18,7 +18,7 @@ from __future__ import annotations
 from collections.abc import Callable
 from dataclasses import dataclass
 
-from ...core.constants import AUTHOR_NAME, TRAY_METRICS
+from ...core.constants import AUTHOR_NAME, MAX_PERIPHERAL_ROWS, TRAY_METRICS
 from ...core.i18n import _
 from .menu_model import TOGGLE_OFF, TOGGLE_ON, TYPE_SEPARATOR, MenuItem
 
@@ -75,6 +75,7 @@ class QuickToggleState:
 def build_menu_items(
     metric_values: dict[str, str],
     *,
+    device_rows: tuple[str, ...] = (),
     keep_awake_on: bool,
     shelf_enabled: bool,
     clipboard_enabled: bool,
@@ -90,6 +91,10 @@ def build_menu_items(
         Map of metric id to its formatted line, for metrics placed in the menu
         that currently have data. Metrics absent from the map render as a hidden
         slot, preserving the node (and its id) for the next update.
+    device_rows
+        Pre-formatted peripheral battery lines (keyboard, mouse, headset…). Fill
+        a fixed pool of slots; unused slots stay present but hidden so the node
+        count never changes.
     keep_awake_on
         Whether the keep-awake toggle is currently active.
     shelf_enabled
@@ -98,7 +103,9 @@ def build_menu_items(
         Callbacks wired to the action rows.
     """
     items = _metric_slots(metric_values)
-    items.append(MenuItem(item_type=TYPE_SEPARATOR, visible=bool(metric_values)))
+    items.extend(_device_slots(device_rows))
+    has_readouts = bool(metric_values) or bool(device_rows)
+    items.append(MenuItem(item_type=TYPE_SEPARATOR, visible=has_readouts))
     items.extend(
         _action_rows(
             keep_awake_on=keep_awake_on,
@@ -120,6 +127,18 @@ def _metric_slots(metric_values: dict[str, str]) -> list[MenuItem]:
             visible=metric in metric_values,
         )
         for metric in TRAY_METRICS
+    ]
+
+
+def _device_slots(device_rows: tuple[str, ...]) -> list[MenuItem]:
+    """A fixed pool of read-only peripheral-battery rows; extras hidden."""
+    return [
+        MenuItem(
+            label=device_rows[index] if index < len(device_rows) else "",
+            enabled=False,
+            visible=index < len(device_rows),
+        )
+        for index in range(MAX_PERIPHERAL_ROWS)
     ]
 
 

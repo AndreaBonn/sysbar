@@ -1,6 +1,8 @@
 from sysbar.app.tray.menu_builder import MenuActions, QuickToggleState, build_menu_items
 from sysbar.app.tray.menu_model import TOGGLE_OFF, TOGGLE_ON, TYPE_SEPARATOR, MenuItem
-from sysbar.core.constants import AUTHOR_NAME, TRAY_METRICS
+from sysbar.core.constants import AUTHOR_NAME, MAX_PERIPHERAL_ROWS, TRAY_METRICS
+
+_METRIC_SEPARATOR_INDEX = len(TRAY_METRICS) + MAX_PERIPHERAL_ROWS
 
 
 def _noop() -> None:
@@ -26,6 +28,7 @@ def _actions() -> MenuActions:
 def _build(
     metric_values: dict[str, str] | None = None,
     *,
+    device_rows: tuple[str, ...] = (),
     keep_awake_on: bool = False,
     shelf_enabled: bool = False,
     clipboard_enabled: bool = False,
@@ -33,6 +36,7 @@ def _build(
 ) -> list[MenuItem]:
     return build_menu_items(
         metric_values or {},
+        device_rows=device_rows,
         keep_awake_on=keep_awake_on,
         shelf_enabled=shelf_enabled,
         clipboard_enabled=clipboard_enabled,
@@ -61,15 +65,39 @@ def test_metric_slots_hidden_when_no_values() -> None:
 
 def test_metric_separator_hidden_when_no_menu_metrics() -> None:
     items = _build()
-    separator = items[len(TRAY_METRICS)]
+    separator = items[_METRIC_SEPARATOR_INDEX]
     assert separator.item_type == TYPE_SEPARATOR
     assert separator.visible is False
 
 
 def test_metric_separator_visible_when_metrics_present() -> None:
     items = _build({"cpu": "CPU 10%"})
-    separator = items[len(TRAY_METRICS)]
+    separator = items[_METRIC_SEPARATOR_INDEX]
     assert separator.visible is True
+
+
+def test_device_pool_has_fixed_slot_count() -> None:
+    items = _build()
+    device_slots = items[len(TRAY_METRICS) : _METRIC_SEPARATOR_INDEX]
+    assert len(device_slots) == MAX_PERIPHERAL_ROWS
+    assert all(not slot.visible for slot in device_slots)
+
+
+def test_device_rows_fill_pool_and_stay_disabled() -> None:
+    items = _build(device_rows=("Keyboard 80%", "Headset 45%"))
+    device_slots = items[len(TRAY_METRICS) : _METRIC_SEPARATOR_INDEX]
+    visible = [slot for slot in device_slots if slot.visible]
+    assert [slot.label for slot in visible] == ["Keyboard 80%", "Headset 45%"]
+    assert all(slot.enabled is False for slot in visible)
+
+
+def test_separator_visible_when_only_device_rows_present() -> None:
+    items = _build(device_rows=("Keyboard 80%",))
+    assert items[_METRIC_SEPARATOR_INDEX].visible is True
+
+
+def test_node_count_constant_with_and_without_device_rows() -> None:
+    assert len(_build()) == len(_build(device_rows=("Keyboard 80%", "Headset 45%")))
 
 
 def test_visible_metric_slot_carries_value_and_is_disabled() -> None:

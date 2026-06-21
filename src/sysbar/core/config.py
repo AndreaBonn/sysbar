@@ -69,6 +69,10 @@ class Config:
         return validation.sanitized_temperature_unit(self._settings.get_string("temperature-unit"))
 
     @property
+    def show_device_batteries(self) -> bool:
+        return self.get_bool("menu-show-device-batteries")
+
+    @property
     def alert_enabled(self) -> bool:
         return self.get_bool("alert-enabled")
 

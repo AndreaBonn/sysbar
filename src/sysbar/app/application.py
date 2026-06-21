@@ -123,6 +123,7 @@ from .tray_renderer import (  # noqa: E402
     TrayOptions,
     available_metrics,
     menu_metric_values,
+    render_device_rows,
     render_tray_label,
 )
 
@@ -532,7 +533,10 @@ class SysbarApplication(Adw.Application):
     def _update_tray_active(self) -> None:
         if self._monitor is None:
             return
-        active = any(self.config.metric_placement(m) != PLACEMENT_OFF for m in TRAY_METRICS)
+        active = (
+            any(self.config.metric_placement(m) != PLACEMENT_OFF for m in TRAY_METRICS)
+            or self.config.show_device_batteries
+        )
         self._monitor.set_tray_active(active)
         self._refresh_tray_label()
         self._refresh_menu()
@@ -548,6 +552,14 @@ class SysbarApplication(Adw.Application):
 
     def _has_menu_metrics(self) -> bool:
         return any(self.config.metric_placement(m) == PLACEMENT_MENU for m in TRAY_METRICS)
+
+    def _menu_device_rows(self) -> tuple[str, ...]:
+        """Peripheral battery lines for the menu, empty when the toggle is off."""
+        if not self.config.show_device_batteries:
+            return ()
+        if self._monitor is None or self._monitor.latest is None:
+            return ()
+        return tuple(render_device_rows(self._monitor.latest))
 
     def _on_snapshot(self, _monitor: SystemMonitor, snapshot: SystemSnapshot) -> None:
         self._refresh_tray_label()
@@ -584,7 +596,11 @@ class SysbarApplication(Adw.Application):
         Returning ``True`` only when metrics live in the dropdown lets the host
         re-read the layout on demand instead of us churning it on every sample.
         """
-        if not self._has_menu_metrics() and not self._has_quick_toggles():
+        if (
+            not self._has_menu_metrics()
+            and not self._has_quick_toggles()
+            and not self.config.show_device_batteries
+        ):
             return False
         self._refresh_menu()
         return True
@@ -723,6 +739,7 @@ class SysbarApplication(Adw.Application):
         keep_awake_on = self._keep_awake is not None and self._keep_awake.is_active
         items = build_menu_items(
             self._menu_metric_values(),
+            device_rows=self._menu_device_rows(),
             keep_awake_on=keep_awake_on,
             shelf_enabled=self.config.get_bool("shelf-enabled"),
             clipboard_enabled=self.config.get_bool("clipboard-enabled"),

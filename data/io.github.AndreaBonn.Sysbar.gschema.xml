@@ -132,6 +132,12 @@
       <summary>Tray memory representation: dot, percent or both</summary>
     </key>
 
+    <key name="menu-show-device-batteries" type="b">
+      <default>false</default>
+      <summary>List connected peripheral batteries in the tray menu</summary>
+      <description>Keyboard, mouse, headset and other devices reported by UPower.</description>
+    </key>
+
     <key name="monitor-interval-seconds" type="i">
       <default>2</default>
       <summary>Sampling cadence in seconds; allowed 1, 2, 5</summary>

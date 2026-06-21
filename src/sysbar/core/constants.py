@@ -68,6 +68,38 @@ DEFAULT_PLACEMENT = PLACEMENT_OFF
 # GSettings key and (for migration) a legacy boolean "menu-bar-<id>" key.
 TRAY_METRICS: tuple[str, ...] = ("cpu", "gpu", "memory", "network", "battery", "power")
 
+# Peripheral battery rows shown in the tray menu (keyboard, mouse, headset…).
+# A fixed pool: extra devices beyond this count are dropped so the dbusmenu node
+# count stays constant (see app/tray/menu_builder.py).
+MAX_PERIPHERAL_ROWS = 6
+
+# UPower device-type codes for peripherals that can report a battery. The laptop
+# battery and line power are excluded by the PowerSupply flag, not by type.
+UPOWER_TYPE_MOUSE = 5
+UPOWER_TYPE_KEYBOARD = 6
+UPOWER_TYPE_PHONE = 8
+UPOWER_TYPE_MEDIA_PLAYER = 9
+UPOWER_TYPE_TABLET = 10
+UPOWER_TYPE_GAMING_INPUT = 12
+UPOWER_TYPE_PEN = 13
+UPOWER_TYPE_TOUCHPAD = 14
+UPOWER_TYPE_HEADSET = 17
+UPOWER_TYPE_SPEAKERS = 18
+UPOWER_TYPE_HEADPHONES = 19
+UPOWER_TYPE_OTHER_AUDIO = 21
+UPOWER_TYPE_WEARABLE = 26
+
+# UPower battery State code that means "charging" (org.freedesktop.UPower.Device).
+UPOWER_STATE_CHARGING = 1
+
+# UPower DBus identity for enumerating connected devices (system bus).
+UPOWER_BUS_NAME = "org.freedesktop.UPower"
+UPOWER_OBJECT_PATH = "/org/freedesktop/UPower"
+UPOWER_INTERFACE = "org.freedesktop.UPower"
+UPOWER_DEVICE_INTERFACE = "org.freedesktop.UPower.Device"
+# Per-call timeout for the UPower DBus reads, in milliseconds.
+UPOWER_DBUS_TIMEOUT_MS = 500
+
 # Metrics that depend on optional hardware: absent on machines without that
 # sensor, so their placement is disabled in Settings when no data is present.
 # cpu/memory are universal; network is merely transient (no baseline on the

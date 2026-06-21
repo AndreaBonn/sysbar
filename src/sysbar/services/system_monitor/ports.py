@@ -9,6 +9,8 @@ from __future__ import annotations
 
 from typing import Protocol
 
+from .models import PeripheralBattery
+
 
 class ProcReader(Protocol):
     """Reads raw procfs files."""
@@ -48,3 +50,9 @@ class DiskReader(Protocol):
     """Reads root filesystem usage as a percentage."""
 
     def usage_percent(self) -> float | None: ...
+
+
+class PeripheralReader(Protocol):
+    """Reads battery levels of connected peripherals (keyboard, mouse, headset…)."""
+
+    def batteries(self) -> tuple[PeripheralBattery, ...]: ...

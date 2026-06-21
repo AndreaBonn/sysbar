@@ -2,10 +2,12 @@ from sysbar.app.tray_renderer import (
     TrayOptions,
     available_metrics,
     menu_metric_values,
+    render_device_rows,
     render_menu_metrics,
     render_tray_label,
 )
-from sysbar.core.constants import HARDWARE_OPTIONAL_METRICS
+from sysbar.core.constants import HARDWARE_OPTIONAL_METRICS, MAX_PERIPHERAL_ROWS
+from sysbar.services.system_monitor.models import PeripheralBattery
 from sysbar.services.system_monitor.snapshot import SystemSnapshot
 
 BAR = "bar"
@@ -196,3 +198,38 @@ def test_hardware_optional_metrics_none_unavailable_when_all_present() -> None:
     present = available_metrics(snap, TrayOptions())
     unavailable = frozenset(m for m in HARDWARE_OPTIONAL_METRICS if m not in present)
     assert unavailable == frozenset()
+
+
+def test_device_rows_empty_without_peripherals() -> None:
+    assert render_device_rows(SystemSnapshot()) == []
+
+
+def test_device_rows_use_model_name_and_percent() -> None:
+    snap = SystemSnapshot(
+        peripherals=(
+            PeripheralBattery(model="Logitech K780", kind=6, percent=80.0, charging=False),
+        )
+    )
+    assert render_device_rows(snap) == ["Logitech K780 80%"]
+
+
+def test_device_rows_fall_back_to_localized_type_name() -> None:
+    snap = SystemSnapshot(
+        peripherals=(PeripheralBattery(model="", kind=6, percent=55.0, charging=False),)
+    )
+    assert render_device_rows(snap) == ["Keyboard 55%"]
+
+
+def test_device_rows_mark_charging_device() -> None:
+    snap = SystemSnapshot(
+        peripherals=(PeripheralBattery(model="WH-1000XM4", kind=17, percent=45.0, charging=True),)
+    )
+    assert render_device_rows(snap) == ["WH-1000XM4 45% ⚡"]
+
+
+def test_device_rows_capped_at_max() -> None:
+    many = tuple(
+        PeripheralBattery(model=f"Dev{i}", kind=0, percent=50.0, charging=False)
+        for i in range(MAX_PERIPHERAL_ROWS + 3)
+    )
+    assert len(render_device_rows(SystemSnapshot(peripherals=many))) == MAX_PERIPHERAL_ROWS

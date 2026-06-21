@@ -8,6 +8,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
+from .models import PeripheralBattery
+
 
 @dataclass(frozen=True)
 class SystemSnapshot:
@@ -32,3 +34,4 @@ class SystemSnapshot:
     power_watts: float | None = None
     temperatures: dict[str, float] = field(default_factory=dict)
     fans: dict[str, float] = field(default_factory=dict)
+    peripherals: tuple[PeripheralBattery, ...] = ()

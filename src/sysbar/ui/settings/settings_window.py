@@ -125,6 +125,14 @@ class SettingsWindow(Adw.PreferencesWindow):
                 row.set_sensitive(False)
                 row.set_subtitle(_("Not detected on this system"))
             tray.add(row)
+        tray.add(
+            bound_switch(
+                self._settings,
+                "menu-show-device-batteries",
+                "Device batteries",
+                "List connected keyboards, mice and headsets in the menu",
+            )
+        )
         page.add(tray)
 
         options = Adw.PreferencesGroup(title=_("Sampling"))

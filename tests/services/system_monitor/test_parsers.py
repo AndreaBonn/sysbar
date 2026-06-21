@@ -1,5 +1,31 @@
 from sysbar.services.system_monitor import parsers
+from sysbar.services.system_monitor.models import PeripheralBattery
 from sysbar.services.system_monitor.parsers import CpuSample, MemInfo
+
+_KEYBOARD = {
+    "Type": 6,
+    "Model": "Logitech K780",
+    "Percentage": 80.0,
+    "State": 2,
+    "PowerSupply": False,
+    "IsPresent": True,
+}
+_HEADSET = {
+    "Type": 17,
+    "Model": "WH-1000XM4",
+    "Percentage": 45.0,
+    "State": 1,
+    "PowerSupply": False,
+    "IsPresent": True,
+}
+_LAPTOP_BATTERY = {
+    "Type": 2,
+    "Model": "",
+    "Percentage": 95.0,
+    "State": 1,
+    "PowerSupply": True,
+    "IsPresent": True,
+}
 
 _STAT = """cpu  100 0 50 800 50 0 0 0 0 0
 cpu0 50 0 25 400 25 0 0 0 0 0
@@ -121,3 +147,32 @@ def test_parse_net_dev_skips_interfaces_with_too_few_columns() -> None:
 
 def test_parse_psi_some_line_without_avg10_returns_none() -> None:
     assert parsers.parse_psi_some_avg10("some avg60=3.00 avg300=1.00 total=10\n") is None
+
+
+def test_parse_upower_devices_maps_peripherals() -> None:
+    result = parsers.parse_upower_devices([_KEYBOARD, _HEADSET])
+    assert result == (
+        PeripheralBattery(model="Logitech K780", kind=6, percent=80.0, charging=False),
+        PeripheralBattery(model="WH-1000XM4", kind=17, percent=45.0, charging=True),
+    )
+
+
+def test_parse_upower_devices_excludes_power_supply() -> None:
+    assert parsers.parse_upower_devices([_LAPTOP_BATTERY]) == ()
+
+
+def test_parse_upower_devices_excludes_absent_device() -> None:
+    absent = {**_KEYBOARD, "IsPresent": False}
+    assert parsers.parse_upower_devices([absent]) == ()
+
+
+def test_parse_upower_devices_excludes_zero_percent() -> None:
+    no_reading = {**_HEADSET, "Percentage": 0.0}
+    assert parsers.parse_upower_devices([no_reading]) == ()
+
+
+def test_parse_upower_devices_defaults_missing_fields() -> None:
+    minimal = {"Percentage": 50.0}
+    assert parsers.parse_upower_devices([minimal]) == (
+        PeripheralBattery(model="", kind=0, percent=50.0, charging=False),
+    )

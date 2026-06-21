@@ -138,6 +138,48 @@ def _exercise_tray_menu() -> None:
                 )
 
 
+def _exercise_device_rows() -> None:
+    """Render a peripheral row per device kind so every type name reaches _()."""
+    from sysbar.app.tray_renderer import render_device_rows
+    from sysbar.core.constants import (
+        UPOWER_TYPE_GAMING_INPUT,
+        UPOWER_TYPE_HEADPHONES,
+        UPOWER_TYPE_HEADSET,
+        UPOWER_TYPE_KEYBOARD,
+        UPOWER_TYPE_MOUSE,
+        UPOWER_TYPE_OTHER_AUDIO,
+        UPOWER_TYPE_PEN,
+        UPOWER_TYPE_PHONE,
+        UPOWER_TYPE_SPEAKERS,
+        UPOWER_TYPE_TABLET,
+        UPOWER_TYPE_TOUCHPAD,
+        UPOWER_TYPE_WEARABLE,
+    )
+    from sysbar.services.system_monitor.models import PeripheralBattery
+    from sysbar.services.system_monitor.snapshot import SystemSnapshot
+
+    kinds = (
+        UPOWER_TYPE_MOUSE,
+        UPOWER_TYPE_KEYBOARD,
+        UPOWER_TYPE_PHONE,
+        UPOWER_TYPE_TABLET,
+        UPOWER_TYPE_GAMING_INPUT,
+        UPOWER_TYPE_PEN,
+        UPOWER_TYPE_TOUCHPAD,
+        UPOWER_TYPE_HEADSET,
+        UPOWER_TYPE_SPEAKERS,
+        UPOWER_TYPE_HEADPHONES,
+        UPOWER_TYPE_OTHER_AUDIO,
+        UPOWER_TYPE_WEARABLE,
+        0,  # unknown -> generic "Device" fallback
+    )
+    for kind in kinds:
+        snap = SystemSnapshot(
+            peripherals=(PeripheralBattery(model="", kind=kind, percent=50.0, charging=False),)
+        )
+        render_device_rows(snap)
+
+
 def _exercise_alerts() -> None:
     """Drive the alert engine so every alert title and body is materialised."""
     from sysbar.services.system_monitor.alerting import AlertEngine, AlertThresholds
@@ -228,6 +270,7 @@ def test_every_used_string_has_an_italian_catalog_entry(
     gtk: object, compiled_schema: str, recorder: _RecordingTranslation, tmp_path: Path
 ) -> None:
     _exercise_tray_menu()
+    _exercise_device_rows()
     _exercise_alerts()
     _exercise_windows(tmp_path)
 

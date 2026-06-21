@@ -6,9 +6,23 @@ so they are unit-tested with concrete fixtures (the heart of the monitor tests).
 
 from __future__ import annotations
 
+from collections.abc import Iterable
 from dataclasses import dataclass
+from typing import Any
 
-from ...core.constants import MEMORY_PRESSURE_CRITICAL, MEMORY_PRESSURE_WARNING
+from ...core.constants import (
+    MEMORY_PRESSURE_CRITICAL,
+    MEMORY_PRESSURE_WARNING,
+    UPOWER_STATE_CHARGING,
+)
+from .models import PeripheralBattery
+
+_UPOWER_KEY_TYPE = "Type"
+_UPOWER_KEY_MODEL = "Model"
+_UPOWER_KEY_PERCENTAGE = "Percentage"
+_UPOWER_KEY_STATE = "State"
+_UPOWER_KEY_POWER_SUPPLY = "PowerSupply"
+_UPOWER_KEY_IS_PRESENT = "IsPresent"
 
 
 @dataclass(frozen=True)
@@ -120,3 +134,38 @@ def memory_pressure_level(avg10: float) -> str:
     if avg10 >= MEMORY_PRESSURE_WARNING:
         return "warning"
     return "normal"
+
+
+def parse_upower_devices(
+    devices: Iterable[dict[str, Any]],
+) -> tuple[PeripheralBattery, ...]:
+    """Turn raw UPower device-property dicts into peripheral battery readings.
+
+    Keeps only connected peripherals that report a charge: entries flagged as a
+    power supply (the laptop battery and AC line) are dropped, as are absent
+    devices and those at 0% (no real reading). Input order is preserved.
+
+    Parameters
+    ----------
+    devices
+        One mapping of ``org.freedesktop.UPower.Device`` properties per device,
+        as returned by ``GetAll`` (already unpacked to native Python values).
+    """
+    result: list[PeripheralBattery] = []
+    for props in devices:
+        if bool(props.get(_UPOWER_KEY_POWER_SUPPLY, False)):
+            continue
+        if not bool(props.get(_UPOWER_KEY_IS_PRESENT, True)):
+            continue
+        percent = float(props.get(_UPOWER_KEY_PERCENTAGE, 0.0))
+        if percent <= 0.0:
+            continue
+        result.append(
+            PeripheralBattery(
+                model=str(props.get(_UPOWER_KEY_MODEL, "")).strip(),
+                kind=int(props.get(_UPOWER_KEY_TYPE, 0)),
+                percent=percent,
+                charging=int(props.get(_UPOWER_KEY_STATE, 0)) == UPOWER_STATE_CHARGING,
+            )
+        )
+    return tuple(result)

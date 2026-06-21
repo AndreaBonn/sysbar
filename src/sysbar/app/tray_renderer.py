@@ -11,18 +11,34 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from ..core.constants import (
+    MAX_PERIPHERAL_ROWS,
     MEMORY_STYLE_BOTH,
     MEMORY_STYLE_DOT,
     PLACEMENT_BAR,
     PLACEMENT_MENU,
     PLACEMENT_OFF,
     TRAY_METRICS,
+    UPOWER_TYPE_GAMING_INPUT,
+    UPOWER_TYPE_HEADPHONES,
+    UPOWER_TYPE_HEADSET,
+    UPOWER_TYPE_KEYBOARD,
+    UPOWER_TYPE_MOUSE,
+    UPOWER_TYPE_OTHER_AUDIO,
+    UPOWER_TYPE_PEN,
+    UPOWER_TYPE_PHONE,
+    UPOWER_TYPE_SPEAKERS,
+    UPOWER_TYPE_TABLET,
+    UPOWER_TYPE_TOUCHPAD,
+    UPOWER_TYPE_WEARABLE,
 )
+from ..core.i18n import _
 from ..services.metrics import metric_format as mf
+from ..services.system_monitor.models import PeripheralBattery
 from ..services.system_monitor.snapshot import SystemSnapshot
 
 _SEPARATOR = " · "
 _PRESSURE_DOTS = {"normal": "●", "warning": "●", "critical": "●"}
+_CHARGING_MARK = " ⚡"
 
 
 @dataclass(frozen=True)
@@ -130,3 +146,41 @@ def _network_segments(snapshot: SystemSnapshot) -> list[str]:
     if snapshot.net_rx_rate is None or snapshot.net_tx_rate is None:
         return []
     return [f"↓{mf.format_rate(snapshot.net_rx_rate)} ↑{mf.format_rate(snapshot.net_tx_rate)}"]
+
+
+def render_device_rows(snapshot: SystemSnapshot) -> list[str]:
+    """Return one menu line per connected peripheral battery, e.g. ``Keyboard 80%``.
+
+    Capped at :data:`MAX_PERIPHERAL_ROWS` so the fixed-size menu pool is never
+    overflowed; a charging device gets a trailing bolt.
+    """
+    rows: list[str] = []
+    for device in snapshot.peripherals[:MAX_PERIPHERAL_ROWS]:
+        suffix = _CHARGING_MARK if device.charging else ""
+        rows.append(f"{_device_name(device)} {mf.format_percent(device.percent)}{suffix}")
+    return rows
+
+
+def _device_name(device: PeripheralBattery) -> str:
+    """Prefer the device's own model string; fall back to its localized type."""
+    if device.model:
+        return device.model
+    return _type_name(device.kind)
+
+
+def _type_name(kind: int) -> str:
+    names = {
+        UPOWER_TYPE_MOUSE: _("Mouse"),
+        UPOWER_TYPE_KEYBOARD: _("Keyboard"),
+        UPOWER_TYPE_PHONE: _("Phone"),
+        UPOWER_TYPE_TABLET: _("Tablet"),
+        UPOWER_TYPE_GAMING_INPUT: _("Game controller"),
+        UPOWER_TYPE_PEN: _("Pen"),
+        UPOWER_TYPE_TOUCHPAD: _("Touchpad"),
+        UPOWER_TYPE_HEADSET: _("Headset"),
+        UPOWER_TYPE_SPEAKERS: _("Speakers"),
+        UPOWER_TYPE_HEADPHONES: _("Headphones"),
+        UPOWER_TYPE_OTHER_AUDIO: _("Audio device"),
+        UPOWER_TYPE_WEARABLE: _("Wearable"),
+    }
+    return names.get(kind, _("Device"))

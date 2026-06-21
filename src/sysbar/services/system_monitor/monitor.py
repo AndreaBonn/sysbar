@@ -22,6 +22,7 @@ from .adapters import (  # noqa: E402
     ProcfsReader,
     PsutilSensorReader,
     SysfsPowerReader,
+    UPowerPeripheralReader,
 )
 from .sampler import SystemSampler  # noqa: E402
 from .snapshot import SystemSnapshot  # noqa: E402
@@ -45,6 +46,7 @@ class SystemMonitor(GObject.Object):
             GpuReaderChain(),
             SysfsPowerReader(),
             DiskUsageReader(),
+            UPowerPeripheralReader(),
         )
         self._timer_id = 0
         self._panel_open = False

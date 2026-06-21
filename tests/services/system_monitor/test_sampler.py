@@ -1,3 +1,4 @@
+from sysbar.services.system_monitor.models import PeripheralBattery
 from sysbar.services.system_monitor.sampler import SystemSampler
 
 _STAT_1 = "cpu  100 0 50 800 50 0 0 0 0 0\ncpu0 100 0 50 800 50 0 0 0 0 0\n"
@@ -68,8 +69,13 @@ class FakeDisk:
         return 63.0
 
 
+class FakePeripherals:
+    def batteries(self) -> tuple[PeripheralBattery, ...]:
+        return (PeripheralBattery(model="Logitech K780", kind=6, percent=80.0, charging=False),)
+
+
 def _sampler(proc: FakeProc) -> SystemSampler:
-    return SystemSampler(proc, FakeSensors(), FakeGpu(), FakePower(), FakeDisk())
+    return SystemSampler(proc, FakeSensors(), FakeGpu(), FakePower(), FakeDisk(), FakePeripherals())
 
 
 def test_first_snapshot_has_no_cpu_or_net_rate() -> None:
@@ -131,7 +137,9 @@ class RaisingDisk:
 
 
 def test_disk_percent_none_when_reader_raises() -> None:
-    sampler = SystemSampler(FakeProc(), FakeSensors(), FakeGpu(), FakePower(), RaisingDisk())
+    sampler = SystemSampler(
+        FakeProc(), FakeSensors(), FakeGpu(), FakePower(), RaisingDisk(), FakePeripherals()
+    )
     snap = sampler.build_snapshot(interval_seconds=2.0)
     assert snap.disk_percent is None
 
@@ -168,18 +176,31 @@ def test_uptime_none_when_uptime_unparseable() -> None:
 
 
 def test_temperatures_empty_when_sensor_raises() -> None:
-    sampler = SystemSampler(FakeProc(), RaisingSensors(), FakeGpu(), FakePower(), FakeDisk())
+    sampler = SystemSampler(
+        FakeProc(), RaisingSensors(), FakeGpu(), FakePower(), FakeDisk(), FakePeripherals()
+    )
     snap = sampler.build_snapshot(interval_seconds=2.0)
     assert snap.temperatures == {}
 
 
 def test_fans_empty_when_sensor_raises() -> None:
-    sampler = SystemSampler(FakeProc(), RaisingSensors(), FakeGpu(), FakePower(), FakeDisk())
+    sampler = SystemSampler(
+        FakeProc(), RaisingSensors(), FakeGpu(), FakePower(), FakeDisk(), FakePeripherals()
+    )
     snap = sampler.build_snapshot(interval_seconds=2.0)
     assert snap.fans == {}
 
 
 def test_safe_reader_returns_none_when_source_raises() -> None:
-    sampler = SystemSampler(FakeProc(), RaisingSensors(), FakeGpu(), FakePower(), FakeDisk())
+    sampler = SystemSampler(
+        FakeProc(), RaisingSensors(), FakeGpu(), FakePower(), FakeDisk(), FakePeripherals()
+    )
     snap = sampler.build_snapshot(interval_seconds=2.0)
     assert snap.cpu_temp_celsius is None
+
+
+def test_snapshot_includes_peripheral_batteries() -> None:
+    snap = _sampler(FakeProc()).build_snapshot(interval_seconds=2.0)
+    assert snap.peripherals == (
+        PeripheralBattery(model="Logitech K780", kind=6, percent=80.0, charging=False),
+    )

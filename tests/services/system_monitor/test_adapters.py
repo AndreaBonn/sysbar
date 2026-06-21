@@ -12,6 +12,7 @@ from sysbar.services.system_monitor.adapters import (
     ProcfsReader,
     PsutilSensorReader,
     SysfsPowerReader,
+    UPowerPeripheralReader,
     _amd_busy_path,
     _amd_temp_path,
     _nvml_temperature,
@@ -19,6 +20,37 @@ from sysbar.services.system_monitor.adapters import (
     _nvml_value,
     _read_sysfs_float,
 )
+from sysbar.services.system_monitor.models import PeripheralBattery
+
+
+class _FakeResult:
+    def __init__(self, value: object) -> None:
+        self._value = value
+
+    def unpack(self) -> object:
+        return self._value
+
+
+class _FakeBus:
+    """Minimal ``Gio.DBusConnection`` stand-in dispatching on the method name."""
+
+    def __init__(self, paths: list[str], props: dict[str, dict[str, object]]) -> None:
+        self._paths = paths
+        self._props = props
+
+    def call_sync(
+        self,
+        _name: str,
+        path: str,
+        _iface: str,
+        method: str,
+        *_rest: object,
+    ) -> _FakeResult:
+        if method == "EnumerateDevices":
+            return _FakeResult((self._paths,))
+        if method == "GetAll":
+            return _FakeResult((self._props[path],))
+        raise AssertionError(f"unexpected method {method}")
 
 
 class FakeSensorEntry:
@@ -488,3 +520,45 @@ def test_usage_percent_none_when_usage_raises() -> None:
         raise OSError("path unreadable")
 
     assert DiskUsageReader(usage=_raise).usage_percent() is None
+
+
+def test_upower_batteries_enumerates_and_filters(monkeypatch: pytest.MonkeyPatch) -> None:
+    from gi.repository import Gio
+
+    paths = ["/org/freedesktop/UPower/devices/keyboard", "/org/freedesktop/UPower/devices/BAT1"]
+    props: dict[str, dict[str, object]] = {
+        paths[0]: {
+            "Type": 6,
+            "Model": "Logitech K780",
+            "Percentage": 80.0,
+            "State": 2,
+            "PowerSupply": False,
+            "IsPresent": True,
+        },
+        paths[1]: {
+            "Type": 2,
+            "Model": "",
+            "Percentage": 95.0,
+            "State": 1,
+            "PowerSupply": True,
+            "IsPresent": True,
+        },
+    }
+    monkeypatch.setattr(Gio, "bus_get_sync", lambda *_a, **_k: _FakeBus(paths, props))
+
+    result = UPowerPeripheralReader().batteries()
+
+    assert result == (
+        PeripheralBattery(model="Logitech K780", kind=6, percent=80.0, charging=False),
+    )
+
+
+def test_upower_batteries_empty_on_dbus_failure(monkeypatch: pytest.MonkeyPatch) -> None:
+    from gi.repository import Gio
+
+    def _raise(*_a: object, **_k: object) -> object:
+        raise RuntimeError("system bus unavailable")
+
+    monkeypatch.setattr(Gio, "bus_get_sync", _raise)
+
+    assert UPowerPeripheralReader().batteries() == ()
