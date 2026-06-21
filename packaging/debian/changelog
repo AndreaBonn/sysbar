@@ -1,3 +1,19 @@
+sysbar (1.1.0) noble; urgency=medium
+
+  * Tray: show peripheral device batteries (mouse, keyboard, headset and more)
+    in the menu, with a settings toggle to hide them.
+  * Shelf: open dropped items with the system default application on
+    double-click.
+  * Branding: ship and register the Sysbar application icon, replacing the
+    generic GNOME gear.
+  * Italian: translate the remaining tray, scenes, settings and alert strings
+    that previously rendered in English.
+  * Fix: keep the Scenes submenu from collapsing when opened.
+  * Packaging: keep the language directory level when installing locales so
+    Italian translations load from the installed package.
+
+ -- AndreaBonn <andreabonacci95@protonmail.com>  Sun, 21 Jun 2026 02:49:30 +0200
+
 sysbar (1.0.0) noble; urgency=medium
 
   * Clipboard history manager: searchable, pinnable, persisted; opened from the
