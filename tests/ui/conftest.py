@@ -17,8 +17,15 @@ from gi.repository import Adw, Gtk  # noqa: E402
 
 
 @pytest.fixture(scope="session")
-def gtk() -> object:
-    """Initialise GTK/libadwaita once; skip the suite when no display is present."""
+def gtk(compiled_schema: str) -> object:
+    """Initialise GTK/libadwaita once; skip the suite when no display is present.
+
+    Depends on ``compiled_schema`` so ``GSETTINGS_SCHEMA_DIR`` is exported *before*
+    ``Adw.init()`` runs. Without a session bus (CI, headless), GTK reads GSettings
+    eagerly during init and caches the default schema source; if that happens
+    before the env var is set, the source resolves to a stale system schema and a
+    later read of a newly added key aborts the process with a fatal GIO error.
+    """
     if not Gtk.init_check():
         pytest.skip("no display available for GTK UI smoke tests")
     Adw.init()
