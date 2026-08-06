@@ -1,24 +1,30 @@
 """Composable scenes, wired to the features they drive.
 
 The scene service knows nothing about keep awake, the microphone or Do Not
-Disturb: it calls a port. This module supplies that port, routing each action to
-the feature that owns it, which is why scenes are constructed after them.
+Disturb: it calls ports. This module supplies them, routing each action to the
+feature that owns it, which is why scenes are constructed after those.
+
+Availability is asked per toggle rather than once for all three: on a session
+with Do Not Disturb but no microphone, a scene should apply what it can and
+report the rest as skipped, not fail whole.
 """
 
 from __future__ import annotations
 
 from collections.abc import Callable
 
-from ...services.scenes.adapters import CallbackSceneApplier, ConfigSceneWriter
+from ...services.scenes.actions import SystemToggle
+from ...services.scenes.adapters import CallbackAudio, CallbackToggles, ConfigSettingsWriter
+from ...services.scenes.apply import ScenePorts
 from ...services.scenes.models import SCENE_FOCUS, Scene
 from ...services.scenes.service import SceneService
 from .. import tray_state
 from ..context import AppContext
 from ..tray.menu_builder import SceneMenuEntry
+from .audio import AudioFeature
 from .keep_awake import KeepAwakeFeature
 from .toggles import TogglesFeature
 
-_NO_SCENE = ""
 _ACTIVE_SCENE_KEY = "active-scene"
 
 
@@ -28,18 +34,11 @@ class ScenesFeature:
     def __init__(
         self,
         context: AppContext,
-        keep_awake: KeepAwakeFeature,
-        toggles: TogglesFeature,
+        drivers: SceneDrivers,
         on_changed: Callable[[], None],
     ) -> None:
-        applier = CallbackSceneApplier(
-            keep_awake=keep_awake.set_active,
-            do_not_disturb=toggles.set_do_not_disturb,
-            microphone_muted=toggles.set_microphone_muted,
-        )
         self._service = SceneService(
-            ConfigSceneWriter(context.config),
-            applier,
+            drivers.ports(context),
             active_id=context.config.get_string(_ACTIVE_SCENE_KEY),
         )
         self._service.connect("changed", lambda _service: on_changed())
@@ -67,3 +66,45 @@ class ScenesFeature:
     @property
     def active_id(self) -> str:
         return self._service.active_id
+
+
+class SceneDrivers:
+    """The features a scene acts on, bundled so the constructor stays narrow."""
+
+    def __init__(
+        self, keep_awake: KeepAwakeFeature, toggles: TogglesFeature, audio: AudioFeature
+    ) -> None:
+        self._keep_awake = keep_awake
+        self._toggles = toggles
+        self._audio = audio
+
+    def ports(self, context: AppContext) -> ScenePorts:
+        return ScenePorts(
+            toggles=CallbackToggles(
+                setters={
+                    SystemToggle.KEEP_AWAKE: self._keep_awake.set_active,
+                    SystemToggle.DO_NOT_DISTURB: self._toggles.set_do_not_disturb,
+                    SystemToggle.MICROPHONE_MUTED: self._toggles.set_microphone_muted,
+                },
+                available=self._supports,
+            ),
+            settings=ConfigSettingsWriter(context.config),
+            audio=CallbackAudio(set_output=self._set_output),
+        )
+
+    def _supports(self, toggle: SystemToggle) -> bool:
+        state = self._toggles.state()
+        match toggle:
+            case SystemToggle.KEEP_AWAKE:
+                return True
+            case SystemToggle.DO_NOT_DISTURB:
+                return state.dnd_available
+            case SystemToggle.MICROPHONE_MUTED:
+                return state.mic_available
+
+    def _set_output(self, device: str) -> bool:
+        """Select ``device`` if it is currently connected."""
+        if device not in {available.name for available in self._audio.outputs()}:
+            return False
+        self._audio.set_output(device)
+        return True

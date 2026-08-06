@@ -121,9 +121,7 @@ def test_a_relative_file_path_is_not_openable(calls: list[str]) -> None:
 
 
 def _scene(scene_id: str, name: str) -> Scene:
-    return Scene(
-        id=scene_id, name=name, keep_awake=False, do_not_disturb=False, mute_microphone=False
-    )
+    return Scene(id=scene_id, name=name)
 
 
 def test_a_scene_row_activates_its_own_scene(calls: list[str]) -> None:

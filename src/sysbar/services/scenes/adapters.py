@@ -1,9 +1,12 @@
-"""Concrete scene ports backed by Config and the live feature managers.
+"""Concrete scene ports, backed by Config and the live feature managers.
 
-``ConfigSceneWriter`` dispatches a value to the right typed GSettings setter.
-``CallbackSceneApplier`` routes the runtime toggles to caller-supplied callables,
-so the application can wire keep-awake, do-not-disturb and microphone without the
-service depending on those managers directly.
+``ConfigSettingsWriter`` dispatches a value to the right typed GSettings setter.
+``CallbackToggles`` and ``CallbackAudio`` route to caller-supplied callables, so
+the service never depends on the feature modules directly.
+
+Each toggle carries its own availability predicate rather than one flag for all
+three: on a GNOME session without a microphone, two of them work and one does
+not, and a scene should report exactly that.
 """
 
 from __future__ import annotations
@@ -11,9 +14,10 @@ from __future__ import annotations
 from collections.abc import Callable
 
 from ...core.config import Config
+from .actions import SystemToggle
 
 
-class ConfigSceneWriter:
+class ConfigSettingsWriter:
     """Writes a scene's settings through the typed Config wrapper."""
 
     def __init__(self, config: Config) -> None:
@@ -29,24 +33,40 @@ class ConfigSceneWriter:
             self._config.set_string(key, value)
 
 
-class CallbackSceneApplier:
-    """Routes the runtime scene toggles to injected callables."""
+class CallbackToggles:
+    """Routes the system toggles to injected callables and availability checks."""
 
     def __init__(
         self,
-        keep_awake: Callable[[bool], None],
-        do_not_disturb: Callable[[bool], None],
-        microphone_muted: Callable[[bool], None],
+        setters: dict[SystemToggle, Callable[[bool], None]],
+        available: Callable[[SystemToggle], bool],
     ) -> None:
-        self._keep_awake = keep_awake
-        self._do_not_disturb = do_not_disturb
-        self._microphone_muted = microphone_muted
+        self._setters = setters
+        self._available = available
+
+    def supports(self, toggle: SystemToggle) -> bool:
+        return toggle in self._setters and self._available(toggle)
 
     def set_keep_awake(self, on: bool) -> None:
-        self._keep_awake(on)
+        self._set(SystemToggle.KEEP_AWAKE, on)
 
     def set_do_not_disturb(self, on: bool) -> None:
-        self._do_not_disturb(on)
+        self._set(SystemToggle.DO_NOT_DISTURB, on)
 
     def set_microphone_muted(self, on: bool) -> None:
-        self._microphone_muted(on)
+        self._set(SystemToggle.MICROPHONE_MUTED, on)
+
+    def _set(self, toggle: SystemToggle, on: bool) -> None:
+        setter = self._setters.get(toggle)
+        if setter is not None:
+            setter(on)
+
+
+class CallbackAudio:
+    """Routes the default-output choice to an injected callable."""
+
+    def __init__(self, set_output: Callable[[str], bool]) -> None:
+        self._set_output = set_output
+
+    def set_output_device(self, device: str) -> bool:
+        return self._set_output(device)

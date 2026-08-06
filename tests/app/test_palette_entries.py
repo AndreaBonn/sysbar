@@ -126,9 +126,7 @@ def _features(**overrides: Any) -> Any:
 
 
 def _scene(scene_id: str, name: str) -> Scene:
-    return Scene(
-        id=scene_id, name=name, keep_awake=False, do_not_disturb=False, mute_microphone=False
-    )
+    return Scene(id=scene_id, name=name)
 
 
 def _device(name: str, description: str, kind: str = "sink") -> AudioDevice:

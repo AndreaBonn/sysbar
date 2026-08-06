@@ -51,7 +51,7 @@ from .features.keep_awake import KeepAwakeFeature  # noqa: E402
 from .features.monitor import MonitorFeature  # noqa: E402
 from .features.palette import PaletteFeature  # noqa: E402
 from .features.panel import PanelFeature  # noqa: E402
-from .features.scenes import ScenesFeature  # noqa: E402
+from .features.scenes import SceneDrivers, ScenesFeature  # noqa: E402
 from .features.shelf import ShelfFeature  # noqa: E402
 from .features.toggles import TogglesFeature  # noqa: E402
 from .features.uninstaller import UninstallerFeature  # noqa: E402
@@ -120,7 +120,9 @@ class SysbarApplication(Adw.Application):
             panel=PanelFeature(context, monitor, audio),
             palette=PaletteFeature(self._palette_entries),
             toggles=toggles,
-            scenes=ScenesFeature(context, keep_awake, toggles, self._refresh_menu),
+            scenes=ScenesFeature(
+                context, SceneDrivers(keep_awake, toggles, audio), self._refresh_menu
+            ),
             shelf=ShelfFeature(context),
             clipboard=ClipboardFeature(context),
             auto_quit=AutoQuitFeature(context),

@@ -206,9 +206,7 @@ def test_countdown_text_appends_the_formatted_remaining_time() -> None:
 
 
 def _scene(scene_id: str, name: str) -> Scene:
-    return Scene(
-        id=scene_id, name=name, keep_awake=False, do_not_disturb=False, mute_microphone=False
-    )
+    return Scene(id=scene_id, name=name)
 
 
 def test_scene_entries_is_empty_for_no_scenes() -> None:
