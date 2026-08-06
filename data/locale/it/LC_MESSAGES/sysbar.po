@@ -492,3 +492,60 @@ msgstr "Prova con una ricerca più breve."
 
 msgid "Reveal"
 msgstr "Mostra"
+
+msgid "Scene"
+msgstr "Scena"
+
+msgid "New scene"
+msgstr "Nuova scena"
+
+msgid "Save scene"
+msgstr "Salva la scena"
+
+msgid "Name"
+msgstr "Nome"
+
+msgid "Back"
+msgstr "Indietro"
+
+msgid "Edit"
+msgstr "Modifica"
+
+msgid "Delete"
+msgstr "Elimina"
+
+msgid "Restore the built-in"
+msgstr "Ripristina quella predefinita"
+
+msgid "What it does"
+msgstr "Cosa fa"
+
+msgid "Anything left unchanged is not touched by the scene"
+msgstr "Ciò che resta invariato non viene toccato dalla scena"
+
+msgid "Leave unchanged"
+msgstr "Lascia invariato"
+
+msgid "Turn on"
+msgstr "Attiva"
+
+msgid "Turn off"
+msgstr "Disattiva"
+
+msgid "Do Not Disturb"
+msgstr "Non disturbare"
+
+msgid "Audio output"
+msgstr "Uscita audio"
+
+msgid "Kept as it is"
+msgstr "Mantenuto com'è"
+
+msgid "{count} more actions in this scene"
+msgstr "Altre {count} azioni in questa scena"
+
+msgid "Built in, {count} actions"
+msgstr "Predefinita, {count} azioni"
+
+msgid "Custom, {count} actions"
+msgstr "Personalizzata, {count} azioni"

@@ -131,6 +131,7 @@ def test_the_only_parametric_handler_is_activate_scene(calls: list[str]) -> None
     [
         (CommandId.OPEN_PANEL, "panel.open"),
         (CommandId.OPEN_PALETTE, "palette.open"),
+        (CommandId.OPEN_SCENES, "scenes.open"),
         (CommandId.OPEN_SHELF, "shelf.open"),
         (CommandId.OPEN_CLIPBOARD, "clipboard.open"),
         (CommandId.OPEN_UNINSTALLER, "uninstaller.open"),

@@ -12,7 +12,9 @@ report the rest as skipped, not fail whole.
 from __future__ import annotations
 
 from collections.abc import Callable
+from typing import TYPE_CHECKING
 
+from ...services.audio.models import AudioDevice
 from ...services.scenes.actions import SystemToggle
 from ...services.scenes.adapters import CallbackAudio, CallbackToggles, ConfigSettingsWriter
 from ...services.scenes.apply import ScenePorts
@@ -22,9 +24,13 @@ from ...services.scenes.store import SceneStore
 from .. import tray_state
 from ..context import AppContext
 from ..tray.menu_builder import SceneMenuEntry
+from ..windows import WindowSlot
 from .audio import AudioFeature
 from .keep_awake import KeepAwakeFeature
 from .toggles import TogglesFeature
+
+if TYPE_CHECKING:
+    from ...ui.scenes.scenes_window import ScenesWindow
 
 _ACTIVE_SCENE_KEY = "active-scene"
 
@@ -38,6 +44,7 @@ class ScenesFeature:
         drivers: SceneDrivers,
         on_changed: Callable[[], None],
     ) -> None:
+        self._drivers = drivers
         self._store = SceneStore()
         self._store.load()
         self._service = SceneService(
@@ -46,6 +53,15 @@ class ScenesFeature:
             active_id=context.config.get_string(_ACTIVE_SCENE_KEY),
         )
         self._service.connect("changed", lambda _service: on_changed())
+        self._window: WindowSlot[ScenesWindow] = WindowSlot(self._build_window)
+
+    def open(self) -> None:
+        self._window.present()
+
+    def _build_window(self) -> ScenesWindow:
+        from ...ui.scenes.scenes_window import ScenesWindow
+
+        return ScenesWindow(self)
 
     def save(self, scene: Scene) -> None:
         """Create or replace a scene, then republish the list."""
@@ -58,6 +74,10 @@ class ScenesFeature:
             return False
         self._service.set_scenes(self._store.all_scenes())
         return True
+
+    def outputs(self) -> list[AudioDevice]:
+        """Audio outputs a scene can pick from, empty without a backend."""
+        return self._drivers.available_outputs()
 
     def is_overridden(self, scene_id: str) -> bool:
         """Whether a built-in has been customised and can be restored."""
@@ -121,6 +141,9 @@ class SceneDrivers:
                 return state.dnd_available
             case SystemToggle.MICROPHONE_MUTED:
                 return state.mic_available
+
+    def available_outputs(self) -> list[AudioDevice]:
+        return self._audio.outputs()
 
     def _set_output(self, device: str) -> bool:
         """Select ``device`` if it is currently connected."""

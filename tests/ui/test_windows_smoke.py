@@ -13,7 +13,9 @@ import pytest
 
 from sysbar.core.capabilities import Capabilities
 from sysbar.core.config import Config
+from sysbar.services.audio.models import AudioDevice
 from sysbar.services.autostart import AutostartManager
+from sysbar.services.scenes.models import Scene
 from sysbar.services.shelf.shelf_service import ShelfService
 from sysbar.services.uninstall.app_uninstaller import AppUninstaller
 from sysbar.services.uninstall.models import PackageManager
@@ -181,4 +183,69 @@ def test_palette_window_shows_the_empty_state_without_matches(gtk: object) -> No
     window = PaletteWindow(lambda _query: [])
 
     assert window._stack.get_visible_child_name() == "empty"
+    window.destroy()
+
+
+class _FakeSceneController:
+    def __init__(self) -> None:
+        from sysbar.services.scenes.models import PRESET_SCENES
+
+        self.scenes = list(PRESET_SCENES)
+        self.saved: list[Scene] = []
+        self.deleted: list[str] = []
+
+    def save(self, scene: Scene) -> None:
+        self.saved.append(scene)
+
+    def delete(self, scene_id: str) -> bool:
+        self.deleted.append(scene_id)
+        return True
+
+    def outputs(self) -> list[AudioDevice]:
+        return []
+
+
+def test_scenes_window_builds(gtk: object) -> None:
+    from sysbar.ui.scenes.scenes_window import ScenesWindow
+
+    window = ScenesWindow(_FakeSceneController())
+
+    assert window.get_title()
+    window.destroy()
+
+
+def test_scenes_window_lists_every_scene(gtk: object) -> None:
+    from sysbar.services.scenes.models import PRESET_SCENES
+    from sysbar.ui.scenes.scenes_window import ScenesWindow
+
+    window = ScenesWindow(_FakeSceneController())
+
+    assert len(window._rows) == len(PRESET_SCENES)
+    window.destroy()
+
+
+def test_scenes_window_opens_the_editor_for_a_new_scene(gtk: object) -> None:
+    from sysbar.ui.scenes.scenes_window import ScenesWindow
+
+    window = ScenesWindow(_FakeSceneController())
+
+    window._edit(None)
+
+    assert window._stack.get_visible_child_name() == "edit"
+    window.destroy()
+
+
+def test_editing_a_preset_saves_it_without_losing_actions(gtk: object) -> None:
+    from sysbar.services.scenes.models import PRESET_SCENES
+    from sysbar.ui.scenes.scenes_window import ScenesWindow
+
+    controller = _FakeSceneController()
+    window = ScenesWindow(controller)
+    preset = PRESET_SCENES[0]
+
+    window._edit(preset)
+    window._save()
+
+    saved = controller.saved[0]
+    assert set(saved.actions) == set(preset.actions)
     window.destroy()

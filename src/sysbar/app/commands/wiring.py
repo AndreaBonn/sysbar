@@ -35,6 +35,7 @@ def build_handlers(
             CommandId.TOGGLE_MICROPHONE: features.toggles.toggle_microphone,
             CommandId.TOGGLE_DND: features.toggles.toggle_do_not_disturb,
             CommandId.TOGGLE_DARK_MODE: features.toggles.toggle_dark_mode,
+            CommandId.OPEN_SCENES: features.scenes.open,
             CommandId.TOGGLE_FOCUS_SCENE: features.scenes.toggle_focus,
             CommandId.CLEAR_SCENE: features.scenes.clear,
             CommandId.QUIT: quit_application,

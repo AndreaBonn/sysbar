@@ -22,6 +22,11 @@ CATALOGUE: tuple[Command, ...] = (
         category=Category.WINDOW,
     ),
     Command(
+        id=CommandId.OPEN_SCENES,
+        title="Manage scenes",
+        category=Category.SCENE,
+    ),
+    Command(
         id=CommandId.OPEN_SETTINGS,
         title="Open settings",
         category=Category.WINDOW,

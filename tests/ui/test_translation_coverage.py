@@ -213,8 +213,10 @@ def _exercise_windows(tmp_path: Path) -> None:
 
     from sysbar.core.capabilities import Capabilities
     from sysbar.core.config import Config
+    from sysbar.services.audio.models import AudioDevice
     from sysbar.services.autostart import AutostartManager
     from sysbar.services.clipboard.service import ClipboardService
+    from sysbar.services.scenes.models import PRESET_SCENES, Scene
     from sysbar.services.shelf.shelf_service import ShelfService
     from sysbar.services.uninstall.app_uninstaller import AppUninstaller
     from sysbar.services.uninstall.models import PackageManager
@@ -222,9 +224,22 @@ def _exercise_windows(tmp_path: Path) -> None:
     from sysbar.ui.onboarding.onboarding_window import OnboardingWindow
     from sysbar.ui.palette.palette_window import PaletteWindow
     from sysbar.ui.panel.panel_window import PanelWindow
+    from sysbar.ui.scenes.scenes_window import ScenesWindow
     from sysbar.ui.settings.settings_window import SettingsWindow
     from sysbar.ui.shelf.shelf_window import ShelfWindow
     from sysbar.ui.uninstall.uninstaller_window import UninstallerWindow
+
+    class _FakeSceneController:
+        def __init__(self) -> None:
+            self.scenes = list(PRESET_SCENES)
+
+        def save(self, scene: Scene) -> None: ...
+
+        def delete(self, scene_id: str) -> bool:
+            return False
+
+        def outputs(self) -> list[AudioDevice]:
+            return []
 
     class _FakePackageQuery:
         def snap_name(self, path: str) -> str | None:
@@ -250,6 +265,7 @@ def _exercise_windows(tmp_path: Path) -> None:
     windows: list[_Destroyable] = [
         PanelWindow(),
         PaletteWindow(lambda _query: []),
+        ScenesWindow(_FakeSceneController()),
         ClipboardWindow(ClipboardService(tmp_path / "clipboard"), on_copy=lambda _text: None),
         SettingsWindow(Config(), AutostartManager()),
         ShelfWindow(shelf_service),
