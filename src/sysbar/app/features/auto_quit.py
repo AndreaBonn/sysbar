@@ -23,6 +23,23 @@ log = logging.getLogger(__name__)
 _ENABLED_KEY = "auto-quit-enabled"
 
 
+def _started(service: AutoQuitService) -> bool:
+    """Subscribe to the window source, reporting whether it took.
+
+    Constructing a source imports nothing: the X11 one pulls the Wnck typelib on
+    first subscribe, precisely so that GTK 3 is not loaded into a GTK 4 process
+    unless the feature is really used. Guarding only construction therefore
+    guards the half that cannot fail, and on a session where that import loses
+    the race the whole application goes down instead of the feature.
+    """
+    try:
+        service.start()
+    except Exception as error:
+        log.warning("auto-quit could not start", extra={"error": str(error)})
+        return False
+    return True
+
+
 class AutoQuitFeature:
     """Owns the auto-quit service and the window source behind it."""
 
@@ -32,7 +49,7 @@ class AutoQuitFeature:
         source = self._create_window_source()
         if source is None:
             return
-        self._service = AutoQuitService(
+        service = AutoQuitService(
             source=source,
             terminator=OsTerminator(),
             scheduler=GLibScheduler(),
@@ -40,7 +57,7 @@ class AutoQuitFeature:
             system_ids=AUTO_QUIT_SYSTEM_WHITELIST,
             enabled=lambda: context.config.get_bool(_ENABLED_KEY),
         )
-        self._service.start()
+        self._service = service if _started(service) else None
 
     @property
     def is_available(self) -> bool:
