@@ -73,6 +73,12 @@ TRAY_METRICS: tuple[str, ...] = ("cpu", "gpu", "memory", "network", "battery", "
 # count stays constant (see app/tray/menu_builder.py).
 MAX_PERIPHERAL_ROWS = 6
 
+# Scene rows in the tray submenu. Same fixed pool, same reason: with
+# user-defined scenes the count varies, and a varying node count desynchronises
+# the dbusmenu host. Scenes past this limit stay reachable from the command line
+# and the palette, just not from the tray.
+MAX_SCENE_ROWS = 8
+
 # UPower device-type codes for peripherals that can report a battery. The laptop
 # battery and line power are excluded by the PowerSupply flag, not by type.
 UPOWER_TYPE_MOUSE = 5

@@ -18,7 +18,12 @@ from __future__ import annotations
 from collections.abc import Callable
 from dataclasses import dataclass
 
-from ...core.constants import AUTHOR_NAME, MAX_PERIPHERAL_ROWS, TRAY_METRICS
+from ...core.constants import (
+    AUTHOR_NAME,
+    MAX_PERIPHERAL_ROWS,
+    MAX_SCENE_ROWS,
+    TRAY_METRICS,
+)
 from ...core.i18n import _
 from .menu_model import TOGGLE_OFF, TOGGLE_ON, TYPE_SEPARATOR, MenuItem
 
@@ -151,7 +156,6 @@ def _action_rows(
     actions: MenuActions,
     scenes: tuple[SceneMenuEntry, ...],
 ) -> list[MenuItem]:
-    scene_rows = [_scenes_submenu(scenes=scenes, actions=actions)] if scenes else []
     return [
         MenuItem(
             label=_("Keep awake"),
@@ -160,7 +164,7 @@ def _action_rows(
             action=actions.toggle_keep_awake,
         ),
         *_quick_toggle_rows(toggles=toggles, actions=actions),
-        *scene_rows,
+        _scenes_submenu(scenes=scenes, actions=actions),
         MenuItem(item_type=TYPE_SEPARATOR),
         MenuItem(label=_("Open panel"), action=actions.open_panel),
         MenuItem(label=_("Open shelf"), action=actions.open_shelf, visible=shelf_enabled),
@@ -179,19 +183,36 @@ def _scene_activator(actions: MenuActions, scene_id: str) -> Callable[[], None]:
 
 
 def _scenes_submenu(*, scenes: tuple[SceneMenuEntry, ...], actions: MenuActions) -> MenuItem:
-    """A submenu listing each scene plus a row to clear the active one."""
+    """A fixed pool of scene rows plus a row to clear the active one.
+
+    Both the submenu itself and its rows are always emitted, hidden rather than
+    dropped, for the reason in the module docstring: the number of scenes varies
+    once the user can define them, and a varying node count desynchronises the
+    host. Scenes past ``MAX_SCENE_ROWS`` are not shown here; they stay reachable
+    from the command line and the palette.
+
+    ``entry.name`` is used verbatim. It has already been resolved to its display
+    form upstream, where a built-in scene can be told from a user-defined one.
+    """
     children = [
-        MenuItem(
-            label=_(entry.name),
-            toggle_type="checkmark",
-            toggle_state=TOGGLE_ON if entry.active else TOGGLE_OFF,
-            action=_scene_activator(actions, entry.id),
-        )
-        for entry in scenes
+        _scene_slot(scenes[index] if index < len(scenes) else None, actions)
+        for index in range(MAX_SCENE_ROWS)
     ]
-    children.append(MenuItem(item_type=TYPE_SEPARATOR))
-    children.append(MenuItem(label=_("None"), action=actions.clear_scene))
+    children.append(MenuItem(item_type=TYPE_SEPARATOR, visible=bool(scenes)))
+    children.append(MenuItem(label=_("None"), action=actions.clear_scene, visible=bool(scenes)))
     return MenuItem(label=_("Scenes"), visible=bool(scenes), children=children)
+
+
+def _scene_slot(entry: SceneMenuEntry | None, actions: MenuActions) -> MenuItem:
+    """One scene row, or an empty hidden placeholder holding its node id."""
+    if entry is None:
+        return MenuItem(label="", enabled=False, visible=False)
+    return MenuItem(
+        label=entry.name,
+        toggle_type="checkmark",
+        toggle_state=TOGGLE_ON if entry.active else TOGGLE_OFF,
+        action=_scene_activator(actions, entry.id),
+    )
 
 
 def _quick_toggle_rows(*, toggles: QuickToggleState, actions: MenuActions) -> list[MenuItem]:

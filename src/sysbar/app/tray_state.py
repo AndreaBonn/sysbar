@@ -23,8 +23,9 @@ from ..core.constants import (
     PLACEMENT_OFF,
     TRAY_METRICS,
 )
+from ..core.i18n import _
 from ..services.metrics import metric_format as mf
-from ..services.scenes.models import Scene
+from ..services.scenes.models import PRESET_SCENE_IDS, Scene
 from ..services.system_monitor.snapshot import SystemSnapshot
 from .tray.menu_builder import SceneMenuEntry
 from .tray_renderer import (
@@ -110,8 +111,18 @@ def countdown_text(*, active: bool, show: bool, remaining_seconds: float | None)
 
 
 def scene_entries(scenes: Iterable[Scene], active_id: str) -> tuple[SceneMenuEntry, ...]:
-    """Tray submenu rows for the known scenes, flagging the active one."""
+    """Tray submenu rows for the known scenes, flagging the active one.
+
+    The name is resolved to its display form here, so that everything downstream
+    can treat it as final text. Only the built-in scenes are translated: see
+    :data:`sysbar.services.scenes.models.PRESET_SCENE_IDS`.
+    """
     return tuple(
-        SceneMenuEntry(id=scene.id, name=scene.name, active=scene.id == active_id)
+        SceneMenuEntry(id=scene.id, name=scene_display_name(scene), active=scene.id == active_id)
         for scene in scenes
     )
+
+
+def scene_display_name(scene: Scene) -> str:
+    """The scene name as shown, translated only when it is a built-in."""
+    return _(scene.name) if scene.id in PRESET_SCENE_IDS else scene.name

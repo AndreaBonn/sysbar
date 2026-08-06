@@ -52,3 +52,10 @@ PRESET_SCENES: tuple[Scene, ...] = (
         settings={"monitor-interval-seconds": 5, "alert-battery-percent": 20},
     ),
 )
+
+# Ids of the scenes shipped with the application. Their names are literals in
+# this module, so they are in the translation catalogue and are translated for
+# display. Names of scenes the user creates are not: passing them through
+# gettext would both fail to translate them and, because the catalogue is
+# checked in CI, demand a msgid for whatever the user happened to type.
+PRESET_SCENE_IDS: frozenset[str] = frozenset(scene.id for scene in PRESET_SCENES)

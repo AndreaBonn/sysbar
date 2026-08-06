@@ -142,9 +142,11 @@ def test_clipboard_visibility_follows_flag() -> None:
     assert hidden.visible is False
 
 
-def test_scenes_submenu_absent_without_scenes() -> None:
+def test_scenes_submenu_is_hidden_but_present_without_scenes() -> None:
+    """The node stays in the tree so the host's ids keep their meaning."""
     items = _build()
-    assert all(i.label != "Scenes" for i in items)
+    submenu = next(i for i in items if i.label == "Scenes")
+    assert submenu.visible is False
 
 
 def test_scenes_submenu_lists_entries_and_marks_active() -> None:
@@ -217,6 +219,7 @@ def test_action_rows_are_present_and_enabled() -> None:
         "Microphone in use",
         "Turn on Do Not Disturb",
         "Switch to dark mode",
+        "Scenes",
         "Open panel",
         "Open shelf",
         "Clipboard",
