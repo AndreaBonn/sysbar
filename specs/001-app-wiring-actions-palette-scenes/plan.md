@@ -37,7 +37,11 @@ blocchi successivi riportano `application.py` oltre le 1200 righe.
 - `busctl --user call io.github.AndreaBonn.Sysbar /io/github/AndreaBonn/Sysbar org.gtk.Actions List`
   elenca l'intero catalogo (>= 13 azioni: le 6 attuali più open-clipboard, activate-scene(s),
   clear-scene, toggle-microphone, toggle-dnd, toggle-dark-mode, toggle-focus-scene).
-- `gapplication list-actions io.github.AndreaBonn.Sysbar` non è vuoto.
+- `gapplication list-actions io.github.AndreaBonn.Sysbar` resta vuoto, ed è il
+  comportamento accettato: `DBusActivatable=true` e il service file sono stati tolti dallo
+  scope durante l'implementazione, con la motivazione registrata in `tasks.md`, sezione
+  "Fuori scope dichiarato". La CLI non ne dipende, perché chiama `org.gtk.Actions.Activate`
+  sull'istanza viva.
 - `sysbar open-panel` con app in esecuzione apre il pannello dell'istanza viva,
   `pgrep -c -f sysbar` resta 1.
 - `sysbar activate-scene focus` attiva la scena. `sysbar bogus` esce con 2 elencando le
