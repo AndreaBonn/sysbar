@@ -18,6 +18,8 @@ from ..core.constants import (
     FOCUS_SCENE_SHORTCUT_ID,
     KEEP_AWAKE_SHORTCUT_DESCRIPTION,
     KEEP_AWAKE_SHORTCUT_ID,
+    PALETTE_SHORTCUT_DESCRIPTION,
+    PALETTE_SHORTCUT_ID,
     SHELF_SHORTCUT_DESCRIPTION,
     SHELF_SHORTCUT_ID,
 )
@@ -27,6 +29,7 @@ KEEP_AWAKE_ENABLED_KEY = "hotkey-enabled"
 SHELF_ENABLED_KEY = "hotkey-shelf-enabled"
 CLIPBOARD_ENABLED_KEY = "hotkey-clipboard-enabled"
 FOCUS_SCENE_ENABLED_KEY = "hotkey-focus-scene-enabled"
+PALETTE_ENABLED_KEY = "hotkey-palette-enabled"
 
 
 @dataclass(frozen=True)
@@ -37,11 +40,20 @@ class ShortcutTargets:
     open_shelf: Callable[[], None]
     open_clipboard: Callable[[], None]
     toggle_focus_scene: Callable[[], None]
+    open_palette: Callable[[], None]
 
 
 def build_hotkey_bindings(config: Config, targets: ShortcutTargets) -> list[HotkeyBinding]:
     """The full shortcut table, each entry gated by its own settings key."""
-    table = (
+    return [
+        HotkeyBinding(shortcut_id, description, trigger, _gate(config, key))
+        for shortcut_id, description, trigger, key in _table(targets)
+    ]
+
+
+def _table(targets: ShortcutTargets) -> tuple[tuple[str, str, Callable[[], None], str], ...]:
+    """Shortcut id, description, what it invokes, and the key that enables it."""
+    return (
         (
             KEEP_AWAKE_SHORTCUT_ID,
             KEEP_AWAKE_SHORTCUT_DESCRIPTION,
@@ -61,11 +73,13 @@ def build_hotkey_bindings(config: Config, targets: ShortcutTargets) -> list[Hotk
             targets.toggle_focus_scene,
             FOCUS_SCENE_ENABLED_KEY,
         ),
+        (
+            PALETTE_SHORTCUT_ID,
+            PALETTE_SHORTCUT_DESCRIPTION,
+            targets.open_palette,
+            PALETTE_ENABLED_KEY,
+        ),
     )
-    return [
-        HotkeyBinding(shortcut_id, description, trigger, _gate(config, key))
-        for shortcut_id, description, trigger, key in table
-    ]
 
 
 def _gate(config: Config, key: str) -> Callable[[], bool]:

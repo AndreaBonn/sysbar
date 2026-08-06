@@ -214,6 +214,13 @@ CLIPBOARD_SHORTCUT_ID = "open-clipboard"
 CLIPBOARD_SHORTCUT_DESCRIPTION = "Open clipboard history"
 FOCUS_SCENE_SHORTCUT_ID = "toggle-focus-scene"
 FOCUS_SCENE_SHORTCUT_DESCRIPTION = "Toggle the Focus scene"
+PALETTE_SHORTCUT_ID = "open-palette"
+PALETTE_SHORTCUT_DESCRIPTION = "Open the command palette"
+
+# Rows the palette shows at once. A cap rather than a scrollback: past this
+# many results the list stops being something the eye can scan, and the answer
+# is a narrower query, not more scrolling.
+PALETTE_MAX_RESULTS = 40
 
 # GNOME Shell extension that feeds window open/close events on Wayland, where
 # there is no libwnck. The extension owns this bus name and object.

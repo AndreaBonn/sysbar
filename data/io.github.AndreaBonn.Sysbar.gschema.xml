@@ -110,6 +110,11 @@
       <summary>Global hotkey to toggle the Focus scene</summary>
     </key>
 
+    <key name="hotkey-palette-enabled" type="b">
+      <default>false</default>
+      <summary>Global hotkey to open the command palette</summary>
+    </key>
+
     <!-- Legacy boolean tray keys (pre-placement). Kept for one-shot migration into
          the "*-placement" keys below; no longer read by the UI. -->
     <key name="menu-bar-cpu" type="b"><default>false</default><summary>Deprecated: show CPU in tray</summary></key>

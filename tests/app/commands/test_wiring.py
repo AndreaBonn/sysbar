@@ -71,6 +71,7 @@ def _features(
     @dataclass
     class _Features:
         panel: Any
+        palette: Any
         keep_awake: Any
         toggles: Any
         scenes: Any
@@ -80,6 +81,7 @@ def _features(
 
     return _Features(
         panel=_Recorder(calls, "panel"),
+        palette=_Recorder(calls, "palette"),
         keep_awake=_Recorder(calls, "keep_awake"),
         toggles=_FakeToggles(calls, toggle_state),
         scenes=_Recorder(calls, "scenes"),
@@ -128,6 +130,7 @@ def test_the_only_parametric_handler_is_activate_scene(calls: list[str]) -> None
     ("command_id", "expected"),
     [
         (CommandId.OPEN_PANEL, "panel.open"),
+        (CommandId.OPEN_PALETTE, "palette.open"),
         (CommandId.OPEN_SHELF, "shelf.open"),
         (CommandId.OPEN_CLIPBOARD, "clipboard.open"),
         (CommandId.OPEN_UNINSTALLER, "uninstaller.open"),

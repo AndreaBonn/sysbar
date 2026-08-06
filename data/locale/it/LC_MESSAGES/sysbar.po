@@ -474,3 +474,21 @@ msgstr "Indossabile"
 
 msgid "Device"
 msgstr "Dispositivo"
+
+msgid "Open command palette"
+msgstr "Apri la palette dei comandi"
+
+msgid "Command palette"
+msgstr "Palette dei comandi"
+
+msgid "Search actions, scenes, clips…"
+msgstr "Cerca azioni, scene, appunti…"
+
+msgid "No matches"
+msgstr "Nessun risultato"
+
+msgid "Try a shorter query."
+msgstr "Prova con una ricerca più breve."
+
+msgid "Reveal"
+msgstr "Mostra"

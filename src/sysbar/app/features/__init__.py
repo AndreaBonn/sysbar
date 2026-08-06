@@ -21,6 +21,7 @@ from .auto_quit import AutoQuitFeature
 from .clipboard import ClipboardFeature
 from .keep_awake import KeepAwakeFeature
 from .monitor import MonitorFeature
+from .palette import PaletteFeature
 from .panel import PanelFeature
 from .scenes import ScenesFeature
 from .shelf import ShelfFeature
@@ -42,6 +43,7 @@ class Features:
     keep_awake: KeepAwakeFeature
     audio: AudioFeature
     panel: PanelFeature
+    palette: PaletteFeature
     toggles: TogglesFeature
     scenes: ScenesFeature
     shelf: ShelfFeature

@@ -12,6 +12,7 @@ from sysbar.app.shortcuts import (  # noqa: E402
     CLIPBOARD_ENABLED_KEY,
     FOCUS_SCENE_ENABLED_KEY,
     KEEP_AWAKE_ENABLED_KEY,
+    PALETTE_ENABLED_KEY,
     SHELF_ENABLED_KEY,
     ShortcutTargets,
     build_hotkey_bindings,
@@ -21,6 +22,7 @@ from sysbar.core.constants import (  # noqa: E402
     CLIPBOARD_SHORTCUT_ID,
     FOCUS_SCENE_SHORTCUT_ID,
     KEEP_AWAKE_SHORTCUT_ID,
+    PALETTE_SHORTCUT_ID,
     SHELF_SHORTCUT_ID,
 )
 
@@ -29,6 +31,7 @@ _ALL_KEYS = (
     SHELF_ENABLED_KEY,
     CLIPBOARD_ENABLED_KEY,
     FOCUS_SCENE_ENABLED_KEY,
+    PALETTE_ENABLED_KEY,
 )
 
 
@@ -49,6 +52,7 @@ def targets(fired: list[str]) -> ShortcutTargets:
         open_shelf=lambda: fired.append("shelf"),
         open_clipboard=lambda: fired.append("clipboard"),
         toggle_focus_scene=lambda: fired.append("focus"),
+        open_palette=lambda: fired.append("palette"),
     )
 
 
@@ -60,6 +64,7 @@ def test_every_shortcut_is_present(config: Config, targets: ShortcutTargets) -> 
         SHELF_SHORTCUT_ID,
         CLIPBOARD_SHORTCUT_ID,
         FOCUS_SCENE_SHORTCUT_ID,
+        PALETTE_SHORTCUT_ID,
     ]
 
 
@@ -73,7 +78,7 @@ def test_each_trigger_calls_its_own_target(
     for binding in build_hotkey_bindings(config, targets):
         binding.trigger()
 
-    assert fired == ["keep-awake", "shelf", "clipboard", "focus"]
+    assert fired == ["keep-awake", "shelf", "clipboard", "focus", "palette"]
 
 
 def test_bindings_are_disabled_when_their_setting_is_off(
@@ -83,6 +88,7 @@ def test_bindings_are_disabled_when_their_setting_is_off(
         config.set_bool(key, False)
 
     assert [binding.enabled() for binding in build_hotkey_bindings(config, targets)] == [
+        False,
         False,
         False,
         False,

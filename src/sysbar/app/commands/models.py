@@ -24,6 +24,7 @@ class CommandId(StrEnum):
     """
 
     OPEN_PANEL = "open-panel"
+    OPEN_PALETTE = "open-palette"
     OPEN_SETTINGS = "open-settings"
     OPEN_SHELF = "open-shelf"
     OPEN_CLIPBOARD = "open-clipboard"

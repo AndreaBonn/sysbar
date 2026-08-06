@@ -28,7 +28,6 @@ from ..core.capabilities import Capabilities  # noqa: E402
 from ..core.config import Config  # noqa: E402
 from ..core.constants import (  # noqa: E402
     APP_ID,
-    AUTHOR_GITHUB_URL,
     CAPABILITY_REFRESH_INTERVAL_SECONDS,
     CURRENT_FEATURE_SET,
 )
@@ -36,9 +35,10 @@ from ..core.localization import install_language  # noqa: E402
 from ..services.autostart import AutostartManager  # noqa: E402
 from ..services.hotkey.manager import HotkeyBinding  # noqa: E402
 from ..services.notifier import Notifier  # noqa: E402
+from ..services.palette.models import PaletteEntry  # noqa: E402
 from ..services.system_monitor.snapshot import SystemSnapshot  # noqa: E402
 from . import tray_state  # noqa: E402
-from .commands.actions import install_actions, refresh_enabled  # noqa: E402
+from .commands.actions import CommandHandlers, install_actions, refresh_enabled  # noqa: E402
 from .commands.models import CommandId  # noqa: E402
 from .commands.wiring import build_handlers, current_state  # noqa: E402
 from .context import AppContext  # noqa: E402
@@ -49,15 +49,17 @@ from .features.clipboard import ClipboardFeature  # noqa: E402
 from .features.hotkeys import HotkeyFeature  # noqa: E402
 from .features.keep_awake import KeepAwakeFeature  # noqa: E402
 from .features.monitor import MonitorFeature  # noqa: E402
+from .features.palette import PaletteFeature  # noqa: E402
 from .features.panel import PanelFeature  # noqa: E402
 from .features.scenes import ScenesFeature  # noqa: E402
 from .features.shelf import ShelfFeature  # noqa: E402
 from .features.toggles import TogglesFeature  # noqa: E402
 from .features.uninstaller import UninstallerFeature  # noqa: E402
 from .features.updates import UpdateCheckFeature  # noqa: E402
+from .palette_entries import collect  # noqa: E402
 from .shortcuts import ShortcutTargets, build_hotkey_bindings  # noqa: E402
 from .tray.menu_builder import MenuActions  # noqa: E402
-from .tray_controller import TrayController  # noqa: E402
+from .tray_controller import TrayController, open_author_profile  # noqa: E402
 from .windows import WindowSlot  # noqa: E402
 
 if TYPE_CHECKING:
@@ -116,6 +118,7 @@ class SysbarApplication(Adw.Application):
             keep_awake=keep_awake,
             audio=audio,
             panel=PanelFeature(context, monitor, audio),
+            palette=PaletteFeature(self._palette_entries),
             toggles=toggles,
             scenes=ScenesFeature(context, keep_awake, toggles, self._refresh_menu),
             shelf=ShelfFeature(context),
@@ -170,13 +173,18 @@ class SysbarApplication(Adw.Application):
 
     # --- actions and shortcuts -------------------------------------------
 
+    def _command_handlers(self) -> CommandHandlers:
+        """Rebuilt on demand: it is a dict of bound methods, cheap to make."""
+        return build_handlers(self.features, self._open_settings, self.quit)
+
+    def _palette_entries(self) -> list[PaletteEntry]:
+        """Read the features as they are now; the palette caches nothing."""
+        return collect(self.features, self._command_handlers())
+
     def _install_actions(self) -> None:
         """Publish the whole catalogue on the bus, disabling what is unavailable."""
-        features = self.features
         self._actions = install_actions(
-            self,
-            build_handlers(features, self._open_settings, self.quit),
-            current_state(features),
+            self, self._command_handlers(), current_state(self.features)
         )
 
     def _refresh_action_state(self) -> None:
@@ -194,7 +202,7 @@ class SysbarApplication(Adw.Application):
             open_clipboard=self._open_clipboard,
             open_uninstaller=self._open_uninstaller,
             open_settings=self._open_settings,
-            open_github=self._open_github,
+            open_github=open_author_profile,
             quit=self.quit,
             activate_scene=features.scenes.activate,
             clear_scene=features.scenes.clear,
@@ -208,6 +216,7 @@ class SysbarApplication(Adw.Application):
                 open_shelf=self._open_shelf,
                 open_clipboard=self._open_clipboard,
                 toggle_focus_scene=self.features.scenes.toggle_focus,
+                open_palette=self.features.palette.open,
             ),
         )
 
@@ -225,13 +234,6 @@ class SysbarApplication(Adw.Application):
 
     def _open_uninstaller(self) -> None:
         self.features.uninstaller.open()
-
-    def _open_github(self) -> None:
-        """Open the author's GitHub profile from the tray menu credit row."""
-        try:
-            Gio.AppInfo.launch_default_for_uri(AUTHOR_GITHUB_URL, None)
-        except GLib.Error:
-            log.exception("Failed to open author GitHub profile")
 
     # --- signal routing ---------------------------------------------------
 

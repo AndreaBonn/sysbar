@@ -26,6 +26,7 @@ def build_handlers(
     return CommandHandlers(
         simple={
             CommandId.OPEN_PANEL: features.panel.open,
+            CommandId.OPEN_PALETTE: features.palette.open,
             CommandId.OPEN_SETTINGS: open_settings,
             CommandId.OPEN_SHELF: features.shelf.open,
             CommandId.OPEN_CLIPBOARD: features.clipboard.open,

@@ -107,6 +107,9 @@ class SettingsWindow(Adw.PreferencesWindow):
         shortcuts.add(
             bound_switch(self._settings, "hotkey-focus-scene-enabled", "Toggle Focus scene")
         )
+        shortcuts.add(
+            bound_switch(self._settings, "hotkey-palette-enabled", "Open command palette")
+        )
         page.add(shortcuts)
         return page
 
