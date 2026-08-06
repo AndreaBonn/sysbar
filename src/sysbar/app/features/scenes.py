@@ -19,10 +19,10 @@ from ...core.i18n import _
 from ...services.audio.models import AudioDevice
 from ...services.scenes.actions import SystemToggle
 from ...services.scenes.adapters import CallbackAudio, CallbackToggles, ConfigSettingsWriter
-from ...services.scenes.apply import ScenePorts
+from ...services.scenes.apply import ScenePorts, applied_count
 from ...services.scenes.editing import rule_id_for
 from ...services.scenes.engine import TriggerActions, TriggerEngine
-from ...services.scenes.models import SCENE_FOCUS, Scene
+from ...services.scenes.models import SCENE_FOCUS, Scene, scene_display_name
 from ...services.scenes.service import SceneService
 from ...services.scenes.store import SceneStore
 from ...services.scenes.triggers import TriggerRule, TriggerState
@@ -112,17 +112,49 @@ class ScenesFeature:
         self._engine.update(self._state)
 
     def _announce(self, scene_id: str) -> None:
-        """Say which scene a trigger just applied.
+        """Say which scene a trigger just applied, and how much of it took.
 
         A scene changing without the user asking is exactly the kind of thing
         that reads as the machine misbehaving unless it says what it did.
         """
-        scene = self._service.find(scene_id)
-        name = scene.name if scene is not None else scene_id
+        name = self._name_of(scene_id)
+        partial = self._partial_note(name)
         self._context.notifier.notify(
             _("Scene activated"),
-            _("A trigger switched to {scene}.").format(scene=name),
+            partial or _("A trigger switched to {scene}.").format(scene=name),
             notification_id="scene-trigger",
+        )
+
+    def _name_of(self, scene_id: str) -> str:
+        scene = self._service.find(scene_id)
+        return scene_display_name(scene) if scene is not None else scene_id
+
+    def _partial_note(self, name: str) -> str:
+        """How much of the last activation took effect, empty when all of it did.
+
+        An action whose capability is missing is a skip, not a failure, so the
+        scene still counts as activated. Saying nothing about it is how a scene
+        quietly does half of what its name promises.
+        """
+        outcomes = self._service.last_outcomes
+        applied = applied_count(outcomes)
+        if not outcomes or applied == len(outcomes):
+            return ""
+        return _("{applied} of {total} actions in {scene} took effect.").format(
+            applied=applied, total=len(outcomes), scene=name
+        )
+
+    def _warn_if_partial(self, scene_id: str) -> None:
+        """Notify only when a scene did less than it says.
+
+        On a scene that applies whole this stays silent: the user just asked
+        for it and does not need telling that it worked.
+        """
+        note = self._partial_note(self._name_of(scene_id))
+        if not note:
+            return
+        self._context.notifier.notify(
+            _("Scene partly applied"), note, notification_id="scene-partial"
         )
 
     def open(self) -> None:
@@ -180,6 +212,7 @@ class ScenesFeature:
 
     def activate(self, scene_id: str) -> None:
         self._service.activate(scene_id)
+        self._warn_if_partial(scene_id)
 
     def clear(self) -> None:
         self._service.clear()
@@ -187,9 +220,9 @@ class ScenesFeature:
     def toggle_focus(self) -> None:
         """Focus is the one scene with a shortcut, so it toggles rather than sets."""
         if self._service.active_id == SCENE_FOCUS:
-            self._service.clear()
+            self.clear()
         else:
-            self._service.activate(SCENE_FOCUS)
+            self.activate(SCENE_FOCUS)
 
     def menu_entries(self) -> tuple[SceneMenuEntry, ...]:
         return tray_state.scene_entries(self._service.scenes, self._service.active_id)

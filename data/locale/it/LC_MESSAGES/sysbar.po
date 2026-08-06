@@ -553,6 +553,12 @@ msgstr "Personalizzata, {count} azioni"
 msgid "Scene activated"
 msgstr "Scena attivata"
 
+msgid "Scene partly applied"
+msgstr "Scena applicata solo in parte"
+
+msgid "{applied} of {total} actions in {scene} took effect."
+msgstr "Di {scene} hanno avuto effetto {applied} azioni su {total}."
+
 msgid "A trigger switched to {scene}."
 msgstr "Un trigger è passato a {scene}."
 
