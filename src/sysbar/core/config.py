@@ -40,6 +40,9 @@ class Config:
     def get_int(self, key: str) -> int:
         return int(self._settings.get_int(key))
 
+    def set_int(self, key: str, value: int) -> None:
+        self._settings.set_int(key, value)
+
     def get_string(self, key: str) -> str:
         return str(self._settings.get_string(key))
 

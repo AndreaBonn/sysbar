@@ -2,12 +2,19 @@
 
 from __future__ import annotations
 
+import pytest
+
 from sysbar.core.config import Config
 from sysbar.services.scenes.actions import SystemToggle
-from sysbar.services.scenes.adapters import CallbackAudio, CallbackToggles, ConfigSettingsWriter
+from sysbar.services.scenes.adapters import (
+    CallbackAudio,
+    CallbackToggles,
+    ConfigSettingsWriter,
+    SettingWriteError,
+)
 
 
-def test_config_writer_dispatches_by_value_type(compiled_schema: str) -> None:
+def test_config_writer_writes_each_type_the_schema_declares(compiled_schema: str) -> None:
     config = Config()
     writer = ConfigSettingsWriter(config)
 
@@ -20,15 +27,48 @@ def test_config_writer_dispatches_by_value_type(compiled_schema: str) -> None:
     assert config.get_string("active-scene") == "focus"
 
 
-def test_config_writer_ignores_unsupported_value_type(compiled_schema: str) -> None:
+def test_config_writer_refuses_a_value_type_the_key_cannot_hold(compiled_schema: str) -> None:
+    """GSettings rejects the write and returns False without raising.
+
+    Left unchecked that reads as success, and the scene reports an action as
+    applied when nothing was written.
+    """
     config = Config()
     writer = ConfigSettingsWriter(config)
     config.settings.set_int("monitor-interval-seconds", 5)
 
-    # A float matches none of bool/int/str, so the write is a silent no-op.
-    writer.set("monitor-interval-seconds", 3.5)
+    with pytest.raises(SettingWriteError):
+        writer.set("monitor-interval-seconds", "abc")
 
     assert config.get_int("monitor-interval-seconds") == 5
+
+
+def test_config_writer_refuses_a_value_of_an_unsupported_type(compiled_schema: str) -> None:
+    config = Config()
+    writer = ConfigSettingsWriter(config)
+    config.settings.set_int("monitor-interval-seconds", 5)
+
+    with pytest.raises(SettingWriteError):
+        writer.set("monitor-interval-seconds", 3.5)
+
+    assert config.get_int("monitor-interval-seconds") == 5
+
+
+def test_config_writer_refuses_a_key_the_schema_does_not_have(compiled_schema: str) -> None:
+    writer = ConfigSettingsWriter(Config())
+
+    with pytest.raises(SettingWriteError):
+        writer.set("no-such-key", True)
+
+
+def test_config_writer_refuses_a_key_whose_type_a_scene_cannot_write(
+    compiled_schema: str,
+) -> None:
+    """A scene writes scalars; a string list is not one, and saying so beats guessing."""
+    writer = ConfigSettingsWriter(Config())
+
+    with pytest.raises(SettingWriteError):
+        writer.set("auto-quit-exceptions", "firefox")
 
 
 def _toggles(calls: dict[str, bool], available: set[SystemToggle]) -> CallbackToggles:

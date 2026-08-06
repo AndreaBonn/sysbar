@@ -17,20 +17,50 @@ from ...core.config import Config
 from .actions import SystemToggle
 
 
+class SettingWriteError(ValueError):
+    """Raised when a value cannot be written to the key it names."""
+
+
+# What each schema type expects, so a mismatch is refused before GSettings sees
+# it. bool comes before int deliberately: in Python bool is a subclass of int.
+_EXPECTED_BY_TYPE: dict[str, type[bool] | type[int] | type[str]] = {
+    "b": bool,
+    "i": int,
+    "s": str,
+}
+
+
 class ConfigSettingsWriter:
-    """Writes a scene's settings through the typed Config wrapper."""
+    """Writes a scene's settings through the typed Config wrapper.
+
+    Dispatch is on the type the key holds, not on the type of the value.
+    GSettings refuses a mismatched write by returning False and logging, without
+    raising, so dispatching on the value lets a hand-written manifest produce an
+    action that reports itself as applied while nothing was written.
+    """
 
     def __init__(self, config: Config) -> None:
         self._config = config
 
     def set(self, key: str, value: object) -> None:
-        # bool must be checked before int: bool is a subclass of int.
-        if isinstance(value, bool):
+        expected = self._expected_type(key)
+        if expected is bool and isinstance(value, bool):
             self._config.set_bool(key, value)
-        elif isinstance(value, int):
-            self._config.settings.set_int(key, value)
-        elif isinstance(value, str):
+        elif expected is int and isinstance(value, int) and not isinstance(value, bool):
+            self._config.set_int(key, value)
+        elif expected is str and isinstance(value, str):
             self._config.set_string(key, value)
+        else:
+            raise SettingWriteError(f"{key!r} does not hold {value!r}")
+
+    def _expected_type(self, key: str) -> type[bool] | type[int] | type[str]:
+        if not self._config.settings.props.settings_schema.has_key(key):
+            raise SettingWriteError(f"no such settings key: {key!r}")
+        signature = self._config.settings.get_value(key).get_type_string()
+        expected = _EXPECTED_BY_TYPE.get(signature)
+        if expected is None:
+            raise SettingWriteError(f"a scene cannot write {signature!r} keys: {key!r}")
+        return expected
 
 
 class CallbackToggles:
