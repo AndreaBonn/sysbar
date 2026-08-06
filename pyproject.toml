@@ -94,6 +94,13 @@ markers = [
 omit = [
     "src/sysbar/ui/*",
     "src/sysbar/app/application.py",
+    # Per-feature wiring: constructs the services of one feature, gates them on a
+    # capability and connects GI signals. Same reason as application.py, verified
+    # against specs/001-app-wiring-actions-palette-scenes/runtime-checklist.md.
+    # The logic these modules used to hold is in app/tray_state.py and
+    # app/shortcuts.py, which are pure and measured.
+    "src/sysbar/app/features/*",
+    "src/sysbar/app/tray_controller.py",
     "src/sysbar/app/tray/status_notifier.py",
     "src/sysbar/app/tray/tray.py",
     "src/sysbar/services/keep_awake/inhibitor.py",
