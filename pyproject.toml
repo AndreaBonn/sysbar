@@ -101,6 +101,10 @@ omit = [
     # app/shortcuts.py, which are pure and measured.
     "src/sysbar/app/features/*",
     "src/sysbar/app/tray_controller.py",
+    # Session-bus client used by the command line. Same category as the other
+    # D-Bus boundaries above: what is testable here (the object path derivation)
+    # lives in core/constants.py and is covered there.
+    "src/sysbar/app/remote.py",
     "src/sysbar/app/tray/status_notifier.py",
     "src/sysbar/app/tray/tray.py",
     "src/sysbar/services/keep_awake/inhibitor.py",

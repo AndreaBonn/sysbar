@@ -17,6 +17,13 @@ APP_ICON_NAME = APP_ID
 BINARY_NAME = "sysbar"
 GETTEXT_DOMAIN = "sysbar"
 GSETTINGS_PATH = "/io/github/AndreaBonn/Sysbar/"
+# Object path where GApplication exports its action group. GLib derives it from
+# the application id by replacing the dots with slashes, so it is computed the
+# same way here rather than copied: the two must not be able to drift apart.
+# It currently matches GSETTINGS_PATH without the trailing slash, but only by
+# convention, and deriving it from that would break the day the schema path
+# gains a suffix.
+DBUS_OBJECT_PATH = "/" + APP_ID.replace(".", "/")
 
 # Tray icon. A themed symbolic name is used so the icon is visible in a source
 # checkout; packaging installs the branded "io.github.AndreaBonn.Sysbar" icon (M9).
