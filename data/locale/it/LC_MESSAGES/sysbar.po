@@ -549,3 +549,21 @@ msgstr "Predefinita, {count} azioni"
 
 msgid "Custom, {count} actions"
 msgstr "Personalizzata, {count} azioni"
+
+msgid "Scene activated"
+msgstr "Scena attivata"
+
+msgid "A trigger switched to {scene}."
+msgstr "Un trigger è passato a {scene}."
+
+msgid "Automatic scene triggers"
+msgstr "Trigger automatici delle scene"
+
+msgid "Automation"
+msgstr "Automazione"
+
+msgid "Let scene rules change the active scene on their own"
+msgstr "Consenti alle regole di cambiare la scena attiva da sole"
+
+msgid "A scene you chose by hand is never replaced"
+msgstr "Una scena scelta a mano non viene mai sostituita"

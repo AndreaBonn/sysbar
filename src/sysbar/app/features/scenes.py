@@ -11,16 +11,20 @@ report the rest as skipped, not fail whole.
 
 from __future__ import annotations
 
+import time
 from collections.abc import Callable
 from typing import TYPE_CHECKING
 
+from ...core.i18n import _
 from ...services.audio.models import AudioDevice
 from ...services.scenes.actions import SystemToggle
 from ...services.scenes.adapters import CallbackAudio, CallbackToggles, ConfigSettingsWriter
 from ...services.scenes.apply import ScenePorts
+from ...services.scenes.engine import TriggerActions, TriggerEngine
 from ...services.scenes.models import SCENE_FOCUS, Scene
 from ...services.scenes.service import SceneService
 from ...services.scenes.store import SceneStore
+from ...services.scenes.triggers import TriggerState
 from .. import tray_state
 from ..context import AppContext
 from ..tray.menu_builder import SceneMenuEntry
@@ -28,11 +32,13 @@ from ..windows import WindowSlot
 from .audio import AudioFeature
 from .keep_awake import KeepAwakeFeature
 from .toggles import TogglesFeature
+from .trigger_sources import DisplayWatcher
 
 if TYPE_CHECKING:
     from ...ui.scenes.scenes_window import ScenesWindow
 
 _ACTIVE_SCENE_KEY = "active-scene"
+_TRIGGERS_ENABLED_KEY = "scene-triggers-enabled"
 
 
 class ScenesFeature:
@@ -54,6 +60,63 @@ class ScenesFeature:
         )
         self._service.connect("changed", lambda _service: on_changed())
         self._window: WindowSlot[ScenesWindow] = WindowSlot(self._build_window)
+        self._context = context
+        self._state = TriggerState()
+        self._engine = TriggerEngine(
+            lambda: self._store.triggers,
+            TriggerActions(
+                activate=self._service.activate,
+                clear=self._service.clear,
+                announce=self._announce,
+            ),
+            time.monotonic,
+        )
+        self._engine.note_active_scene(self._service.active_id)
+        self._display = DisplayWatcher(self._on_display_changed)
+        self._refresh_triggers()
+
+    # --- triggers ---------------------------------------------------------
+
+    @property
+    def triggers_enabled(self) -> bool:
+        return self._context.config.get_bool(_TRIGGERS_ENABLED_KEY)
+
+    def note_snapshot(self, on_battery: bool, battery_percent: float | None) -> None:
+        """Feed the power state from the monitor's sample stream."""
+        self._state = TriggerState(
+            external_monitor=self._state.external_monitor,
+            on_battery=on_battery,
+            battery_percent=battery_percent,
+        )
+        self._refresh_triggers()
+
+    def _on_display_changed(self, has_external: bool) -> None:
+        self._state = TriggerState(
+            external_monitor=has_external,
+            on_battery=self._state.on_battery,
+            battery_percent=self._state.battery_percent,
+        )
+        self._refresh_triggers()
+
+    def _refresh_triggers(self) -> None:
+        """Evaluate the rules, unless the user has switched triggers off."""
+        if not self.triggers_enabled:
+            return
+        self._engine.update(self._state)
+
+    def _announce(self, scene_id: str) -> None:
+        """Say which scene a trigger just applied.
+
+        A scene changing without the user asking is exactly the kind of thing
+        that reads as the machine misbehaving unless it says what it did.
+        """
+        scene = self._service.find(scene_id)
+        name = scene.name if scene is not None else scene_id
+        self._context.notifier.notify(
+            _("Scene activated"),
+            _("A trigger switched to {scene}.").format(scene=name),
+            notification_id="scene-trigger",
+        )
 
     def open(self) -> None:
         self._window.present()
@@ -84,10 +147,13 @@ class ScenesFeature:
         return self._store.is_overridden(scene_id)
 
     def activate(self, scene_id: str) -> None:
+        """Activate by hand, telling the engine so it does not claim ownership."""
         self._service.activate(scene_id)
+        self._engine.note_active_scene(scene_id)
 
     def clear(self) -> None:
         self._service.clear()
+        self._engine.note_active_scene("")
 
     def toggle_focus(self) -> None:
         """Focus is the one scene with a shortcut, so it toggles rather than sets."""

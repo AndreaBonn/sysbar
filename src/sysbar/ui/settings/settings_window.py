@@ -96,22 +96,40 @@ class SettingsWindow(Adw.PreferencesWindow):
 
         group.add(bound_switch(self._settings, "auto-check-updates", "Check for updates"))
         page.add(group)
+        page.add(self._shortcuts_group())
+        page.add(self._automation_group())
+        return page
 
-        shortcuts = Adw.PreferencesGroup(
+    def _shortcuts_group(self) -> Adw.PreferencesGroup:
+        group = Adw.PreferencesGroup(
             title=_("Global shortcuts"),
             description=_("Assign the keys from your desktop's keyboard settings"),
         )
-        shortcuts.add(bound_switch(self._settings, "hotkey-enabled", "Toggle keep awake"))
-        shortcuts.add(bound_switch(self._settings, "hotkey-shelf-enabled", "Open shelf"))
-        shortcuts.add(bound_switch(self._settings, "hotkey-clipboard-enabled", "Open clipboard"))
-        shortcuts.add(
-            bound_switch(self._settings, "hotkey-focus-scene-enabled", "Toggle Focus scene")
+        for key, title in (
+            ("hotkey-enabled", "Toggle keep awake"),
+            ("hotkey-shelf-enabled", "Open shelf"),
+            ("hotkey-clipboard-enabled", "Open clipboard"),
+            ("hotkey-focus-scene-enabled", "Toggle Focus scene"),
+            ("hotkey-palette-enabled", "Open command palette"),
+        ):
+            group.add(bound_switch(self._settings, key, title))
+        return group
+
+    def _automation_group(self) -> Adw.PreferencesGroup:
+        """Triggers are not a shortcut: they act without anyone pressing a key."""
+        group = Adw.PreferencesGroup(
+            title=_("Automation"),
+            description=_("Let scene rules change the active scene on their own"),
         )
-        shortcuts.add(
-            bound_switch(self._settings, "hotkey-palette-enabled", "Open command palette")
+        group.add(
+            bound_switch(
+                self._settings,
+                "scene-triggers-enabled",
+                "Automatic scene triggers",
+                "A scene you chose by hand is never replaced",
+            )
         )
-        page.add(shortcuts)
-        return page
+        return group
 
     def _monitor_page(self) -> Adw.PreferencesPage:
         page = Adw.PreferencesPage(

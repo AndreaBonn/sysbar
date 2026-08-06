@@ -250,6 +250,7 @@ class SysbarApplication(Adw.Application):
     def _on_snapshot(self, snapshot: SystemSnapshot) -> None:
         self._refresh_label()
         self.features.panel.push_snapshot(snapshot)
+        self.features.scenes.note_snapshot(bool(snapshot.on_battery), snapshot.battery_percent)
 
     def _on_keep_awake_changed(self) -> None:
         self._refresh_menu()
