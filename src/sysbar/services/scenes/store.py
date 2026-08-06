@@ -20,6 +20,7 @@ from __future__ import annotations
 
 import json
 import logging
+import os
 from collections.abc import Iterable
 from pathlib import Path
 
@@ -78,11 +79,28 @@ class SceneStore:
             triggers = _read_triggers(body)
         except (OSError, ValueError, KeyError, TypeError, SceneError, TriggerError):
             log.warning("could not read the scenes manifest", extra={"path": str(self._path)})
+            self._quarantine()
             self._scenes = []
             self._triggers = []
             return
         self._scenes = scenes
         self._triggers = triggers
+
+    def _quarantine(self) -> None:
+        """Move an unreadable manifest aside before anything overwrites it.
+
+        Degrading leaves the store looking exactly like one with no user scenes,
+        and saving writes whatever is in memory. Without this, the first edit
+        after a failed read replaces every scene and rule the file still holds,
+        which is the one failure the user cannot undo.
+        """
+        target = _free_quarantine_path(self._path)
+        try:
+            self._path.rename(target)
+        except OSError:
+            log.warning("could not set the manifest aside", extra={"path": str(self._path)})
+            return
+        log.warning("kept a copy of the unreadable manifest", extra={"path": str(target)})
 
     def save(self) -> None:
         self._path.parent.mkdir(parents=True, exist_ok=True)
@@ -91,7 +109,21 @@ class SceneStore:
             _SCENES_KEY: [scene.to_dict() for scene in self._scenes],
             _TRIGGERS_KEY: [trigger.to_dict() for trigger in self._triggers],
         }
-        self._path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
+        self._write_private(json.dumps(payload, indent=2))
+
+    def _write_private(self, text: str) -> None:
+        """Write the manifest, created private rather than made private after.
+
+        ``write_text`` then ``chmod`` leaves a window in which the file exists
+        with whatever the umask allows, and this file decides what the
+        application does when a scene is activated.
+        """
+        descriptor = os.open(
+            self._path, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, SCENES_MANIFEST_MODE
+        )
+        with os.fdopen(descriptor, "w", encoding="utf-8") as handle:
+            handle.write(text)
+        # An older file keeps the mode it was created with, so set it either way.
         self._path.chmod(SCENES_MANIFEST_MODE)
 
     def upsert(self, scene: Scene) -> None:
@@ -140,6 +172,17 @@ class SceneStore:
         self._triggers = remaining
         self.save()
         return True
+
+
+def _free_quarantine_path(path: Path) -> Path:
+    """A name for the copy that does not bury an earlier one."""
+    base = path.with_suffix(f"{path.suffix}.corrupt")
+    if not base.exists():
+        return base
+    index = 1
+    while Path(f"{base}.{index}").exists():
+        index += 1
+    return Path(f"{base}.{index}")
 
 
 def _manifest_body(raw: object) -> dict[str, object]:

@@ -6,6 +6,8 @@ import json
 import stat
 from pathlib import Path
 
+import pytest
+
 from sysbar.services.scenes.actions import SetSetting, SetToggle, SystemToggle
 from sysbar.services.scenes.models import PRESET_SCENES, Scene, SceneOrigin
 from sysbar.services.scenes.store import SceneStore, merged
@@ -215,6 +217,70 @@ def test_one_unreadable_scene_degrades_the_whole_file(tmp_path: Path) -> None:
     store.load()
 
     assert store.scenes == []
+
+
+def test_an_unreadable_manifest_is_moved_aside_instead_of_being_overwritten(
+    tmp_path: Path,
+) -> None:
+    """The degraded state must not look like a legitimately empty one.
+
+    Saving writes whatever is in memory, so without this the first edit after a
+    failed read replaces every valid scene and rule with the single new one.
+    """
+    original = json.dumps({"version": 1, "scenes": [_user().to_dict()], "triggers": []})
+    store = _write(tmp_path, original + "  trailing garbage")
+    manifest = tmp_path / "scenes" / "manifest.json"
+
+    store.load()
+    store.upsert(_user("other", "Altra"))
+
+    quarantined = tmp_path / "scenes" / "manifest.json.corrupt"
+    assert quarantined.read_text(encoding="utf-8") == original + "  trailing garbage"
+    assert [scene.id for scene in store.scenes] == ["other"]
+    assert json.loads(manifest.read_text(encoding="utf-8"))["scenes"][0]["id"] == "other"
+
+
+def test_a_readable_manifest_is_never_moved_aside(tmp_path: Path) -> None:
+    payload = {"version": 1, "scenes": [_user().to_dict()], "triggers": []}
+    store = _write(tmp_path, json.dumps(payload))
+
+    store.load()
+
+    assert not (tmp_path / "scenes" / "manifest.json.corrupt").exists()
+
+
+def test_a_manifest_that_cannot_be_moved_aside_still_degrades(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Quarantine is best-effort: failing to rename must not take startup down."""
+    store = _write(tmp_path, "{not json")
+
+    def refuse(self: Path, target: object) -> None:
+        raise OSError("read-only filesystem")
+
+    monkeypatch.setattr(Path, "rename", refuse)
+
+    store.load()
+
+    assert store.scenes == []
+
+
+def test_further_corrupt_manifests_do_not_bury_the_earlier_ones(tmp_path: Path) -> None:
+    """Bad reads in a row must not leave the user with only the newest wreck."""
+    store = _write(tmp_path, "{first wreck")
+    manifest = tmp_path / "scenes" / "manifest.json"
+
+    store.load()
+    for wreck in ("{second wreck", "{third wreck"):
+        manifest.write_text(wreck, encoding="utf-8")
+        store.load()
+
+    kept = {
+        path.read_text(encoding="utf-8")
+        for path in (tmp_path / "scenes").iterdir()
+        if ".corrupt" in path.name
+    }
+    assert kept == {"{first wreck", "{second wreck", "{third wreck"}
 
 
 def test_duplicate_ids_degrade(tmp_path: Path) -> None:
