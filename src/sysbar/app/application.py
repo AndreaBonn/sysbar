@@ -38,6 +38,9 @@ from ..services.hotkey.manager import HotkeyBinding  # noqa: E402
 from ..services.notifier import Notifier  # noqa: E402
 from ..services.system_monitor.snapshot import SystemSnapshot  # noqa: E402
 from . import tray_state  # noqa: E402
+from .commands.actions import install_actions, refresh_enabled  # noqa: E402
+from .commands.models import CommandId  # noqa: E402
+from .commands.wiring import build_handlers, current_state  # noqa: E402
 from .context import AppContext  # noqa: E402
 from .features import Features  # noqa: E402
 from .features.audio import AudioFeature  # noqa: E402
@@ -74,6 +77,7 @@ class SysbarApplication(Adw.Application):
         self._hotkeys: HotkeyFeature | None = None
         self._capabilities = Capabilities()
         self._autostart = AutostartManager()
+        self._actions: dict[CommandId, Gio.SimpleAction] = {}
         self._settings: WindowSlot[SettingsWindow] = WindowSlot(self._build_settings)
         self._held = False
 
@@ -167,18 +171,16 @@ class SysbarApplication(Adw.Application):
     # --- actions and shortcuts -------------------------------------------
 
     def _install_actions(self) -> None:
-        for name, handler in (
-            ("open-panel", self._open_panel),
-            ("open-settings", self._open_settings),
-            ("toggle-keep-awake", self._toggle_keep_awake),
-            ("open-shelf", self._open_shelf),
-            ("open-clipboard", self._open_clipboard),
-            ("open-uninstaller", self._open_uninstaller),
-            ("quit", self.quit),
-        ):
-            action = Gio.SimpleAction.new(name, None)
-            action.connect("activate", lambda _a, _p, fn=handler: fn())
-            self.add_action(action)
+        """Publish the whole catalogue on the bus, disabling what is unavailable."""
+        features = self.features
+        self._actions = install_actions(
+            self,
+            build_handlers(features, self._open_settings, self.quit),
+            current_state(features),
+        )
+
+    def _refresh_action_state(self) -> None:
+        refresh_enabled(self._actions, current_state(self.features))
 
     def _menu_actions(self) -> MenuActions:
         features = self.features
@@ -252,6 +254,7 @@ class SysbarApplication(Adw.Application):
     def _on_settings_changed(self, _settings: Gio.Settings, key: str) -> None:
         if self._tray is not None:
             self._tray.sync_sampling()
+        self._refresh_action_state()
         if key.startswith("shelf-"):
             self.features.shelf.reconcile()
         if key.startswith("clipboard-"):
