@@ -45,18 +45,13 @@ from ..core.constants import (  # noqa: E402
     FOCUS_SCENE_SHORTCUT_ID,
     GNOME_INTERFACE_SCHEMA,
     GNOME_NOTIFICATIONS_SCHEMA,
-    GRAPH_METRICS,
-    HARDWARE_OPTIONAL_METRICS,
     KEEP_AWAKE_SHORTCUT_DESCRIPTION,
     KEEP_AWAKE_SHORTCUT_ID,
     NET_PROCESS_COUNT,
     PANEL_PROCESS_COUNT,
-    PLACEMENT_MENU,
-    PLACEMENT_OFF,
     SHELF_DIR,
     SHELF_SHORTCUT_DESCRIPTION,
     SHELF_SHORTCUT_ID,
-    TRAY_METRICS,
 )
 from ..core.i18n import _  # noqa: E402
 from ..core.localization import install_language  # noqa: E402
@@ -79,7 +74,6 @@ from ..services.keep_awake.inhibitor import SystemInhibitor  # noqa: E402
 from ..services.keep_awake.manager import KeepAwakeManager  # noqa: E402
 from ..services.keep_awake.ports import EndReason  # noqa: E402
 from ..services.keep_awake.scheduler import GLibScheduler  # noqa: E402
-from ..services.metrics import metric_format as mf  # noqa: E402
 from ..services.notifier import Notifier  # noqa: E402
 from ..services.quick_toggles.adapters import (  # noqa: E402
     GioSettingsStore,
@@ -112,6 +106,7 @@ from ..services.uninstall.command_query import CommandPackageQuery  # noqa: E402
 from ..services.uninstall.package_remover import PkexecPackageRemover  # noqa: E402
 from ..services.uninstall.trash import GioTrash  # noqa: E402
 from ..services.update_service import UpdateInfo, UpdateService  # noqa: E402
+from . import tray_state  # noqa: E402
 from .tray.menu_builder import (  # noqa: E402
     MenuActions,
     QuickToggleState,
@@ -120,13 +115,7 @@ from .tray.menu_builder import (  # noqa: E402
 )
 from .tray.menu_model import MenuModel  # noqa: E402
 from .tray.tray import Tray  # noqa: E402
-from .tray_renderer import (  # noqa: E402
-    TrayOptions,
-    available_metrics,
-    menu_metric_values,
-    render_device_rows,
-    render_tray_label,
-)
+from .tray_renderer import TrayOptions, render_tray_label  # noqa: E402
 from .windows import WindowSlot  # noqa: E402
 
 if TYPE_CHECKING:
@@ -329,11 +318,7 @@ class SysbarApplication(Adw.Application):
     def _scene_menu_entries(self) -> tuple[SceneMenuEntry, ...]:
         if self._scenes is None:
             return ()
-        active = self._scenes.active_id
-        return tuple(
-            SceneMenuEntry(id=scene.id, name=scene.name, active=scene.id == active)
-            for scene in self._scenes.scenes
-        )
+        return tray_state.scene_entries(self._scenes.scenes, self._scenes.active_id)
 
     def _toggle_microphone(self) -> None:
         if self._microphone is not None:
@@ -543,36 +528,18 @@ class SysbarApplication(Adw.Application):
         if display is not None:
             display.get_clipboard().set(text)
 
+    def _latest_snapshot(self) -> SystemSnapshot | None:
+        return self._monitor.latest if self._monitor is not None else None
+
     def _update_tray_active(self) -> None:
         if self._monitor is None:
             return
-        active = (
-            any(self.config.metric_placement(m) != PLACEMENT_OFF for m in TRAY_METRICS)
-            or self.config.show_device_batteries
-        )
-        self._monitor.set_tray_active(active)
+        self._monitor.set_tray_active(tray_state.wants_tray_sampling(self.config))
         self._refresh_tray_label()
         self._refresh_menu()
 
     def _tray_options(self) -> TrayOptions:
-        config = self.config
-        placements = {metric: config.metric_placement(metric) for metric in TRAY_METRICS}
-        return TrayOptions(
-            memory_style=config.memory_style,
-            temperature_unit=config.temperature_unit,
-            **placements,
-        )
-
-    def _has_menu_metrics(self) -> bool:
-        return any(self.config.metric_placement(m) == PLACEMENT_MENU for m in TRAY_METRICS)
-
-    def _menu_device_rows(self) -> tuple[str, ...]:
-        """Peripheral battery lines for the menu, empty when the toggle is off."""
-        if not self.config.show_device_batteries:
-            return ()
-        if self._monitor is None or self._monitor.latest is None:
-            return ()
-        return tuple(render_device_rows(self._monitor.latest))
+        return tray_state.tray_options(self.config)
 
     def _on_snapshot(self, _monitor: SystemMonitor, snapshot: SystemSnapshot) -> None:
         self._refresh_tray_label()
@@ -592,14 +559,8 @@ class SysbarApplication(Adw.Application):
 
     def _apply_graph_metrics(self, panel: PanelWindow) -> None:
         """Re-apply the sparkline selection to an open panel after a settings change."""
-        panel.set_graph_metrics(self._graph_metrics())
+        panel.set_graph_metrics(tray_state.graph_metrics(self.config))
         panel.update_history(self._history)
-
-    def _graph_metrics(self) -> frozenset[str]:
-        """Metrics whose sparkline is enabled in settings (``monitor-graph-*``)."""
-        return frozenset(
-            metric for metric in GRAPH_METRICS if self.config.get_bool(f"monitor-graph-{metric}")
-        )
 
     def _refresh_menu(self) -> None:
         if self._tray is not None:
@@ -634,14 +595,13 @@ class SysbarApplication(Adw.Application):
         self._tray.set_label(" · ".join(segments))
 
     def _countdown_text(self) -> str:
-        if self._keep_awake is None or not self._keep_awake.is_active:
-            return ""
-        if not self.config.get_bool("show-countdown"):
-            return ""
-        remaining = self._keep_awake.remaining_seconds()
-        if remaining is None:
-            return _KEEP_AWAKE_PLAY
-        return f"{_KEEP_AWAKE_PLAY} {mf.format_countdown(remaining)}"
+        keep_awake = self._keep_awake
+        active = keep_awake is not None and keep_awake.is_active
+        return tray_state.countdown_text(
+            active=active,
+            show=self.config.get_bool("show-countdown"),
+            remaining_seconds=keep_awake.remaining_seconds() if active and keep_awake else None,
+        )
 
     def _on_settings_changed(self, _settings: Gio.Settings, key: str) -> None:
         self._update_tray_active()
@@ -728,9 +688,7 @@ class SysbarApplication(Adw.Application):
         self._tray.set_menu(self._build_menu())
 
     def _menu_metric_values(self) -> dict[str, str]:
-        if self._monitor is None or self._monitor.latest is None:
-            return {}
-        return menu_metric_values(self._monitor.latest, self._tray_options())
+        return tray_state.menu_metrics(self._latest_snapshot(), self._tray_options())
 
     def _menu_actions(self) -> MenuActions:
         return MenuActions(
@@ -841,16 +799,7 @@ class SysbarApplication(Adw.Application):
             log.exception("Failed to open author GitHub profile")
 
     def _unavailable_metrics(self) -> frozenset[str]:
-        """Hardware-optional metrics with no data in the latest snapshot.
-
-        Fail-open: with no snapshot yet, nothing is reported unavailable so the
-        Settings rows stay enabled rather than being disabled by mistake.
-        """
-        snapshot = self._monitor.latest if self._monitor is not None else None
-        if snapshot is None:
-            return frozenset()
-        present = available_metrics(snapshot, TrayOptions())
-        return frozenset(m for m in HARDWARE_OPTIONAL_METRICS if m not in present)
+        return tray_state.unavailable_metrics(self._latest_snapshot())
 
     def _show_onboarding(self) -> None:
         from ..ui.onboarding.onboarding_window import OnboardingWindow
