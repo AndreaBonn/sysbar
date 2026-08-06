@@ -18,13 +18,9 @@ from __future__ import annotations
 from collections.abc import Callable
 from dataclasses import dataclass
 
-from ...core.constants import (
-    AUTHOR_NAME,
-    MAX_PERIPHERAL_ROWS,
-    MAX_SCENE_ROWS,
-    TRAY_METRICS,
-)
+from ...core.constants import AUTHOR_NAME, MAX_PERIPHERAL_ROWS, TRAY_METRICS
 from ...core.i18n import _
+from ...services.scenes.constants import MAX_SCENE_ROWS
 from .menu_model import TOGGLE_OFF, TOGGLE_ON, TYPE_SEPARATOR, MenuItem
 
 

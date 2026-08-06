@@ -22,7 +22,7 @@ from sysbar.app.tray.menu_builder import (
 )
 from sysbar.app.tray.menu_model import MenuItem
 from sysbar.core import i18n
-from sysbar.core.constants import MAX_SCENE_ROWS
+from sysbar.services.scenes.constants import MAX_SCENE_ROWS
 
 
 def _noop() -> None: ...

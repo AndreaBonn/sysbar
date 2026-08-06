@@ -22,7 +22,7 @@ from dataclasses import dataclass
 from enum import StrEnum
 from typing import Final, Literal
 
-from ...core.constants import SCENE_WRITABLE_KEYS
+from .constants import SCENE_WRITABLE_KEYS
 
 KIND_TOGGLE: Final = "toggle"
 KIND_SETTING: Final = "setting"

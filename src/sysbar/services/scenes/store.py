@@ -23,11 +23,7 @@ import logging
 from collections.abc import Iterable
 from pathlib import Path
 
-from ...core.constants import (
-    SCENES_MANIFEST,
-    SCENES_MANIFEST_MODE,
-    SCENES_MANIFEST_VERSION,
-)
+from .constants import SCENES_MANIFEST, SCENES_MANIFEST_MODE, SCENES_MANIFEST_VERSION
 from .models import PRESET_SCENES, Scene, SceneError, SceneOrigin
 from .triggers import TriggerError, TriggerRule
 
