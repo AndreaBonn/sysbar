@@ -2,7 +2,10 @@
 
 from __future__ import annotations
 
+import logging
 from dataclasses import dataclass, field
+
+import pytest
 
 from sysbar.services.scenes.actions import (
     SetOutputDevice,
@@ -189,9 +192,7 @@ def test_the_last_outcomes_report_how_much_of_the_scene_applied() -> None:
 
 
 def test_a_missing_output_device_is_skipped() -> None:
-    scenes = [
-        Scene(id="dock", name="Dock", actions=(SetOutputDevice(device="hdmi"),))
-    ]
+    scenes = [Scene(id="dock", name="Dock", actions=(SetOutputDevice(device="hdmi"),))]
     settings = _FakeSettings()
     audio = _FakeAudio(available=set())
     service = SceneService(
@@ -239,3 +240,19 @@ def test_set_scenes_keeps_an_active_scene_that_still_exists() -> None:
     service.set_scenes(_SCENES)
 
     assert service.active_id == "focus"
+
+
+def test_every_scene_change_is_logged(caplog: pytest.LogCaptureFixture) -> None:
+    """A trigger moves this without the user asking, so it has to leave a trace."""
+    service, _, _, _ = _service()
+
+    with caplog.at_level(logging.INFO, logger="sysbar.services.scenes.service"):
+        service.activate("focus")
+
+    records = [record for record in caplog.records if record.message == "active scene changed"]
+    assert len(records) == 1
+    # Both read through getattr with a default: "from" is a keyword, and the
+    # two-argument form gets rewritten into attribute access the type checker
+    # then rejects on LogRecord.
+    assert getattr(records[0], "to", None) == "focus"
+    assert getattr(records[0], "from", None) == ""

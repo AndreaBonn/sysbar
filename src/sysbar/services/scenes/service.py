@@ -91,6 +91,14 @@ class SceneService(GObject.Object):
         self._set_active(_NO_SCENE)
 
     def _set_active(self, scene_id: str) -> None:
+        # The active scene is the one piece of state a trigger changes without
+        # the user asking, and nothing recorded when it moved: an unexplained
+        # switch left no trace to read afterwards. One line per change is what
+        # makes the next one diagnosable.
+        log.info(
+            "active scene changed",
+            extra={"from": self._active_id, "to": scene_id, "applied": len(self._last_outcomes)},
+        )
         self._ports.settings.set(_ACTIVE_SCENE_KEY, scene_id)
         self._active_id = scene_id
         self.emit("changed")
