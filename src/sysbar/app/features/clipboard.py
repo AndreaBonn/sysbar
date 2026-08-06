@@ -15,6 +15,7 @@ gi.require_version("Gdk", "4.0")
 from gi.repository import Gdk  # noqa: E402
 
 from ...core.constants import CLIPBOARD_DIR  # noqa: E402
+from ...services.clipboard.models import ClipEntry  # noqa: E402
 from ...services.clipboard.monitor import ClipboardMonitor  # noqa: E402
 from ...services.clipboard.service import ClipboardService  # noqa: E402
 from ..context import AppContext  # noqa: E402
@@ -50,6 +51,20 @@ class ClipboardFeature:
 
     def open(self) -> None:
         self._window.present()
+
+    def entries(self) -> list[ClipEntry]:
+        """The history, or nothing at all while the feature is switched off.
+
+        Deliberately does not build the store: asking what is in a disabled
+        history should not be what causes it to start being kept.
+        """
+        if not self.is_enabled or self._service is None:
+            return []
+        return self._service.items
+
+    def copy(self, text: str) -> None:
+        """Put ``text`` back on the system clipboard."""
+        self._copy_back(text)
 
     def _ensure_service(self) -> ClipboardService:
         if self._service is None:

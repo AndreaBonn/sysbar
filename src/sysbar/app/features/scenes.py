@@ -10,7 +10,7 @@ from __future__ import annotations
 from collections.abc import Callable
 
 from ...services.scenes.adapters import CallbackSceneApplier, ConfigSceneWriter
-from ...services.scenes.models import SCENE_FOCUS
+from ...services.scenes.models import SCENE_FOCUS, Scene
 from ...services.scenes.service import SceneService
 from .. import tray_state
 from ..context import AppContext
@@ -59,3 +59,11 @@ class ScenesFeature:
 
     def menu_entries(self) -> tuple[SceneMenuEntry, ...]:
         return tray_state.scene_entries(self._service.scenes, self._service.active_id)
+
+    @property
+    def scenes(self) -> list[Scene]:
+        return self._service.scenes
+
+    @property
+    def active_id(self) -> str:
+        return self._service.active_id

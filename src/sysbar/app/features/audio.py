@@ -14,6 +14,7 @@ from typing import TYPE_CHECKING
 from ...core.capabilities import PIPEWIRE_PULSE
 from ...services.audio.app_volume_mixer import AppVolumeMixer
 from ...services.audio.device_switcher import DeviceSwitcher
+from ...services.audio.models import AudioDevice
 from ...services.audio.pulse_backend import PulseAudioBackend
 from ..context import AppContext
 
@@ -57,3 +58,19 @@ class AudioFeature:
         """Re-read the available sinks and sources; no-op without a backend."""
         if self._switcher is not None:
             self._switcher.refresh()
+
+    def outputs(self) -> list[AudioDevice]:
+        """Selectable output devices, empty without an audio backend."""
+        return self._switcher.outputs if self._switcher is not None else []
+
+    def inputs(self) -> list[AudioDevice]:
+        """Selectable input devices, empty without an audio backend."""
+        return self._switcher.inputs if self._switcher is not None else []
+
+    def set_output(self, name: str) -> None:
+        if self._switcher is not None:
+            self._switcher.set_default_output(name)
+
+    def set_input(self, name: str) -> None:
+        if self._switcher is not None:
+            self._switcher.set_default_input(name)
