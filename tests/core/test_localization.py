@@ -1,5 +1,6 @@
 import os
 import shutil
+import subprocess
 from collections.abc import Iterator
 from pathlib import Path
 
@@ -182,3 +183,36 @@ def test_install_language_translates_after_on_demand_compile(
     monkeypatch.setattr(localization, "_LOCALE_CANDIDATES", (tmp_path,))
     localization.install_language("it")
     assert i18n._("Start at login") == "Avvia all'accesso"
+
+
+def test_the_italian_catalogue_has_no_duplicate_entries() -> None:
+    """A duplicate msgid makes msgfmt refuse the whole file.
+
+    The coverage gate checks that every translated string has an entry; it
+    cannot see this, because the entry is there twice. What the user gets is an
+    untranslated interface and one warning in the log.
+    """
+    catalogue = Path("data/locale/it/LC_MESSAGES/sysbar.po")
+    ids = [
+        line.removeprefix("msgid ").strip()
+        for line in catalogue.read_text(encoding="utf-8").splitlines()
+        if line.startswith("msgid ")
+    ]
+
+    duplicates = sorted({entry for entry in ids if ids.count(entry) > 1})
+
+    assert duplicates == []
+
+
+@pytest.mark.skipif(shutil.which("msgfmt") is None, reason="gettext tools not installed")
+def test_the_italian_catalogue_compiles(tmp_path: Path) -> None:
+    catalogue = Path("data/locale/it/LC_MESSAGES/sysbar.po")
+
+    result = subprocess.run(
+        ["msgfmt", str(catalogue), "-o", str(tmp_path / "sysbar.mo")],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+
+    assert result.returncode == 0, result.stderr

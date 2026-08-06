@@ -577,9 +577,6 @@ msgstr "Lascia su Mai per attivare questa scena solo a mano"
 msgid "Activate automatically"
 msgstr "Attiva automaticamente"
 
-msgid "Never"
-msgstr "Mai"
-
 msgid "An external monitor is connected"
 msgstr "Un monitor esterno è collegato"
 
