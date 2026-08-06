@@ -9,6 +9,7 @@ from pathlib import Path
 from sysbar.services.scenes.actions import SetSetting, SetToggle, SystemToggle
 from sysbar.services.scenes.models import PRESET_SCENES, Scene, SceneOrigin
 from sysbar.services.scenes.store import SceneStore, merged
+from sysbar.services.scenes.triggers import ExternalMonitorConnected, TriggerRule
 
 
 def _store(tmp_path: Path) -> SceneStore:
@@ -265,3 +266,114 @@ def test_a_valid_setting_key_loads_normally(tmp_path: Path) -> None:
     store.load()
 
     assert store.scenes == [scene]
+
+
+# --- trigger rules --------------------------------------------------------
+
+
+def _rule(rule_id: str = "r1", scene_id: str = "focus") -> TriggerRule:
+    return TriggerRule(
+        id=rule_id,
+        condition=ExternalMonitorConnected(),
+        scene_id=scene_id,
+        restore_on_exit=True,
+    )
+
+
+def test_a_new_store_has_no_rules(tmp_path: Path) -> None:
+    assert _store(tmp_path).triggers == []
+
+
+def test_a_saved_rule_comes_back(tmp_path: Path) -> None:
+    store = _store(tmp_path)
+    store.upsert_trigger(_rule())
+
+    reopened = _store(tmp_path)
+    reopened.load()
+
+    assert reopened.triggers == [_rule()]
+
+
+def test_rules_and_scenes_share_one_document(tmp_path: Path) -> None:
+    """One atomic write, so a rule never points at an unsaved scene."""
+    store = _store(tmp_path)
+    store.upsert(_user())
+    store.upsert_trigger(_rule(scene_id="mine"))
+
+    payload = json.loads((tmp_path / "scenes" / "manifest.json").read_text(encoding="utf-8"))
+
+    assert len(payload["scenes"]) == 1
+    assert len(payload["triggers"]) == 1
+
+
+def test_upserting_a_rule_twice_replaces_it(tmp_path: Path) -> None:
+    store = _store(tmp_path)
+    store.upsert_trigger(_rule(scene_id="focus"))
+
+    store.upsert_trigger(_rule(scene_id="presentation"))
+
+    assert [rule.scene_id for rule in store.triggers] == ["presentation"]
+
+
+def test_replacing_a_rule_keeps_its_position(tmp_path: Path) -> None:
+    """The list is the priority, so an edit must not reorder it."""
+    store = _store(tmp_path)
+    store.upsert_trigger(_rule("first"))
+    store.upsert_trigger(_rule("second"))
+
+    store.upsert_trigger(_rule("first", scene_id="power-saving"))
+
+    assert [rule.id for rule in store.triggers] == ["first", "second"]
+
+
+def test_removing_a_rule_reports_success(tmp_path: Path) -> None:
+    store = _store(tmp_path)
+    store.upsert_trigger(_rule())
+
+    assert store.remove_trigger("r1") is True
+    assert store.triggers == []
+
+
+def test_removing_a_rule_that_is_not_there_reports_so(tmp_path: Path) -> None:
+    assert _store(tmp_path).remove_trigger("ghost") is False
+
+
+def test_triggers_that_are_not_a_list_degrade(tmp_path: Path) -> None:
+    store = _write(tmp_path, json.dumps({"version": 1, "scenes": [], "triggers": "r1"}))
+
+    store.load()
+
+    assert store.triggers == []
+
+
+def test_one_unreadable_rule_degrades_the_whole_file(tmp_path: Path) -> None:
+    payload = {
+        "version": 1,
+        "scenes": [_user().to_dict()],
+        "triggers": [{"id": "r1", "scene_id": "focus", "condition": {"kind": "moon-phase"}}],
+    }
+    store = _write(tmp_path, json.dumps(payload))
+
+    store.load()
+
+    assert store.triggers == []
+    assert store.scenes == []
+
+
+def test_duplicate_rule_ids_degrade(tmp_path: Path) -> None:
+    payload = {"version": 1, "scenes": [], "triggers": [_rule().to_dict(), _rule().to_dict()]}
+    store = _write(tmp_path, json.dumps(payload))
+
+    store.load()
+
+    assert store.triggers == []
+
+
+def test_a_manifest_without_a_triggers_key_loads_its_scenes(tmp_path: Path) -> None:
+    """Files written before rules existed must keep working."""
+    store = _write(tmp_path, json.dumps({"version": 1, "scenes": [_user().to_dict()]}))
+
+    store.load()
+
+    assert store.scenes == [_user()]
+    assert store.triggers == []
