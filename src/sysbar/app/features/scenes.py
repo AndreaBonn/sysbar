@@ -18,6 +18,7 @@ from ...services.scenes.adapters import CallbackAudio, CallbackToggles, ConfigSe
 from ...services.scenes.apply import ScenePorts
 from ...services.scenes.models import SCENE_FOCUS, Scene
 from ...services.scenes.service import SceneService
+from ...services.scenes.store import SceneStore
 from .. import tray_state
 from ..context import AppContext
 from ..tray.menu_builder import SceneMenuEntry
@@ -37,11 +38,30 @@ class ScenesFeature:
         drivers: SceneDrivers,
         on_changed: Callable[[], None],
     ) -> None:
+        self._store = SceneStore()
+        self._store.load()
         self._service = SceneService(
             drivers.ports(context),
+            scenes=self._store.all_scenes(),
             active_id=context.config.get_string(_ACTIVE_SCENE_KEY),
         )
         self._service.connect("changed", lambda _service: on_changed())
+
+    def save(self, scene: Scene) -> None:
+        """Create or replace a scene, then republish the list."""
+        self._store.upsert(scene)
+        self._service.set_scenes(self._store.all_scenes())
+
+    def delete(self, scene_id: str) -> bool:
+        """Remove a user scene, or restore a built-in by dropping its override."""
+        if not self._store.remove(scene_id):
+            return False
+        self._service.set_scenes(self._store.all_scenes())
+        return True
+
+    def is_overridden(self, scene_id: str) -> bool:
+        """Whether a built-in has been customised and can be restored."""
+        return self._store.is_overridden(scene_id)
 
     def activate(self, scene_id: str) -> None:
         self._service.activate(scene_id)
