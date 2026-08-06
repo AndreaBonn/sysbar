@@ -1,3 +1,6 @@
+import subprocess
+import sys
+
 from sysbar.services.auto_quit.wnck_source import WnckWindowSource
 
 
@@ -77,3 +80,22 @@ def test_handle_closed_forwards_xid() -> None:
     source._handle_closed(None, _FakeWindow(xid=99))
 
     assert received == [99]
+
+
+def test_import_does_not_load_gtk3() -> None:
+    """Importing this module must leave GTK unloaded.
+
+    The Wnck-3.0 typelib pulls in GTK 3, and gi allows one GTK version per
+    process: a module-level Wnck import would make ``gi.require_version("Gtk",
+    "4.0")`` fail for every GTK4 test collected afterwards. Runs in a subprocess
+    because the check is about a fresh interpreter's global gi state.
+    """
+    code = (
+        "import gi\n"
+        "import sysbar.services.auto_quit.wnck_source\n"
+        "gi.require_version('Gtk', '4.0')\n"
+    )
+
+    result = subprocess.run([sys.executable, "-c", code], capture_output=True, text=True)
+
+    assert result.returncode == 0, result.stderr

@@ -10,12 +10,7 @@ from __future__ import annotations
 import logging
 from typing import Any
 
-import gi
-
-gi.require_version("Wnck", "3.0")
-from gi.repository import Wnck  # noqa: E402
-
-from .ports import WindowClosedCallback, WindowOpenedCallback  # noqa: E402
+from .ports import WindowClosedCallback, WindowOpenedCallback
 
 log = logging.getLogger(__name__)
 
@@ -30,6 +25,14 @@ class WnckWindowSource:
     def subscribe(  # pragma: no cover - Wnck.Screen.get_default boundary (requires X11)
         self, on_opened: WindowOpenedCallback, on_closed: WindowClosedCallback
     ) -> None:
+        import gi
+
+        # Imported here, not at module level: the Wnck-3.0 typelib pulls in GTK 3,
+        # and gi allows a single GTK version per process. A module-level import
+        # would lock the process to GTK 3 and break the GTK4 UI at import time.
+        gi.require_version("Wnck", "3.0")
+        from gi.repository import Wnck
+
         self._on_opened = on_opened
         self._on_closed = on_closed
         screen = Wnck.Screen.get_default()
