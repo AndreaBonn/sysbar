@@ -64,7 +64,13 @@ class ScenesFeature:
         self._window: WindowSlot[ScenesWindow] = WindowSlot(self._build_window)
         self._context = context
         self._state = TriggerState()
-        self._engine = TriggerEngine(
+        self._engine = self._build_engine()
+        self._display = DisplayWatcher(self._on_display_changed)
+        self._refresh_triggers()
+
+    def _build_engine(self) -> TriggerEngine:
+        """The engine, started level with whatever scene is already active."""
+        engine = TriggerEngine(
             lambda: self._store.triggers,
             TriggerActions(
                 activate=self._service.activate,
@@ -73,9 +79,8 @@ class ScenesFeature:
             ),
             time.monotonic,
         )
-        self._engine.note_active_scene(self._service.active_id)
-        self._display = DisplayWatcher(self._on_display_changed)
-        self._refresh_triggers()
+        engine.note_active_scene(self._service.active_id)
+        return engine
 
     # --- triggers ---------------------------------------------------------
 
