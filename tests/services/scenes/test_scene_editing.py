@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from collections.abc import MutableMapping
+
 import pytest
 
 from sysbar.services.scenes.actions import (
@@ -263,3 +265,20 @@ def test_the_rule_id_is_derived_from_the_scene() -> None:
 
     assert first is not None and second is not None
     assert first.id == second.id == rule_id_for("focus")
+
+
+def test_the_draft_cannot_be_changed_behind_with_toggle() -> None:
+    """Frozen has to mean it: the dict was the one mutable way in."""
+    draft = SceneDraft(name="Mia", toggles={SystemToggle.KEEP_AWAKE: True})
+
+    assert not isinstance(draft.toggles, MutableMapping)
+    assert draft.toggles == {SystemToggle.KEEP_AWAKE: True}
+
+
+def test_the_draft_does_not_alias_the_dict_it_was_built_from() -> None:
+    toggles = {SystemToggle.KEEP_AWAKE: True}
+    draft = SceneDraft(name="Mia", toggles=toggles)
+
+    toggles[SystemToggle.MICROPHONE_MUTED] = False
+
+    assert SystemToggle.MICROPHONE_MUTED not in draft.toggles

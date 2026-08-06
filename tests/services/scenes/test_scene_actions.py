@@ -111,3 +111,18 @@ def test_a_toggle_defaults_to_off_when_the_value_is_absent() -> None:
     action = action_from_dict({"kind": "toggle", "toggle": "keep-awake"})
 
     assert action == SetToggle(toggle=SystemToggle.KEEP_AWAKE, value=False)
+
+
+def test_a_toggle_value_that_is_not_a_boolean_is_refused() -> None:
+    """Coercing would turn a hand-written "false" into the toggle going on.
+
+    The module docstring says reading back raises rather than guessing, and a
+    truthy string is exactly the case where guessing is wrong.
+    """
+    with pytest.raises(SceneActionError):
+        SetToggle.from_dict({"toggle": "keep-awake", "value": "false"})
+
+
+def test_a_toggle_value_survives_both_boolean_states() -> None:
+    assert SetToggle.from_dict({"toggle": "keep-awake", "value": False}).value is False
+    assert SetToggle.from_dict({"toggle": "keep-awake", "value": True}).value is True

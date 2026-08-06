@@ -16,8 +16,10 @@ changing anything produces the same file.
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from dataclasses import dataclass, field
 from enum import StrEnum
+from types import MappingProxyType
 
 from .actions import SceneAction, SetOutputDevice, SetToggle, SystemToggle
 from .models import Scene
@@ -38,10 +40,16 @@ class SceneDraft:
     """What the editor holds while a scene is being written."""
 
     name: str
-    toggles: dict[SystemToggle, bool | None] = field(default_factory=dict)
+    toggles: Mapping[SystemToggle, bool | None] = field(default_factory=dict)
     output_device: str | None = None
     #: Actions the editor cannot render, kept so that saving does not drop them.
     preserved: tuple[SceneAction, ...] = ()
+
+    def __post_init__(self) -> None:
+        # Frozen stops the field being rebound, not the dict being written
+        # through. Copy, then hand out a read-only view, so that with_toggle is
+        # the only way a draft changes and every caller gets the same answer.
+        object.__setattr__(self, "toggles", MappingProxyType(dict(self.toggles)))
 
     def with_toggle(self, toggle: SystemToggle, value: bool | None) -> SceneDraft:
         updated = dict(self.toggles)

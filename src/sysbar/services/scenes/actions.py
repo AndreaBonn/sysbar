@@ -58,7 +58,13 @@ class SetToggle:
             toggle = SystemToggle(str(data["toggle"]))
         except (KeyError, ValueError) as error:
             raise SceneActionError(f"unknown toggle: {data.get('toggle')!r}") from error
-        return cls(toggle=toggle, value=bool(data.get("value", False)))
+        # An absent value means off, which is a shorthand the format allows. A
+        # value that is there but is not a boolean is not: coercing would read a
+        # hand-written "false" as the toggle going on.
+        value = data.get("value", False)
+        if not isinstance(value, bool):
+            raise SceneActionError(f"toggle value is not a boolean: {value!r}")
+        return cls(toggle=toggle, value=value)
 
 
 @dataclass(frozen=True)
