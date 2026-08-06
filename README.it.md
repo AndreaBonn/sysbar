@@ -307,7 +307,7 @@ necessario e trascina i binding GTK di sistema come dipendenze.
 
 Apri l'[ultima release](https://github.com/AndreaBonn/sysbar/releases/latest) e
 scarica l'asset `sysbar_<versione>_all.deb` (per esempio
-`sysbar_1.1.1_all.deb`).
+`sysbar_1.2.0_all.deb`).
 
 **Passo 2 - Installalo**
 
@@ -315,7 +315,7 @@ Dalla cartella dove l'hai scaricato, esegui (sostituisci la versione con il file
 che hai scaricato):
 
 ```bash
-sudo apt install ./sysbar_1.1.1_all.deb
+sudo apt install ./sysbar_1.2.0_all.deb
 ```
 
 `apt` risolve in automatico i binding GTK di sistema. Evita `sudo dpkg -i`: non

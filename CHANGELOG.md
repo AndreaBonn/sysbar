@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.2.0] - 2026-08-07
+
 ### Added
 - Command line and D-Bus control: `sysbar <action> [argument]` forwards a
   command to the already-running instance and exits, covering all 15 actions
@@ -159,6 +161,7 @@ First stable release.
 - Local only: no account, no telemetry. Every feature is opt-in and degrades
   gracefully when a dependency, extension or session capability is missing.
 
+[1.2.0]: https://github.com/AndreaBonn/sysbar/releases/tag/v1.2.0
 [1.1.1]: https://github.com/AndreaBonn/sysbar/releases/tag/v1.1.1
 [1.1.0]: https://github.com/AndreaBonn/sysbar/releases/tag/v1.1.0
 [1.0.0]: https://github.com/AndreaBonn/sysbar/releases/tag/v1.0.0

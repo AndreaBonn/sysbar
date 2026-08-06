@@ -1,6 +1,6 @@
 [project]
 name = "sysbar"
-version = "1.1.1"
+version = "1.2.0"
 description = "System tray toolkit for Ubuntu/GNOME: monitor, per-app volume mixer, keep awake, auto-quit, uninstaller, shelf."
 readme = "README.md"
 requires-python = ">=3.11"

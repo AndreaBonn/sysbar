@@ -1,3 +1,29 @@
+sysbar (1.2.0) noble; urgency=medium
+
+  * Command palette: a window opened with a global hotkey that fuzzy-searches
+    commands, quick toggles, scenes, clipboard entries, shelf items and audio
+    devices. Clipboard entries that look like a secret are masked. Off by
+    default.
+  * User-defined scenes: scenes can be created, edited and deleted from the
+    Scenes window, not just the three built-in presets. A scene is a list of
+    typed actions, stored in a JSON manifest under
+    ~/.local/share/sysbar/scenes/manifest.json.
+  * Scene triggers: a scene can activate on an external monitor being connected
+    or on the power/battery level, without overriding a scene chosen by hand.
+    Off by default.
+  * Command line and D-Bus control: "sysbar <action>" forwards any of the 15
+    actions to the running instance; "sysbar --list-actions" prints the catalog.
+  * Fix: the Scenes submenu kept a fixed row count, so the menu host no longer
+    desynchronizes item state as the number of scenes changes.
+  * Fix: an unreadable scenes manifest is moved aside instead of being silently
+    overwritten, and a settings-key action that failed to write is no longer
+    reported as applied.
+  * Fix: Sysbar starts even when the window source used by auto-quit cannot
+    subscribe to window events.
+  * Fix: the built-in scene names are translated in the Scenes window.
+
+ -- AndreaBonn <andreabonacci95@protonmail.com>  Fri, 07 Aug 2026 10:00:00 +0200
+
 sysbar (1.1.1) noble; urgency=medium
 
   * Fix: the panel and settings windows showed GNOME's generic icon in the
