@@ -217,6 +217,7 @@ def _exercise_windows(tmp_path: Path) -> None:
     from sysbar.services.autostart import AutostartManager
     from sysbar.services.clipboard.service import ClipboardService
     from sysbar.services.scenes.models import PRESET_SCENES, Scene
+    from sysbar.services.scenes.triggers import TriggerRule
     from sysbar.services.shelf.shelf_service import ShelfService
     from sysbar.services.uninstall.app_uninstaller import AppUninstaller
     from sysbar.services.uninstall.models import PackageManager
@@ -240,6 +241,11 @@ def _exercise_windows(tmp_path: Path) -> None:
 
         def outputs(self) -> list[AudioDevice]:
             return []
+
+        def trigger_for(self, scene_id: str) -> TriggerRule | None:
+            return None
+
+        def save_trigger(self, rule: TriggerRule | None, scene_id: str) -> None: ...
 
     class _FakePackageQuery:
         def snap_name(self, path: str) -> str | None:

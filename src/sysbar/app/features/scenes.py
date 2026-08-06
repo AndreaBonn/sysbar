@@ -20,11 +20,12 @@ from ...services.audio.models import AudioDevice
 from ...services.scenes.actions import SystemToggle
 from ...services.scenes.adapters import CallbackAudio, CallbackToggles, ConfigSettingsWriter
 from ...services.scenes.apply import ScenePorts
+from ...services.scenes.editing import rule_id_for
 from ...services.scenes.engine import TriggerActions, TriggerEngine
 from ...services.scenes.models import SCENE_FOCUS, Scene
 from ...services.scenes.service import SceneService
 from ...services.scenes.store import SceneStore
-from ...services.scenes.triggers import TriggerState
+from ...services.scenes.triggers import TriggerRule, TriggerState
 from .. import tray_state
 from ..context import AppContext
 from ..tray.menu_builder import SceneMenuEntry
@@ -137,6 +138,19 @@ class ScenesFeature:
             return False
         self._service.set_scenes(self._store.all_scenes())
         return True
+
+    def trigger_for(self, scene_id: str) -> TriggerRule | None:
+        """The rule the editor owns for this scene, if there is one."""
+        wanted = rule_id_for(scene_id)
+        return next((rule for rule in self._store.triggers if rule.id == wanted), None)
+
+    def save_trigger(self, rule: TriggerRule | None, scene_id: str) -> None:
+        """Store the rule the form describes, or drop the scene's rule for "never"."""
+        if rule is None:
+            self._store.remove_trigger(rule_id_for(scene_id))
+        else:
+            self._store.upsert_trigger(rule)
+        self._refresh_triggers()
 
     def outputs(self) -> list[AudioDevice]:
         """Audio outputs a scene can pick from, empty without a backend."""

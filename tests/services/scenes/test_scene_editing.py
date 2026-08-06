@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import pytest
+
 from sysbar.services.scenes.actions import (
     SetOutputDevice,
     SetSetting,
@@ -9,12 +11,24 @@ from sysbar.services.scenes.actions import (
     SystemToggle,
 )
 from sysbar.services.scenes.editing import (
+    DEFAULT_BATTERY_PERCENT,
     SceneDraft,
+    TriggerChoice,
+    TriggerDraft,
     actions_from,
     apply_draft,
     draft_from,
+    rule_from,
+    rule_id_for,
+    trigger_draft_from,
 )
 from sysbar.services.scenes.models import PRESET_SCENES, Scene, SceneOrigin
+from sysbar.services.scenes.triggers import (
+    BatteryBelow,
+    ExternalMonitorConnected,
+    OnBatteryPower,
+    TriggerRule,
+)
 
 
 def _scene(*actions: object) -> Scene:
@@ -166,3 +180,86 @@ def test_with_toggle_does_not_mutate_the_original_draft() -> None:
     original.with_toggle(SystemToggle.KEEP_AWAKE, None)
 
     assert original.toggles == {SystemToggle.KEEP_AWAKE: True}
+
+
+# --- the trigger part of the form -----------------------------------------
+
+
+def test_no_rule_yields_the_empty_trigger_form() -> None:
+    draft = trigger_draft_from(None)
+
+    assert draft.choice is TriggerChoice.NEVER
+    assert draft.restore_on_exit is False
+
+
+def test_the_empty_form_builds_no_rule() -> None:
+    assert rule_from(TriggerDraft(), "focus") is None
+
+
+def test_a_monitor_rule_reads_back_as_its_choice() -> None:
+    rule = TriggerRule(id="scene:focus", condition=ExternalMonitorConnected(), scene_id="focus")
+
+    assert trigger_draft_from(rule).choice is TriggerChoice.EXTERNAL_MONITOR
+
+
+def test_an_on_battery_rule_reads_back_as_its_choice() -> None:
+    rule = TriggerRule(id="scene:focus", condition=OnBatteryPower(), scene_id="focus")
+
+    assert trigger_draft_from(rule).choice is TriggerChoice.ON_BATTERY
+
+
+def test_a_battery_threshold_rule_carries_its_percentage_back() -> None:
+    rule = TriggerRule(id="scene:focus", condition=BatteryBelow(percent=15), scene_id="focus")
+
+    draft = trigger_draft_from(rule)
+
+    assert draft.choice is TriggerChoice.BATTERY_BELOW
+    assert draft.percent == 15
+
+
+def test_restore_on_exit_survives_the_round_trip() -> None:
+    draft = TriggerDraft(choice=TriggerChoice.EXTERNAL_MONITOR, restore_on_exit=True)
+
+    rule = rule_from(draft, "presentation")
+
+    assert rule is not None
+    assert trigger_draft_from(rule).restore_on_exit is True
+
+
+@pytest.mark.parametrize(
+    "choice",
+    [TriggerChoice.EXTERNAL_MONITOR, TriggerChoice.ON_BATTERY, TriggerChoice.BATTERY_BELOW],
+)
+def test_every_choice_survives_a_round_trip(choice: TriggerChoice) -> None:
+    draft = TriggerDraft(choice=choice, percent=25, restore_on_exit=True)
+
+    rule = rule_from(draft, "focus")
+
+    assert rule is not None
+    restored = trigger_draft_from(rule)
+    assert restored.choice is choice
+    assert restored.restore_on_exit is True
+
+
+def test_the_percentage_is_only_kept_for_the_threshold_choice() -> None:
+    """Nothing else has anywhere to store it, so it returns to the default."""
+    rule = rule_from(TriggerDraft(choice=TriggerChoice.ON_BATTERY, percent=25), "focus")
+
+    assert rule is not None
+    assert trigger_draft_from(rule).percent == DEFAULT_BATTERY_PERCENT
+
+
+def test_the_rule_activates_the_scene_it_was_written_for() -> None:
+    rule = rule_from(TriggerDraft(choice=TriggerChoice.ON_BATTERY), "power-saving")
+
+    assert rule is not None
+    assert rule.scene_id == "power-saving"
+
+
+def test_the_rule_id_is_derived_from_the_scene() -> None:
+    """Editing twice must replace the rule, not stack up one per save."""
+    first = rule_from(TriggerDraft(choice=TriggerChoice.ON_BATTERY), "focus")
+    second = rule_from(TriggerDraft(choice=TriggerChoice.EXTERNAL_MONITOR), "focus")
+
+    assert first is not None and second is not None
+    assert first.id == second.id == rule_id_for("focus")

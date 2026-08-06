@@ -16,6 +16,7 @@ from sysbar.core.config import Config
 from sysbar.services.audio.models import AudioDevice
 from sysbar.services.autostart import AutostartManager
 from sysbar.services.scenes.models import Scene
+from sysbar.services.scenes.triggers import TriggerRule
 from sysbar.services.shelf.shelf_service import ShelfService
 from sysbar.services.uninstall.app_uninstaller import AppUninstaller
 from sysbar.services.uninstall.models import PackageManager
@@ -193,6 +194,7 @@ class _FakeSceneController:
         self.scenes = list(PRESET_SCENES)
         self.saved: list[Scene] = []
         self.deleted: list[str] = []
+        self.saved_triggers: list[TriggerRule | None] = []
 
     def save(self, scene: Scene) -> None:
         self.saved.append(scene)
@@ -203,6 +205,12 @@ class _FakeSceneController:
 
     def outputs(self) -> list[AudioDevice]:
         return []
+
+    def trigger_for(self, scene_id: str) -> TriggerRule | None:
+        return None
+
+    def save_trigger(self, rule: TriggerRule | None, scene_id: str) -> None:
+        self.saved_triggers.append(rule)
 
 
 def test_scenes_window_builds(gtk: object) -> None:
@@ -244,7 +252,7 @@ def test_editing_a_preset_saves_it_without_losing_actions(gtk: object) -> None:
     preset = PRESET_SCENES[0]
 
     window._edit(preset)
-    window._save()
+    window._editor._save()
 
     saved = controller.saved[0]
     assert set(saved.actions) == set(preset.actions)

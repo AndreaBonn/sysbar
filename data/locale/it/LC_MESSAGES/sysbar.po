@@ -567,3 +567,30 @@ msgstr "Consenti alle regole di cambiare la scena attiva da sole"
 
 msgid "A scene you chose by hand is never replaced"
 msgstr "Una scena scelta a mano non viene mai sostituita"
+
+msgid "When to activate it"
+msgstr "Quando attivarla"
+
+msgid "Leave on Never to activate this scene only by hand"
+msgstr "Lascia su Mai per attivare questa scena solo a mano"
+
+msgid "Activate automatically"
+msgstr "Attiva automaticamente"
+
+msgid "Never"
+msgstr "Mai"
+
+msgid "An external monitor is connected"
+msgstr "Un monitor esterno è collegato"
+
+msgid "Running on battery"
+msgstr "Alimentazione a batteria"
+
+msgid "Battery drops below a level"
+msgstr "La batteria scende sotto una soglia"
+
+msgid "Below this charge (%)"
+msgstr "Sotto questa carica (%)"
+
+msgid "Undo when the condition ends"
+msgstr "Annulla quando la condizione finisce"

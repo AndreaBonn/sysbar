@@ -17,9 +17,17 @@ changing anything produces the same file.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from enum import StrEnum
 
 from .actions import SceneAction, SetOutputDevice, SetToggle, SystemToggle
 from .models import Scene
+from .triggers import (
+    BatteryBelow,
+    ExternalMonitorConnected,
+    OnBatteryPower,
+    TriggerCondition,
+    TriggerRule,
+)
 
 # A toggle the editor leaves alone: the scene simply does not touch it.
 UNSET: None = None
@@ -91,3 +99,79 @@ def actions_from(draft: SceneDraft) -> tuple[SceneAction, ...]:
 def apply_draft(scene: Scene, draft: SceneDraft) -> Scene:
     """The scene as edited: a user-owned copy, same id."""
     return scene.edited(name=draft.name, actions=actions_from(draft))
+
+
+class TriggerChoice(StrEnum):
+    """The trigger conditions the scene editor offers.
+
+    A closed list rather than the full condition union: the editor gives each
+    scene at most one rule, which covers the cases the feature exists for and
+    keeps the form to three widgets. Several rules per scene remain expressible
+    in the manifest, and the engine has always handled them.
+    """
+
+    NEVER = "never"
+    EXTERNAL_MONITOR = "external-monitor"
+    ON_BATTERY = "on-battery"
+    BATTERY_BELOW = "battery-below"
+
+
+DEFAULT_BATTERY_PERCENT = 20.0
+_RULE_PREFIX = "scene:"
+
+
+@dataclass(frozen=True)
+class TriggerDraft:
+    """The trigger part of the scene form."""
+
+    choice: TriggerChoice = TriggerChoice.NEVER
+    percent: float = DEFAULT_BATTERY_PERCENT
+    restore_on_exit: bool = False
+
+
+def rule_id_for(scene_id: str) -> str:
+    """The id of the rule the editor owns for a scene.
+
+    Derived from the scene so that editing twice replaces the rule instead of
+    accumulating one per save.
+    """
+    return f"{_RULE_PREFIX}{scene_id}"
+
+
+def trigger_draft_from(rule: TriggerRule | None) -> TriggerDraft:
+    """Read an existing rule into the form, or return the empty form."""
+    if rule is None:
+        return TriggerDraft()
+    match rule.condition:
+        case ExternalMonitorConnected():
+            choice, percent = TriggerChoice.EXTERNAL_MONITOR, DEFAULT_BATTERY_PERCENT
+        case OnBatteryPower():
+            choice, percent = TriggerChoice.ON_BATTERY, DEFAULT_BATTERY_PERCENT
+        case BatteryBelow(percent=threshold):
+            choice, percent = TriggerChoice.BATTERY_BELOW, threshold
+    return TriggerDraft(choice=choice, percent=percent, restore_on_exit=rule.restore_on_exit)
+
+
+def rule_from(draft: TriggerDraft, scene_id: str) -> TriggerRule | None:
+    """Build the rule the form describes, or ``None`` for "never"."""
+    condition = _condition_for(draft)
+    if condition is None:
+        return None
+    return TriggerRule(
+        id=rule_id_for(scene_id),
+        condition=condition,
+        scene_id=scene_id,
+        restore_on_exit=draft.restore_on_exit,
+    )
+
+
+def _condition_for(draft: TriggerDraft) -> TriggerCondition | None:
+    match draft.choice:
+        case TriggerChoice.NEVER:
+            return None
+        case TriggerChoice.EXTERNAL_MONITOR:
+            return ExternalMonitorConnected()
+        case TriggerChoice.ON_BATTERY:
+            return OnBatteryPower()
+        case TriggerChoice.BATTERY_BELOW:
+            return BatteryBelow(percent=draft.percent)
