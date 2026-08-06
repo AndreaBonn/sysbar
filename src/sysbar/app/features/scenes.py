@@ -59,7 +59,8 @@ class ScenesFeature:
             scenes=self._store.all_scenes(),
             active_id=context.config.get_string(_ACTIVE_SCENE_KEY),
         )
-        self._service.connect("changed", lambda _service: on_changed())
+        self._on_changed = on_changed
+        self._service.connect("changed", lambda _service: self._scene_changed())
         self._window: WindowSlot[ScenesWindow] = WindowSlot(self._build_window)
         self._context = context
         self._state = TriggerState()
@@ -160,14 +161,23 @@ class ScenesFeature:
         """Whether a built-in has been customised and can be restored."""
         return self._store.is_overridden(scene_id)
 
+    def _scene_changed(self) -> None:
+        """Keep the engine level with the service, whoever moved the scene.
+
+        Every route into a scene change ends at the service's ``changed``
+        signal, so listening here is what makes "the user chose this by hand"
+        true for the menu, the shortcut, the palette and the command line alike.
+        Asking each caller to announce itself works until one forgets, and the
+        one that forgot lets a trigger overwrite a scene the user picked.
+        """
+        self._engine.note_active_scene(self._service.active_id)
+        self._on_changed()
+
     def activate(self, scene_id: str) -> None:
-        """Activate by hand, telling the engine so it does not claim ownership."""
         self._service.activate(scene_id)
-        self._engine.note_active_scene(scene_id)
 
     def clear(self) -> None:
         self._service.clear()
-        self._engine.note_active_scene("")
 
     def toggle_focus(self) -> None:
         """Focus is the one scene with a shortcut, so it toggles rather than sets."""

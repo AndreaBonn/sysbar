@@ -6,8 +6,11 @@ from dataclasses import dataclass, field
 
 import pytest
 
+from sysbar.services.scenes.apply import ScenePorts
 from sysbar.services.scenes.constants import TRIGGER_MIN_INTERVAL_SECONDS
 from sysbar.services.scenes.engine import TriggerActions, TriggerEngine
+from sysbar.services.scenes.models import Scene, SceneOrigin
+from sysbar.services.scenes.service import SceneService
 from sysbar.services.scenes.triggers import (
     ExternalMonitorConnected,
     OnBatteryPower,
@@ -231,3 +234,81 @@ def test_rules_are_read_on_every_update(recorder: _Recorder, clock: _Clock) -> N
     engine.update(TriggerState(on_battery=True))
 
     assert recorder.activated == ["power-saving"]
+
+
+# --- wiring: the engine follows the service, whoever changed the scene -----
+
+
+@dataclass
+class _FakePorts:
+    """Minimal ports: this suite cares about who owns a scene, not what it does."""
+
+    written: dict[str, object] = field(default_factory=dict)
+
+    def supports(self, toggle: object) -> bool:
+        return True
+
+    def set_keep_awake(self, on: bool) -> None: ...
+    def set_do_not_disturb(self, on: bool) -> None: ...
+    def set_microphone_muted(self, on: bool) -> None: ...
+
+    def set(self, key: str, value: object) -> None:
+        self.written[key] = value
+
+    def set_output_device(self, device: str) -> bool:
+        return True
+
+    def ports(self) -> ScenePorts:
+        return ScenePorts(toggles=self, settings=self, audio=self)
+
+
+def _wired(rules: list[TriggerRule], clock: _Clock) -> tuple[SceneService, TriggerEngine]:
+    """Service and engine cabled the way ScenesFeature cables them.
+
+    The engine learns the active scene from the service's ``changed`` signal
+    rather than from every caller remembering to tell it, because a caller that
+    forgets makes a trigger overwrite a scene the user chose by hand.
+    """
+    service = SceneService(
+        _FakePorts().ports(),
+        scenes=[
+            Scene(id="focus", name="Focus", origin=SceneOrigin.BUILT_IN),
+            Scene(id="presentazione", name="Presentazione", origin=SceneOrigin.USER),
+        ],
+        active_id="",
+    )
+    engine = TriggerEngine(
+        lambda: rules,
+        TriggerActions(
+            activate=service.activate,
+            clear=service.clear,
+            announce=lambda _scene_id: None,
+        ),
+        clock,
+    )
+    service.connect("changed", lambda _service: engine.note_active_scene(service.active_id))
+    return service, engine
+
+
+def test_a_scene_activated_straight_on_the_service_counts_as_manual(clock: _Clock) -> None:
+    """No trigger may overwrite a scene the user chose, by whichever route."""
+    rules = [_rule("monitor", "presentazione")]
+    service, engine = _wired(rules, clock)
+
+    service.activate("focus")
+    engine.update(TriggerState(external_monitor=True))
+
+    assert service.active_id == "focus"
+
+
+def test_a_manual_scene_set_mid_ownership_is_not_cleared_on_release(clock: _Clock) -> None:
+    rules = [_rule("monitor", "presentazione", restore_on_exit=True)]
+    service, engine = _wired(rules, clock)
+
+    engine.update(TriggerState(external_monitor=True))
+    assert service.active_id == "presentazione"
+    service.activate("focus")
+    clock.advance(TRIGGER_MIN_INTERVAL_SECONDS)
+    engine.update(TriggerState(external_monitor=False))
+
+    assert service.active_id == "focus"
