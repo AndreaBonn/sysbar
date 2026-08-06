@@ -39,6 +39,7 @@ capability is missing.
   - [Keep awake](#keep-awake)
   - [Auto-quit, uninstaller and shelf](#auto-quit-uninstaller-and-shelf)
   - [Global hotkeys](#global-hotkeys)
+  - [Command palette](#command-palette)
   - [Command-line and D-Bus control](#command-line-and-d-bus-control)
   - [Scenes](#scenes)
   - [Clipboard history](#clipboard-history)
@@ -107,9 +108,28 @@ low. Can be toggled with a configurable global hotkey (see Global hotkeys below)
 ### Global hotkeys
 
 Keyboard shortcuts can be assigned to several actions from the settings: toggle
-keep awake, open the shelf, open the clipboard history, and activate the Focus
-scene. Shortcuts are registered through the XDG GlobalShortcuts portal and work
-across the desktop on both X11 and Wayland, not just when Sysbar has focus.
+keep awake, open the shelf, open the clipboard history, open the command
+palette, and activate the Focus scene. Shortcuts are registered through the
+XDG GlobalShortcuts portal and work across the desktop on both X11 and
+Wayland, not just when Sysbar has focus.
+
+### Command palette
+
+A single window, opened with a global hotkey, for finding and running
+anything in Sysbar without navigating the tray menu or settings. It searches
+commands, quick toggles, scenes, clipboard history entries, shelf items and
+audio output/input devices with one fuzzy search: matching is
+case-insensitive, accent-insensitive, and works on partial or out-of-order
+letters, scored so the closest match comes first. Clearing the search box
+shows the main commands grouped by category.
+
+Type to search, use the arrow keys to move through the results, Enter to run
+the selected item, Esc to close. The window is focused on the search field as
+soon as it opens, and closes if it loses focus. Clipboard entries flagged as a
+likely secret (a password or token) are masked by default and need an
+explicit action to reveal.
+
+Off by default; enable it from the global hotkeys settings described above.
 
 ### Command-line and D-Bus control
 
@@ -133,11 +153,12 @@ List the full catalog of actions:
 sysbar --list-actions
 ```
 
-There are 13 actions: `open-panel`, `open-settings`, `open-shelf`,
-`open-clipboard`, `open-uninstaller`, `toggle-keep-awake`,
-`toggle-microphone`, `toggle-dnd`, `toggle-dark-mode`, `toggle-focus-scene`,
-`activate-scene` (takes a scene id as argument: `focus`, `presentation` or
-`power-saving`), `clear-scene`, `quit`.
+There are 15 actions: `open-panel`, `open-palette`, `open-scenes`,
+`open-settings`, `open-shelf`, `open-clipboard`, `open-uninstaller`,
+`toggle-keep-awake`, `toggle-microphone`, `toggle-dnd`, `toggle-dark-mode`,
+`toggle-focus-scene`, `activate-scene` (takes a scene id as argument, for
+example `focus`, `presentation` or `power-saving`, or the id of a scene you
+created), `clear-scene`, `quit`.
 
 Actions tied to a capability unavailable in the current session (for example
 `toggle-microphone` without PipeWire, or `open-shelf` with the shelf disabled
@@ -158,15 +179,30 @@ i3.
 
 ### Scenes
 
-Three composable scenes are available from a "Scenes" submenu in the tray. Each
-scene activates a combination of settings in one click:
+A scene applies a combination of settings in one click, from a "Scenes"
+submenu in the tray or from the Scenes window, where scenes are created,
+edited and deleted. Three scenes come built in - Focus, Presentation and
+Power saving - and cannot be deleted, but editing one creates a restorable
+override so your changes persist without losing the original:
 
 - **Focus** - enables keep awake, turns on do-not-disturb, mutes the microphone.
 - **Presentation** - enables keep awake, turns on do-not-disturb.
 - **Power saving** - disables keep awake, adjusts display settings to reduce
   power use.
 
-Scenes can also be triggered by a global hotkey.
+A scene you create is a list of actions, each of one of three kinds: toggle a
+system switch (keep awake, do-not-disturb, microphone), set one of
+a fixed list of allowed settings, or choose the default audio output device.
+Scenes are stored in `~/.local/share/sysbar/scenes/manifest.json`, readable
+only by your user.
+
+Scenes can be activated by hand from the tray or the Scenes window, by a
+global hotkey (Focus only, see Global hotkeys above), or automatically by a
+trigger: connecting an external monitor, or a change in power source or
+battery level. Automatic triggers are off by default and configured per
+scene in the scene editor; restoring the previous scene once the trigger
+condition ends is optional and set per rule. A scene you activate by hand is
+never overridden by a trigger.
 
 ### Clipboard history
 

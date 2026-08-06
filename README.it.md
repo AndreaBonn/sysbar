@@ -40,6 +40,7 @@ della sessione.
   - [Keep awake](#keep-awake)
   - [Auto-quit, disinstallatore e shelf](#auto-quit-disinstallatore-e-shelf)
   - [Scorciatoie globali](#scorciatoie-globali)
+  - [Command palette](#command-palette)
   - [Controllo da riga di comando e D-Bus](#controllo-da-riga-di-comando-e-d-bus)
   - [Scene](#scene)
   - [Cronologia degli appunti](#cronologia-degli-appunti)
@@ -111,10 +112,31 @@ globale configurabile (vedi Scorciatoie globali di seguito).
 ### Scorciatoie globali
 
 Dalle impostazioni è possibile assegnare scorciatoie da tastiera a piu azioni:
-attivare keep awake, aprire lo shelf, aprire la cronologia degli appunti e
-attivare la scena Focus. Le scorciatoie vengono registrate tramite il portale
-XDG GlobalShortcuts e funzionano su tutto il desktop, non solo quando Sysbar ha
-il focus, sia su X11 sia su Wayland.
+attivare keep awake, aprire lo shelf, aprire la cronologia degli appunti,
+aprire la command palette e attivare la scena Focus. Le scorciatoie vengono
+registrate tramite il portale XDG GlobalShortcuts e funzionano su tutto il
+desktop, non solo quando Sysbar ha il focus, sia su X11 sia su Wayland.
+
+### Command palette
+
+Una singola finestra, aperta con una scorciatoia globale, per trovare ed
+eseguire qualsiasi cosa in Sysbar senza navigare il menu tray o le
+impostazioni. Cerca fra comandi, quick toggle, scene, voci della cronologia
+appunti, elementi dello shelf e dispositivi audio di uscita/ingresso con
+un'unica ricerca a sottosequenza: il confronto ignora maiuscole/minuscole e
+accenti, funziona anche con lettere parziali o fuori ordine, ed è ordinato per
+punteggio così il risultato più vicino compare per primo. Con il campo di
+ricerca vuoto compaiono i comandi principali raggruppati per categoria.
+
+Digita per cercare, usa le frecce per muoverti fra i risultati, Invio per
+eseguire la voce selezionata, Esc per chiudere. La finestra ha il focus sul
+campo di ricerca appena si apre, e si chiude se perde il focus. Le voci della
+cronologia appunti classificate come probabile segreto (una password o un
+token) sono mascherate di default e richiedono un'azione esplicita per essere
+rivelate.
+
+Disattivata di default; si abilita dalle impostazioni delle scorciatoie
+globali descritte sopra.
 
 ### Controllo da riga di comando e D-Bus
 
@@ -136,11 +158,12 @@ Per il catalogo completo delle azioni:
 sysbar --list-actions
 ```
 
-Le azioni disponibili sono 13: `open-panel`, `open-settings`, `open-shelf`,
-`open-clipboard`, `open-uninstaller`, `toggle-keep-awake`,
-`toggle-microphone`, `toggle-dnd`, `toggle-dark-mode`, `toggle-focus-scene`,
-`activate-scene` (richiede l'id di una scena come argomento: `focus`,
-`presentation` o `power-saving`), `clear-scene`, `quit`.
+Le azioni disponibili sono 15: `open-panel`, `open-palette`, `open-scenes`,
+`open-settings`, `open-shelf`, `open-clipboard`, `open-uninstaller`,
+`toggle-keep-awake`, `toggle-microphone`, `toggle-dnd`, `toggle-dark-mode`,
+`toggle-focus-scene`, `activate-scene` (richiede l'id di una scena come
+argomento, per esempio `focus`, `presentation` o `power-saving`, oppure
+l'id di una scena creata da te), `clear-scene`, `quit`.
 
 Le azioni legate a una capability non disponibile nella sessione corrente (per
 esempio `toggle-microphone` senza PipeWire, o `open-shelf` con lo shelf
@@ -161,8 +184,12 @@ come sway o i3.
 
 ### Scene
 
-Tre scene componibili sono disponibili dal sottomenu "Scenes" nel tray. Ogni
-scena attiva una combinazione di impostazioni con un solo clic:
+Una scena applica una combinazione di impostazioni con un solo clic, dal
+sottomenu "Scenes" nel tray o dalla finestra Scenes, dove le scene si creano,
+modificano ed eliminano. Tre scene sono incluse di base - Focus, Presentation
+e Power saving - e non possono essere eliminate, ma modificarne una crea un
+override ripristinabile, così le tue modifiche restano senza perdere
+l'originale:
 
 - **Focus** - attiva keep awake, abilita il non-disturbare, silenzia il
   microfono.
@@ -170,7 +197,21 @@ scena attiva una combinazione di impostazioni con un solo clic:
 - **Power saving** - disattiva keep awake, riduce le impostazioni del display
   per risparmiare energia.
 
-Le scene possono essere attivate anche tramite scorciatoia globale.
+Una scena creata da te è un elenco di azioni, ciascuna di uno di tre tipi:
+commutare un interruttore di sistema (keep awake, non-disturbare, microfono),
+impostare una chiave scelta da un elenco fisso di impostazioni
+consentite, oppure scegliere il dispositivo di uscita audio predefinito. Le
+scene sono salvate in `~/.local/share/sysbar/scenes/manifest.json`, leggibile
+solo dal tuo utente.
+
+Le scene si attivano a mano dal tray o dalla finestra Scenes, con una
+scorciatoia globale (solo per Focus, vedi Scorciatoie globali sopra), oppure
+in automatico tramite un trigger: il collegamento di un monitor esterno,
+oppure un cambio della fonte di alimentazione o del livello di batteria. I
+trigger automatici sono disattivati di default e si configurano per singola
+scena nell'editor; il ripristino della scena precedente al termine della
+condizione è opzionale ed è impostato per ogni regola. Una scena attivata a
+mano non viene mai sovrascritta da un trigger.
 
 ### Cronologia degli appunti
 

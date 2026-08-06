@@ -9,12 +9,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 - Command line and D-Bus control: `sysbar <action> [argument]` forwards a
-  command to the already-running instance and exits, covering all 13 actions
-  (panel, settings, shelf, clipboard history, uninstaller, keep awake,
-  microphone, do-not-disturb, dark mode, scenes, quit). `sysbar --list-actions`
-  prints the full catalog. Actions are exposed as a GTK action group on the
-  session bus (`org.gtk.Actions` on `io.github.AndreaBonn.Sysbar`), so they can
-  also be driven directly over D-Bus.
+  command to the already-running instance and exits, covering all 15 actions
+  (panel, command palette, scenes window, settings, shelf, clipboard history,
+  uninstaller, keep awake, microphone, do-not-disturb, dark mode, Focus scene,
+  activate a scene by id, clear the active scene, quit).
+  `sysbar --list-actions` prints the full catalog. Actions are exposed as a
+  GTK action group on the session bus (`org.gtk.Actions` on
+  `io.github.AndreaBonn.Sysbar`), so they can also be driven directly over
+  D-Bus.
+- Command palette: a window opened with a global hotkey that searches
+  commands, quick toggles, scenes, clipboard entries, shelf items and audio
+  devices with a fuzzy, accent- and case-insensitive match. An empty query
+  shows the main commands grouped by category. Clipboard entries flagged as a
+  likely secret are masked by default. Off by default, behind the
+  `hotkey-palette-enabled` setting.
+- User-defined scenes: scenes can now be created, edited and deleted from the
+  Scenes window, not just the three built-in presets (Focus, Presentation,
+  Power saving). The presets cannot be deleted, but editing one creates a
+  restorable override. Each scene is a list of typed actions: toggle a system
+  switch, write a settings key from a fixed whitelist, or choose the audio
+  output device. Scenes are stored in a JSON manifest under
+  `~/.local/share/sysbar/scenes/manifest.json`, created with `0o600`
+  permissions.
+- Scene triggers: scenes can activate automatically from two sources, an
+  external monitor being connected or the power/battery level. A scene
+  activated manually is never overridden by a trigger, and restoring the
+  previous scene when the condition ends is optional per rule. Off by
+  default, behind the `scene-triggers-enabled` setting.
 
 ### Fixed
 - Tray: the Scenes submenu now uses a fixed pool of rows, so the node count no
@@ -22,6 +43,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   desynchronizing item state.
 - Localization: scene names no longer go through the translation system, which
   was only correct as long as scenes were three, fixed and predefined.
+- Scenes: a manifest that could not be read (corrupted or invalid JSON) was
+  silently overwritten, discarding the user's scenes; it is now moved aside
+  to `manifest.json.corrupt` and the path is named in the log.
+- Scenes: a settings-key action was reported as applied even when the write
+  failed, and a toggle action accepted a non-boolean value instead of being
+  rejected.
+- Scene triggers: a trigger could overwrite a scene the user had switched to
+  by hand; a manually activated scene now takes precedence until cleared.
+- Localization: a duplicate entry in the translation catalogue broke
+  compilation of the message catalog.
+- Startup: Sysbar failed to start when the window source used by auto-quit
+  could not subscribe to window events; it now degrades instead of aborting
+  startup.
+- Localization: the built-in scene names (Focus, Presentation, Power saving)
+  are now translated in the Scenes window instead of showing in English.
 
 ## [1.1.1] - 2026-06-21
 
