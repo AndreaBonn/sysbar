@@ -150,6 +150,21 @@ PANEL_SECTION_ORDER: tuple[str, ...] = (
     SECTION_FAN_CONTROL,
 )
 
+# Settings keys a scene is allowed to write. A whitelist rather than the whole
+# schema: a scene is a convenience, not an alternative way to reconfigure the
+# application, and letting one write any key would make a hand-edited manifest
+# able to change anything at all.
+SCENE_WRITABLE_KEYS: frozenset[str] = frozenset(
+    {
+        "alert-enabled",
+        "alert-battery-percent",
+        "clamshell-preferred",
+        "default-duration-minutes",
+        "monitor-interval-seconds",
+        "show-countdown",
+    }
+)
+
 # Feature tour versioning (post-update showcase).
 CURRENT_FEATURE_SET = 4
 PANEL_NAVIGATION_FEATURE_SET = 4
@@ -244,6 +259,15 @@ ALERT_TEMPERATURE_MAX = 150
 DATA_HOME = Path.home() / ".local" / "share" / BINARY_NAME
 SHELF_DIR = DATA_HOME / "shelf"
 SHELF_MANIFEST = SHELF_DIR / "manifest.json"
+
+# User scenes and their triggers, in one document: one atomic write, and no
+# window in which a trigger points at a scene that is not saved yet.
+SCENES_DIR = DATA_HOME / "scenes"
+SCENES_MANIFEST = SCENES_DIR / "manifest.json"
+SCENES_MANIFEST_VERSION = 1
+# The manifest drives what the application does when a scene is activated, so it
+# is readable and writable by its owner only.
+SCENES_MANIFEST_MODE = 0o600
 
 # Clipboard history: persisted manifest, ring-buffer size and label length.
 CLIPBOARD_DIR = DATA_HOME / "clipboard"
