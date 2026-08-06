@@ -220,6 +220,7 @@ def _exercise_windows(tmp_path: Path) -> None:
     from sysbar.services.uninstall.models import PackageManager
     from sysbar.ui.clipboard.clipboard_window import ClipboardWindow
     from sysbar.ui.onboarding.onboarding_window import OnboardingWindow
+    from sysbar.ui.palette.palette_window import PaletteWindow
     from sysbar.ui.panel.panel_window import PanelWindow
     from sysbar.ui.settings.settings_window import SettingsWindow
     from sysbar.ui.shelf.shelf_window import ShelfWindow
@@ -248,6 +249,7 @@ def _exercise_windows(tmp_path: Path) -> None:
 
     windows: list[_Destroyable] = [
         PanelWindow(),
+        PaletteWindow(lambda _query: []),
         ClipboardWindow(ClipboardService(tmp_path / "clipboard"), on_copy=lambda _text: None),
         SettingsWindow(Config(), AutostartManager()),
         ShelfWindow(shelf_service),

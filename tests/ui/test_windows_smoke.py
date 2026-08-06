@@ -148,3 +148,37 @@ def test_uninstaller_window_builds(gtk: object) -> None:
     window = UninstallerWindow(uninstaller, _FakePackageQuery())
     assert window.get_title()
     window.destroy()
+
+
+def test_palette_window_builds(gtk: object) -> None:
+    from sysbar.ui.palette.palette_window import PaletteWindow
+
+    window = PaletteWindow(lambda _query: [])
+
+    assert window.get_title()
+    window.destroy()
+
+
+def test_palette_window_lists_the_entries_it_is_given(gtk: object) -> None:
+    from sysbar.services.palette.models import EntryKind, PaletteEntry, Runnable
+    from sysbar.ui.palette.palette_window import PaletteWindow
+
+    entry = PaletteEntry(
+        id="open-panel",
+        title="Open the panel",
+        kind=EntryKind.COMMAND,
+        activation=Runnable(invoke=lambda: None),
+    )
+    window = PaletteWindow(lambda _query: [entry])
+
+    assert window._list.get_row_at_index(0) is not None
+    window.destroy()
+
+
+def test_palette_window_shows_the_empty_state_without_matches(gtk: object) -> None:
+    from sysbar.ui.palette.palette_window import PaletteWindow
+
+    window = PaletteWindow(lambda _query: [])
+
+    assert window._stack.get_visible_child_name() == "empty"
+    window.destroy()

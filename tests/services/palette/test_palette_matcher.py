@@ -188,3 +188,49 @@ def test_grouping_preserves_the_ranking_within_a_bucket() -> None:
 
 def test_grouping_an_empty_result_is_empty() -> None:
     assert group_by_kind([]) == {}
+
+
+# --- selection movement ---------------------------------------------------
+
+
+def test_moving_down_from_nothing_selected_lands_on_the_first_row() -> None:
+    from sysbar.services.palette.matcher import next_index
+
+    assert next_index(current=-1, count=5, step=1) == 0
+
+
+def test_moving_down_advances_by_one() -> None:
+    from sysbar.services.palette.matcher import next_index
+
+    assert next_index(current=2, count=5, step=1) == 3
+
+
+def test_moving_up_goes_back_by_one() -> None:
+    from sysbar.services.palette.matcher import next_index
+
+    assert next_index(current=2, count=5, step=-1) == 1
+
+
+def test_moving_down_past_the_end_stays_on_the_last_row() -> None:
+    from sysbar.services.palette.matcher import next_index
+
+    assert next_index(current=4, count=5, step=1) == 4
+
+
+def test_moving_up_past_the_start_stays_on_the_first_row() -> None:
+    from sysbar.services.palette.matcher import next_index
+
+    assert next_index(current=0, count=5, step=-1) == 0
+
+
+def test_there_is_nowhere_to_move_in_an_empty_list() -> None:
+    from sysbar.services.palette.matcher import next_index
+
+    assert next_index(current=-1, count=0, step=1) == -1
+
+
+def test_a_single_row_list_stays_put_in_both_directions() -> None:
+    from sysbar.services.palette.matcher import next_index
+
+    assert next_index(current=0, count=1, step=1) == 0
+    assert next_index(current=0, count=1, step=-1) == 0

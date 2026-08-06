@@ -101,6 +101,19 @@ def rank(entries: Iterable[PaletteEntry], query: str, limit: int) -> list[Palett
     return [row[4] for row in scored[:limit]]
 
 
+def next_index(current: int, count: int, step: int) -> int:
+    """Where an arrow key moves the selection, clamped to the list.
+
+    Clamping rather than wrapping: a list that jumps from the last row back to
+    the first on one more Down looks like the results changed under the user.
+    ``current`` may be ``-1``, meaning nothing is selected yet, and ``count`` may
+    be zero, in which case there is nowhere to go and ``-1`` comes back.
+    """
+    if count <= 0:
+        return -1
+    return max(0, min(count - 1, current + step))
+
+
 def group_by_kind(entries: Iterable[PaletteEntry]) -> dict[str, list[PaletteEntry]]:
     """Bucket ranked entries by kind, preserving the ranking inside each bucket."""
     grouped: dict[str, list[PaletteEntry]] = {}
