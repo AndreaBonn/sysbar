@@ -15,6 +15,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field, replace
 from enum import StrEnum
 
+from ...core.i18n import _
 from .actions import (
     SceneAction,
     SceneActionError,
@@ -148,3 +149,13 @@ PRESET_SCENES: tuple[Scene, ...] = (
 # gettext would both fail to translate them and, because the catalogue is
 # checked in CI, demand a msgid for whatever the user happened to type.
 PRESET_SCENE_IDS: frozenset[str] = frozenset(scene.id for scene in PRESET_SCENES)
+
+
+def scene_display_name(scene: Scene) -> str:
+    """The scene name as shown, translated only when it is a built-in.
+
+    Lives here rather than with either caller: the tray, the palette and the
+    scenes window all show scene names, and two of them cannot import from the
+    third. A copy per window is how the same scene ends up called two things.
+    """
+    return _(scene.name) if scene.id in PRESET_SCENE_IDS else scene.name

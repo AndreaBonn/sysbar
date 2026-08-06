@@ -20,7 +20,11 @@ gi.require_version("Adw", "1")
 from gi.repository import Adw, Gtk  # noqa: E402
 
 from ...core.i18n import _  # noqa: E402
-from ...services.scenes.models import PRESET_SCENE_IDS, Scene  # noqa: E402
+from ...services.scenes.models import (  # noqa: E402
+    PRESET_SCENE_IDS,
+    Scene,
+    scene_display_name,
+)
 from ..footer import build_footer  # noqa: E402
 from .ports import SceneController  # noqa: E402
 from .scene_editor import SceneEditor  # noqa: E402
@@ -87,7 +91,7 @@ class ScenesWindow(Adw.Window):
             self._rows.append(row)
 
     def _build_scene_row(self, scene: Scene) -> Adw.ActionRow:
-        row = Adw.ActionRow(title=scene.name, subtitle=_describe(scene))
+        row = Adw.ActionRow(title=scene_display_name(scene), subtitle=_describe(scene))
         edit = Gtk.Button(
             icon_name="document-edit-symbolic",
             tooltip_text=_("Edit"),

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import pytest
 
+from sysbar.core.i18n import _
 from sysbar.services.scenes.actions import SetSetting, SetToggle, SystemToggle
 from sysbar.services.scenes.models import (
     PRESET_SCENE_IDS,
@@ -11,6 +12,7 @@ from sysbar.services.scenes.models import (
     Scene,
     SceneError,
     SceneOrigin,
+    scene_display_name,
 )
 
 
@@ -161,3 +163,17 @@ def test_preset_ids_match_the_preset_list() -> None:
 
 def test_every_preset_does_something() -> None:
     assert all(preset.actions for preset in PRESET_SCENES)
+
+
+def test_a_built_in_scene_name_is_translated() -> None:
+    """Built-in names are in the catalogue; the tray, palette and window agree."""
+    preset = PRESET_SCENES[0]
+
+    assert scene_display_name(preset) == _(preset.name)
+
+
+def test_a_user_scene_name_is_shown_verbatim() -> None:
+    """Passing a user's own name through gettext would demand a msgid for it."""
+    mine = Scene(id="mine", name="Presentation", origin=SceneOrigin.USER)
+
+    assert scene_display_name(mine) == "Presentation"

@@ -20,11 +20,11 @@ from ..services.palette.sources import (
     scene_entries,
     shelf_entries,
 )
+from ..services.scenes.models import scene_display_name
 from .commands.actions import CommandHandlers
 from .commands.palette import command_entries
 from .commands.wiring import current_state
 from .features import Features
-from .tray_state import scene_display_name
 
 _OUTPUT_SUBTITLE = "Set as audio output"
 _INPUT_SUBTITLE = "Set as audio input"

@@ -23,9 +23,8 @@ from ..core.constants import (
     PLACEMENT_OFF,
     TRAY_METRICS,
 )
-from ..core.i18n import _
 from ..services.metrics import metric_format as mf
-from ..services.scenes.models import PRESET_SCENE_IDS, Scene
+from ..services.scenes.models import Scene, scene_display_name
 from ..services.system_monitor.snapshot import SystemSnapshot
 from .tray.menu_builder import SceneMenuEntry
 from .tray_renderer import (
@@ -121,8 +120,3 @@ def scene_entries(scenes: Iterable[Scene], active_id: str) -> tuple[SceneMenuEnt
         SceneMenuEntry(id=scene.id, name=scene_display_name(scene), active=scene.id == active_id)
         for scene in scenes
     )
-
-
-def scene_display_name(scene: Scene) -> str:
-    """The scene name as shown, translated only when it is a built-in."""
-    return _(scene.name) if scene.id in PRESET_SCENE_IDS else scene.name
