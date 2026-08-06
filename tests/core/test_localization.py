@@ -106,6 +106,24 @@ def test_ensure_catalogs_compiled_recompiles_stale_mo(tmp_path: Path) -> None:
     assert mo.read_bytes() != b"stale"
 
 
+def test_ensure_catalogs_compiled_leaves_a_fresh_mo_alone(tmp_path: Path) -> None:
+    """A catalogue newer than its source is not recompiled.
+
+    Without this the branch was only exercised by whatever mtimes the checkout
+    happened to have, which made its coverage depend on the working tree.
+    """
+    if shutil.which("msgfmt") is None:
+        pytest.skip("msgfmt not available")
+    po = _write_catalog(tmp_path)
+    mo = po.with_suffix(".mo")
+    mo.write_bytes(b"fresh")
+    os.utime(po, (0, 0))  # force the .po older than the .mo
+
+    localization._ensure_catalogs_compiled(tmp_path)
+
+    assert mo.read_bytes() == b"fresh"
+
+
 def test_ensure_catalogs_compiled_noop_without_msgfmt(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
