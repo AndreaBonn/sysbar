@@ -76,7 +76,14 @@ class TriggerEngine:
         if decision.is_noop:
             return
         if not self._allowed():
-            log.warning("trigger suppressed by the rate limit")
+            log.warning(
+                "trigger suppressed by the rate limit",
+                extra={
+                    "rule": decision.owner.rule_id if decision.owner is not None else "",
+                    "scene": decision.activate or "",
+                    "clearing": decision.clear,
+                },
+            )
             return
         self._last_activation = self._clock()
         self._perform(decision.activate, clear=decision.clear)

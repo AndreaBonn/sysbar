@@ -443,3 +443,45 @@ def test_a_manifest_without_a_triggers_key_loads_its_scenes(tmp_path: Path) -> N
 
     assert store.scenes == [_user()]
     assert store.triggers == []
+
+
+def test_a_manifest_with_wide_permissions_is_narrowed_on_load(tmp_path: Path) -> None:
+    """Writing creates it private; a file restored from a backup arrives as it was."""
+    payload = {"version": 1, "scenes": [_user().to_dict()], "triggers": []}
+    store = _write(tmp_path, json.dumps(payload))
+    manifest = tmp_path / "scenes" / "manifest.json"
+    manifest.chmod(0o644)
+
+    store.load()
+
+    assert stat.S_IMODE(manifest.stat().st_mode) == 0o600
+    assert [scene.id for scene in store.scenes] == ["mine"]
+
+
+def test_an_already_private_manifest_is_left_alone(tmp_path: Path) -> None:
+    payload = {"version": 1, "scenes": [], "triggers": []}
+    store = _write(tmp_path, json.dumps(payload))
+    manifest = tmp_path / "scenes" / "manifest.json"
+    manifest.chmod(0o600)
+
+    store.load()
+
+    assert stat.S_IMODE(manifest.stat().st_mode) == 0o600
+
+
+def test_a_manifest_whose_mode_cannot_be_narrowed_is_still_read(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Tightening is best-effort: a filesystem that refuses it must not lose the scenes."""
+    payload = {"version": 1, "scenes": [_user().to_dict()], "triggers": []}
+    store = _write(tmp_path, json.dumps(payload))
+    (tmp_path / "scenes" / "manifest.json").chmod(0o644)
+
+    def refuse(self: Path, mode: int) -> None:
+        raise OSError("read-only filesystem")
+
+    monkeypatch.setattr(Path, "chmod", refuse)
+
+    store.load()
+
+    assert [scene.id for scene in store.scenes] == ["mine"]

@@ -111,7 +111,10 @@ def _apply_setting(action: SetSetting, settings: SettingsActions) -> ActionOutco
     try:
         settings.set(action.key, action.value)
     except Exception as error:
-        log.warning("scene could not write a setting", extra={"key": action.key})
+        log.warning(
+            "scene could not write a setting",
+            extra={"key": action.key, "error": str(error)},
+        )
         return ActionOutcome(action, Status.FAILED, str(error))
     return ActionOutcome(action, Status.APPLIED)
 

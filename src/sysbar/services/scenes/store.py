@@ -21,6 +21,7 @@ from __future__ import annotations
 import json
 import logging
 import os
+import stat
 from collections.abc import Iterable
 from pathlib import Path
 
@@ -73,6 +74,7 @@ class SceneStore:
     def load(self) -> None:
         if not self._path.is_file():
             return
+        self._ensure_private()
         try:
             body = _manifest_body(json.loads(self._path.read_text(encoding="utf-8")))
             scenes = _read_scenes(body)
@@ -85,6 +87,19 @@ class SceneStore:
             return
         self._scenes = scenes
         self._triggers = triggers
+
+    def _ensure_private(self) -> None:
+        """Narrow the permissions of a file this process did not create.
+
+        Writing creates it private, but a manifest restored from a backup or
+        synchronised between machines arrives with whatever mode it had there,
+        and until the user next edits a scene nothing would tighten it.
+        """
+        try:
+            if stat.S_IMODE(self._path.stat().st_mode) != SCENES_MANIFEST_MODE:
+                self._path.chmod(SCENES_MANIFEST_MODE)
+        except OSError:
+            log.warning("could not narrow the manifest mode", extra={"path": str(self._path)})
 
     def _quarantine(self) -> None:
         """Move an unreadable manifest aside before anything overwrites it.
