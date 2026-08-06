@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- Command line and D-Bus control: `sysbar <action> [argument]` forwards a
+  command to the already-running instance and exits, covering all 13 actions
+  (panel, settings, shelf, clipboard history, uninstaller, keep awake,
+  microphone, do-not-disturb, dark mode, scenes, quit). `sysbar --list-actions`
+  prints the full catalog. Actions are exposed as a GTK action group on the
+  session bus (`org.gtk.Actions` on `io.github.AndreaBonn.Sysbar`), so they can
+  also be driven directly over D-Bus.
+
+### Fixed
+- Tray: the Scenes submenu now uses a fixed pool of rows, so the node count no
+  longer shifts with the number of scenes and the menu host stops
+  desynchronizing item state.
+- Localization: scene names no longer go through the translation system, which
+  was only correct as long as scenes were three, fixed and predefined.
+
 ## [1.1.1] - 2026-06-21
 
 ### Fixed

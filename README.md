@@ -39,6 +39,7 @@ capability is missing.
   - [Keep awake](#keep-awake)
   - [Auto-quit, uninstaller and shelf](#auto-quit-uninstaller-and-shelf)
   - [Global hotkeys](#global-hotkeys)
+  - [Command-line and D-Bus control](#command-line-and-d-bus-control)
   - [Scenes](#scenes)
   - [Clipboard history](#clipboard-history)
 - [Tech stack](#tech-stack)
@@ -109,6 +110,51 @@ Keyboard shortcuts can be assigned to several actions from the settings: toggle
 keep awake, open the shelf, open the clipboard history, and activate the Focus
 scene. Shortcuts are registered through the XDG GlobalShortcuts portal and work
 across the desktop on both X11 and Wayland, not just when Sysbar has focus.
+
+### Command-line and D-Bus control
+
+Every action available from the tray menu is also exposed as a GTK action
+group on the session bus (`org.gtk.Actions` on `io.github.AndreaBonn.Sysbar`,
+object path `/io/github/AndreaBonn/Sysbar`), and the CLI wraps it for
+convenience:
+
+```bash
+sysbar <action> [argument]
+```
+
+This forwards the action to the already-running instance and exits; it does
+not start Sysbar. If no instance is running, it prints an error to stderr and
+exits with status 1. An unknown action exits with status 2 and lists the valid
+ones.
+
+List the full catalog of actions:
+
+```bash
+sysbar --list-actions
+```
+
+There are 13 actions: `open-panel`, `open-settings`, `open-shelf`,
+`open-clipboard`, `open-uninstaller`, `toggle-keep-awake`,
+`toggle-microphone`, `toggle-dnd`, `toggle-dark-mode`, `toggle-focus-scene`,
+`activate-scene` (takes a scene id as argument: `focus`, `presentation` or
+`power-saving`), `clear-scene`, `quit`.
+
+Actions tied to a capability unavailable in the current session (for example
+`toggle-microphone` without PipeWire, or `open-shelf` with the shelf disabled
+in settings) stay registered but disabled: the name stays stable for scripts,
+the invocation simply does nothing.
+
+Examples:
+
+```bash
+sysbar open-panel
+sysbar activate-scene focus
+sysbar --list-actions
+```
+
+This is useful to bind an action to a custom GNOME keyboard shortcut, to call
+it from a script or a systemd job, or from a window manager such as sway or
+i3.
 
 ### Scenes
 

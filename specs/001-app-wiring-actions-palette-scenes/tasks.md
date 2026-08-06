@@ -110,6 +110,7 @@ Sottototale: circa 17 ore nette, 3,5-4 giorni.
 
 | Elemento | Motivo | Dove ripianificarlo |
 |---|---|---|
+| `DBusActivatable=true` nel `.desktop` più service file (era il sub-task 1.11) | Rimosso dal blocco 1 durante l'implementazione. L'attivazione D-Bus fa lanciare il processo in service mode con `--gapplication-service`, dove `do_activate` non viene chiamato all'avvio: `hold()` e l'onboarding di primo avvio, che oggi vivono lì, andrebbero spostati in `do_startup`. È una modifica al ciclo di vita che si può validare solo facendo logout e login e provando lancio da dock e da autostart, e il guadagno è far funzionare `gapplication list-actions`, un tool di terze parti. La CLI `sysbar <azione>` non ne ha bisogno: chiama `org.gtk.Actions.Activate` direttamente e funziona già | Modifica separata e verificabile, non una riga in un `.desktop` |
 | Azione `RunCommand` nelle scene | Porta quasi tutto il rischio di sicurezza e poco valore. L'unione discriminata la accoglie dopo al costo di una dataclass | Iterazione successiva, con i vincoli già scritti nel piano |
 | Azioni `LaunchApp`, `CloseApp`, `SetAppVolume` | Non necessarie perché la scena sia utile. Estensione a costo di una dataclass ciascuna | Iterazione successiva |
 | Trigger su SSID di rete | Richiede un boundary NetworkManager nuovo, valore marginale | Se richiesto |

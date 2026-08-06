@@ -40,6 +40,7 @@ della sessione.
   - [Keep awake](#keep-awake)
   - [Auto-quit, disinstallatore e shelf](#auto-quit-disinstallatore-e-shelf)
   - [Scorciatoie globali](#scorciatoie-globali)
+  - [Controllo da riga di comando e D-Bus](#controllo-da-riga-di-comando-e-d-bus)
   - [Scene](#scene)
   - [Cronologia degli appunti](#cronologia-degli-appunti)
 - [Stack tecnologico](#stack-tecnologico)
@@ -114,6 +115,49 @@ attivare keep awake, aprire lo shelf, aprire la cronologia degli appunti e
 attivare la scena Focus. Le scorciatoie vengono registrate tramite il portale
 XDG GlobalShortcuts e funzionano su tutto il desktop, non solo quando Sysbar ha
 il focus, sia su X11 sia su Wayland.
+
+### Controllo da riga di comando e D-Bus
+
+Ogni azione disponibile dal menu tray è esposta anche come action group GTK
+sul session bus (`org.gtk.Actions` su `io.github.AndreaBonn.Sysbar`, object
+path `/io/github/AndreaBonn/Sysbar`), che la CLI usa sotto il cofano:
+
+```bash
+sysbar <azione> [argomento]
+```
+
+Il comando inoltra l'azione all'istanza già in esecuzione e termina; non avvia
+Sysbar. Se nessuna istanza è attiva, stampa un errore su stderr ed esce con
+codice 1. Un'azione inesistente esce con codice 2 ed elenca quelle valide.
+
+Per il catalogo completo delle azioni:
+
+```bash
+sysbar --list-actions
+```
+
+Le azioni disponibili sono 13: `open-panel`, `open-settings`, `open-shelf`,
+`open-clipboard`, `open-uninstaller`, `toggle-keep-awake`,
+`toggle-microphone`, `toggle-dnd`, `toggle-dark-mode`, `toggle-focus-scene`,
+`activate-scene` (richiede l'id di una scena come argomento: `focus`,
+`presentation` o `power-saving`), `clear-scene`, `quit`.
+
+Le azioni legate a una capability non disponibile nella sessione corrente (per
+esempio `toggle-microphone` senza PipeWire, o `open-shelf` con lo shelf
+disattivato nelle impostazioni) restano registrate ma disabilitate: il nome
+resta stabile per chi scrive script, l'invocazione semplicemente non fa nulla.
+
+Esempi:
+
+```bash
+sysbar open-panel
+sysbar activate-scene focus
+sysbar --list-actions
+```
+
+Utile per assegnare un'azione a una scorciatoia personalizzata di GNOME,
+richiamarla da uno script o da un job systemd, oppure da un window manager
+come sway o i3.
 
 ### Scene
 
