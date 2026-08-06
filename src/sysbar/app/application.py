@@ -11,6 +11,7 @@ from __future__ import annotations
 import logging
 import threading
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 import gi
 
@@ -126,6 +127,14 @@ from .tray_renderer import (  # noqa: E402
     render_device_rows,
     render_tray_label,
 )
+from .windows import WindowSlot  # noqa: E402
+
+if TYPE_CHECKING:
+    from ..ui.clipboard.clipboard_window import ClipboardWindow
+    from ..ui.panel.panel_window import PanelWindow
+    from ..ui.settings.settings_window import SettingsWindow
+    from ..ui.shelf.shelf_window import ShelfWindow
+    from ..ui.uninstall.uninstaller_window import UninstallerWindow
 
 _KEEP_AWAKE_PLAY = "▶"
 _SESSION_END_MESSAGES = {
@@ -145,8 +154,8 @@ class SysbarApplication(Adw.Application):
         self._capabilities = Capabilities()
         self._autostart = AutostartManager()
         self._tray: Tray | None = None
-        self._panel: Adw.Window | None = None
-        self._settings_window: Adw.PreferencesWindow | None = None
+        self._panel: WindowSlot[PanelWindow] = WindowSlot(self._build_panel, self._on_panel_closed)
+        self._settings_window: WindowSlot[SettingsWindow] = WindowSlot(self._build_settings)
         self._monitor: SystemMonitor | None = None
         self._history = MetricHistory()
         self._alert_engine: AlertEngine | None = None
@@ -162,15 +171,17 @@ class SysbarApplication(Adw.Application):
         self._dnd: DoNotDisturbToggle | None = None
         self._dark_mode: ColorSchemeToggle | None = None
         self._shelf: ShelfService | None = None
-        self._shelf_window: Adw.Window | None = None
+        self._shelf_window: WindowSlot[ShelfWindow] = WindowSlot(self._build_shelf_window)
         self._shake_monitor: ShakeMonitor | None = None
         self._clipboard: ClipboardService | None = None
-        self._clipboard_window: Adw.Window | None = None
+        self._clipboard_window: WindowSlot[ClipboardWindow] = WindowSlot(self._build_clipboard)
         self._clipboard_monitor: ClipboardMonitor | None = None
         self._auto_quit: AutoQuitService | None = None
         self._hotkey: HotkeyManager | None = None
         self._uninstaller: AppUninstaller | None = None
-        self._uninstaller_window: Adw.Window | None = None
+        self._uninstaller_window: WindowSlot[UninstallerWindow] = WindowSlot(
+            self._build_uninstaller
+        )
         self._notifier: Notifier | None = None
         self._countdown_timer = 0
         self._held = False
@@ -437,27 +448,29 @@ class SysbarApplication(Adw.Application):
         return False
 
     def _setup_uninstaller(self) -> None:
-        self._uninstaller = AppUninstaller(
+        self._uninstaller = self._create_uninstaller()
+
+    def _create_uninstaller(self) -> AppUninstaller:
+        return AppUninstaller(
             home=Path.home(),
             trash=GioTrash(),
             remover=PkexecPackageRemover(),
             polkit_available=self._capabilities.has(POLKIT),
         )
 
-    def _open_uninstaller(self) -> None:
+    def _ensure_uninstaller(self) -> AppUninstaller:
+        """The uninstaller, built on first use if startup wiring was skipped."""
         if self._uninstaller is None:
-            self._setup_uninstaller()
+            self._uninstaller = self._create_uninstaller()
+        return self._uninstaller
+
+    def _build_uninstaller(self) -> UninstallerWindow:
         from ..ui.uninstall.uninstaller_window import UninstallerWindow
 
-        if self._uninstaller_window is None and self._uninstaller is not None:
-            self._uninstaller_window = UninstallerWindow(self._uninstaller, CommandPackageQuery())
-            self._uninstaller_window.connect("close-request", self._on_uninstaller_closed)
-        if self._uninstaller_window is not None:
-            self._uninstaller_window.present()
+        return UninstallerWindow(self._ensure_uninstaller(), CommandPackageQuery())
 
-    def _on_uninstaller_closed(self, _window: Adw.Window) -> bool:
-        self._uninstaller_window = None
-        return False
+    def _open_uninstaller(self) -> None:
+        self._uninstaller_window.present()
 
     def _reconcile_shelf(self) -> None:
         enabled = self.config.get_bool("shelf-enabled")
@@ -479,20 +492,20 @@ class SysbarApplication(Adw.Application):
         if self._tray is not None:
             self._tray.set_menu(self._build_menu())
 
-    def _open_shelf(self) -> None:
+    def _ensure_shelf(self) -> ShelfService:
+        """The shelf service, loaded on first use if the feature was off at startup."""
         if self._shelf is None:
             self._shelf = ShelfService(SHELF_DIR)
             self._shelf.load()
+        return self._shelf
+
+    def _build_shelf_window(self) -> ShelfWindow:
         from ..ui.shelf.shelf_window import ShelfWindow
 
-        if self._shelf_window is None:
-            self._shelf_window = ShelfWindow(self._shelf)
-            self._shelf_window.connect("close-request", self._on_shelf_closed)
-        self._shelf_window.present()
+        return ShelfWindow(self._ensure_shelf())
 
-    def _on_shelf_closed(self, _window: Adw.Window) -> bool:
-        self._shelf_window = None
-        return False
+    def _open_shelf(self) -> None:
+        self._shelf_window.present()
 
     def _reconcile_clipboard(self) -> None:
         enabled = self.config.get_bool("clipboard-enabled")
@@ -505,15 +518,19 @@ class SysbarApplication(Adw.Application):
         if self._tray is not None:
             self._tray.set_menu(self._build_menu())
 
-    def _open_clipboard(self) -> None:
+    def _ensure_clipboard(self) -> ClipboardService:
+        """The clipboard history, loaded on first use if the feature was off at startup."""
         if self._clipboard is None:
             self._clipboard = ClipboardService(CLIPBOARD_DIR)
             self._clipboard.load()
+        return self._clipboard
+
+    def _build_clipboard(self) -> ClipboardWindow:
         from ..ui.clipboard.clipboard_window import ClipboardWindow
 
-        if self._clipboard_window is None:
-            self._clipboard_window = ClipboardWindow(self._clipboard, self._copy_to_clipboard)
-            self._clipboard_window.connect("close-request", self._on_clipboard_closed)
+        return ClipboardWindow(self._ensure_clipboard(), self._copy_to_clipboard)
+
+    def _open_clipboard(self) -> None:
         self._clipboard_window.present()
 
     def _on_clipboard_text(self, text: str) -> None:
@@ -525,10 +542,6 @@ class SysbarApplication(Adw.Application):
         display = Gdk.Display.get_default()
         if display is not None:
             display.get_clipboard().set(text)
-
-    def _on_clipboard_closed(self, _window: Adw.Window) -> bool:
-        self._clipboard_window = None
-        return False
 
     def _update_tray_active(self) -> None:
         if self._monitor is None:
@@ -565,20 +578,22 @@ class SysbarApplication(Adw.Application):
         self._refresh_tray_label()
         self._history.record(snapshot)
         self._evaluate_alerts(snapshot)
-        if self._panel is not None:
-            self._panel.update_snapshot(snapshot)
-            self._panel.update_history(self._history)
-            self._panel.update_processes(self._process_usage.top_cpu(PANEL_PROCESS_COUNT))
-            self._update_net_processes()
+        self._panel.if_open(lambda panel: self._push_panel_update(panel, snapshot))
 
     def _update_net_processes(self) -> None:
         """Refresh the panel's per-process network rows from a fresh ``ss`` read."""
-        if self._panel is None or self._net_sampler is None:
+        sampler = self._net_sampler
+        if sampler is None:
             return
-        rates = self._net_tracker.update(
-            self._net_sampler.sample(), self.config.monitor_interval_seconds
+        rates = self._net_tracker.update(sampler.sample(), self.config.monitor_interval_seconds)
+        self._panel.if_open(
+            lambda panel: panel.update_net_processes(top_by_throughput(rates, NET_PROCESS_COUNT))
         )
-        self._panel.update_net_processes(top_by_throughput(rates, NET_PROCESS_COUNT))
+
+    def _apply_graph_metrics(self, panel: PanelWindow) -> None:
+        """Re-apply the sparkline selection to an open panel after a settings change."""
+        panel.set_graph_metrics(self._graph_metrics())
+        panel.update_history(self._history)
 
     def _graph_metrics(self) -> frozenset[str]:
         """Metrics whose sparkline is enabled in settings (``monitor-graph-*``)."""
@@ -636,9 +651,8 @@ class SysbarApplication(Adw.Application):
             self._reconcile_clipboard()
         if key.startswith("alert-"):
             self._reconcile_alerting()
-        if key.startswith("monitor-graph-") and self._panel is not None:
-            self._panel.set_graph_metrics(self._graph_metrics())
-            self._panel.update_history(self._history)
+        if key.startswith("monitor-graph-"):
+            self._panel.if_open(self._apply_graph_metrics)
 
     def _on_keep_awake_changed(self, _manager: KeepAwakeManager) -> None:
         self._refresh_menu()
@@ -749,37 +763,46 @@ class SysbarApplication(Adw.Application):
         )
         return MenuModel(items)
 
-    def _open_panel(self) -> None:
+    def _build_panel(self) -> PanelWindow:
+        """One-time construction and binding; per-open settings live elsewhere."""
         from ..ui.panel.panel_window import PanelWindow
 
-        if self._panel is None:
-            self._panel = PanelWindow()
-            self._panel.connect("close-request", self._on_panel_closed)
-            self._panel.bind_process_actions(self._confirm_kill_process)
-            if self._mixer is not None:
-                self._panel.bind_mixer(self._mixer)
-            else:
-                self._panel.set_mixer_unavailable()
-            if self._device_switcher is not None:
-                self._panel.bind_devices(self._device_switcher)
-        self._panel.set_temperature_unit(self.config.temperature_unit)
-        self._panel.set_show_fans(self.config.get_bool("monitor-show-fan-control-beta"))
-        self._panel.set_graph_metrics(self._graph_metrics())
+        panel = PanelWindow()
+        panel.bind_process_actions(self._confirm_kill_process)
+        if self._mixer is not None:
+            panel.bind_mixer(self._mixer)
+        else:
+            panel.set_mixer_unavailable()
+        if self._device_switcher is not None:
+            panel.bind_devices(self._device_switcher)
+        return panel
+
+    def _open_panel(self) -> None:
+        panel = self._panel.present()
+        panel.set_temperature_unit(self.config.temperature_unit)
+        panel.set_show_fans(self.config.get_bool("monitor-show-fan-control-beta"))
+        panel.set_graph_metrics(self._graph_metrics())
         if self._device_switcher is not None:
             self._device_switcher.refresh()
         if self._monitor is not None:
             self._monitor.set_panel_open(True)
             if self._monitor.latest is not None:
-                self._panel.update_snapshot(self._monitor.latest)
-                self._panel.update_history(self._history)
-                self._panel.update_processes(self._process_usage.top_cpu(PANEL_PROCESS_COUNT))
-                self._update_net_processes()
-        self._panel.present()
+                self._push_panel_update(panel, self._monitor.latest)
+
+    def _push_panel_update(self, panel: PanelWindow, snapshot: SystemSnapshot) -> None:
+        """Feed one sample's worth of data into an open panel."""
+        panel.update_snapshot(snapshot)
+        panel.update_history(self._history)
+        panel.update_processes(self._process_usage.top_cpu(PANEL_PROCESS_COUNT))
+        self._update_net_processes()
 
     def _confirm_kill_process(self, pid: int, name: str) -> None:
         """Ask before killing; a stray click should not terminate a process."""
+        self._panel.if_open(lambda panel: self._present_kill_dialog(panel, pid, name))
+
+    def _present_kill_dialog(self, panel: PanelWindow, pid: int, name: str) -> None:
         dialog = Adw.MessageDialog(
-            transient_for=self._panel,
+            transient_for=panel,
             heading=_("End process?"),
             body=_("Send a termination signal to “{name}” (PID {pid})?").format(name=name, pid=pid),
         )
@@ -795,23 +818,19 @@ class SysbarApplication(Adw.Application):
         if response == "end":
             self._process_killer.terminate(pid)
 
-    def _on_panel_closed(self, _window: Adw.Window) -> bool:
-        self._panel = None
+    def _on_panel_closed(self) -> None:
         if self._monitor is not None:
             self._monitor.set_panel_open(False)
-        return False
 
-    def _open_settings(self) -> None:
-        from ..ui.settings.settings_window import SettingsWindow
-
-        # Availability is frozen at open time. The window is recreated on every
+    def _build_settings(self) -> SettingsWindow:
+        # Availability is frozen at build time. The window is recreated on every
         # open (close clears the reference), so a hardware change is picked up on
         # the next open rather than live in an already-open window.
-        if self._settings_window is None:
-            self._settings_window = SettingsWindow(
-                self.config, self._autostart, self._unavailable_metrics()
-            )
-            self._settings_window.connect("close-request", self._on_settings_closed)
+        from ..ui.settings.settings_window import SettingsWindow
+
+        return SettingsWindow(self.config, self._autostart, self._unavailable_metrics())
+
+    def _open_settings(self) -> None:
         self._settings_window.present()
 
     def _open_github(self) -> None:
@@ -832,10 +851,6 @@ class SysbarApplication(Adw.Application):
             return frozenset()
         present = available_metrics(snapshot, TrayOptions())
         return frozenset(m for m in HARDWARE_OPTIONAL_METRICS if m not in present)
-
-    def _on_settings_closed(self, _window: Adw.PreferencesWindow) -> bool:
-        self._settings_window = None
-        return False
 
     def _show_onboarding(self) -> None:
         from ..ui.onboarding.onboarding_window import OnboardingWindow
