@@ -22,19 +22,23 @@ A Ubuntu/GNOME system tray application that bundles local utilities behind one i
 [![Coverage](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/AndreaBonn/sysbar/main/badges/coverage-badge.json)](https://github.com/AndreaBonn/sysbar/actions/workflows/ci.yml)
 
 Sysbar puts tools behind one tray icon: a system monitor with historical
-sparklines, a per-application volume mixer with output/input device switching,
-a clipboard history manager, configurable global hotkeys, composable scenes, keep
-awake, auto-quit, an application uninstaller and a shelf. Everything runs
-locally: no account, no telemetry. Every feature is off until you turn it on,
-and degrades with an explicit message when a system dependency or session
-capability is missing.
+sparklines and threshold alerts, a per-application volume mixer with
+output/input device switching, a clipboard history manager, configurable global
+hotkeys, composable scenes, keep awake, auto-quit, an application uninstaller
+and a shelf. Everything runs locally: no account, no telemetry. Every feature is
+off until you turn it on, and degrades with an explicit message when a system
+dependency or session capability is missing.
 
 ![Sysbar tray menu with live metrics](./assets/screenshots/tray-menu.png)
+
+Looking for step-by-step instructions rather than an overview? Read the
+[user manual](./MANUAL.md).
 
 ## Table of contents
 
 - [Features](#features)
   - [System monitor](#system-monitor)
+  - [Threshold alerts](#threshold-alerts)
   - [Per-application volume mixer](#per-application-volume-mixer)
   - [Keep awake](#keep-awake)
   - [Auto-quit, uninstaller and shelf](#auto-quit-uninstaller-and-shelf)
@@ -43,6 +47,7 @@ capability is missing.
   - [Command-line and D-Bus control](#command-line-and-d-bus-control)
   - [Scenes](#scenes)
   - [Clipboard history](#clipboard-history)
+- [User manual](#user-manual)
 - [Tech stack](#tech-stack)
 - [Architecture](#architecture)
 - [Repository structure](#repository-structure)
@@ -72,7 +77,23 @@ section lists the processes consuming the most bandwidth; it uses `/proc` and `s
 and works on a best-effort basis - it requires `ss` to be present and may not
 reflect all traffic on all configurations.
 
+A "top processes" section lists the heaviest processes, each with an End button
+that terminates it after a confirmation dialog. Fan readings are behind a beta
+flag that has no settings row yet; turn it on with
+`gsettings set io.github.AndreaBonn.Sysbar monitor-show-fan-control-beta true`
+and reopen the panel.
+
 ![Panel: system and network metrics](./assets/screenshots/panel-system.png)
+
+### Threshold alerts
+
+The monitor can send a desktop notification when a metric crosses a limit you
+set: CPU load (with a minimum duration, so a momentary spike does not notify),
+memory used, root filesystem used, temperature and battery charge. Each alert
+fires once when the value crosses its threshold and rearms only after the value
+falls back, so a sustained breach does not repeat. Setting a threshold to `0`
+turns that alert off; the "Enable alerts" switch turns all of them off at once.
+Configured in the Alerts tab of the preferences window.
 
 ### Per-application volume mixer
 
@@ -185,16 +206,25 @@ edited and deleted. Three scenes come built in - Focus, Presentation and
 Power saving - and cannot be deleted, but editing one creates a restorable
 override so your changes persist without losing the original:
 
-- **Focus** - enables keep awake, turns on do-not-disturb, mutes the microphone.
-- **Presentation** - enables keep awake, turns on do-not-disturb.
-- **Power saving** - disables keep awake, adjusts display settings to reduce
-  power use.
+- **Focus** - keep awake on, do-not-disturb on, microphone muted, threshold
+  alerts off.
+- **Presentation** - keep awake on with no time limit, do-not-disturb on,
+  microphone unmuted, lid-close suspension left to the system.
+- **Power saving** - keep awake off, do-not-disturb off, microphone unmuted,
+  sampling interval raised to 5 seconds, low-battery alert at 20%.
 
 A scene you create is a list of actions, each of one of three kinds: toggle a
 system switch (keep awake, do-not-disturb, microphone), set one of
 a fixed list of allowed settings, or choose the default audio output device.
 Scenes are stored in `~/.local/share/sysbar/scenes/manifest.json`, readable
 only by your user.
+
+An action can fail for reasons outside Sysbar - the microphone toggle needs
+PipeWire, do-not-disturb needs the GNOME desktop interface. When only part of a
+scene takes effect, a notification names the scene and says how many of its
+actions applied, instead of leaving you to guess from the tray state. The tray
+submenu holds up to 8 scenes; beyond that the rest stay reachable from the
+Scenes window, the palette and the command line.
 
 Scenes can be activated by hand from the tray or the Scenes window, by a
 global hotkey (Focus only, see Global hotkeys above), or automatically by a
@@ -211,8 +241,21 @@ be pinned to keep them at the top, and clicking any entry copies it back to the
 clipboard. The history is accessible from the tray menu and from a configurable
 global hotkey. The feature is off by default and must be enabled in settings.
 
+The history keeps the last 50 entries; pinned ones are never dropped to make
+room. Entries that look like a password or a token are masked in the command
+palette until you ask to see them.
+
 Note on privacy: the clipboard history is stored in plain text on disk. Do not
 enable it if you regularly copy sensitive data such as passwords or tokens.
+
+## User manual
+
+The sections above describe what each feature does. [MANUAL.md](./MANUAL.md)
+covers how to use it: the first run, what every entry in the tray menu does,
+every tab of the preferences window, how to build a scene and give it a
+trigger, how to assign the global shortcuts, and what to check when a feature
+reports itself as unavailable. It is also available
+[in Italian](./MANUAL.it.md).
 
 ## Tech stack
 
@@ -260,10 +303,10 @@ Shell extension on Wayland).
 
 ```text
 src/sysbar/
-  app/        application lifecycle, tray, metric rendering
+  app/        application lifecycle, tray, per-feature wiring, command catalogue
   core/       GSettings config, capability detection, i18n, logging
   services/   framework-agnostic feature logic (ports + adapters)
-  ui/         GTK4 windows: panel, settings, onboarding, shelf, uninstaller
+  ui/         GTK4 windows: panel, settings, onboarding, palette, scenes, shelf, clipboard, uninstaller
   support/    diagnostics (selftest, sensor dump)
 tests/        mirror of src/sysbar
 data/         GSettings schema, .desktop files, autostart, app icons, GNOME Shell extension, translations
@@ -378,7 +421,8 @@ All runtime configuration lives in GSettings, schema
 `io.github.AndreaBonn.Sysbar`, path `/io/github/AndreaBonn/Sysbar/`. The keys are
 documented in `data/io.github.AndreaBonn.Sysbar.gschema.xml`. No secrets or
 environment variables are required in production. Settings are grouped in a
-Preferences window with one tab per area.
+Preferences window with one tab per area: General, Monitor, Alerts, Keep Awake,
+Features and About.
 
 ### General preferences
 

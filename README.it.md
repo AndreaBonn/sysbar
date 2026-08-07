@@ -22,20 +22,24 @@ Un'applicazione nella barra di sistema di Ubuntu/GNOME che raggruppa utility loc
 [![Coverage](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/AndreaBonn/sysbar/main/badges/coverage-badge.json)](https://github.com/AndreaBonn/sysbar/actions/workflows/ci.yml)
 
 Sysbar mette gli strumenti dietro una sola icona nel tray: un monitor di sistema
-con sparkline storiche, un mixer del volume per applicazione con selettore
-dispositivo audio, una cronologia degli appunti, scorciatoie globali
-configurabili, scene componibili, keep awake, auto-quit, un disinstallatore di
-applicazioni e uno shelf. Tutto gira in locale: nessun account, nessuna
-telemetria. Ogni funzionalità è disattivata finché non la attivi, e si degrada
-con un messaggio esplicito quando manca una dipendenza di sistema o una capability
-della sessione.
+con sparkline storiche e avvisi a soglia, un mixer del volume per applicazione
+con selettore dispositivo audio, una cronologia degli appunti, scorciatoie
+globali configurabili, scene componibili, keep awake, auto-quit, un
+disinstallatore di applicazioni e uno shelf. Tutto gira in locale: nessun
+account, nessuna telemetria. Ogni funzionalità è disattivata finché non la
+attivi, e si degrada con un messaggio esplicito quando manca una dipendenza di
+sistema o una capability della sessione.
 
 ![Menu tray di Sysbar con metriche live](./assets/screenshots/tray-menu.png)
+
+Se cerchi le istruzioni passo passo invece della panoramica, leggi il
+[manuale utente](./MANUAL.it.md).
 
 ## Indice
 
 - [Funzionalità](#funzionalità)
   - [Monitor di sistema](#monitor-di-sistema)
+  - [Avvisi a soglia](#avvisi-a-soglia)
   - [Mixer del volume per applicazione](#mixer-del-volume-per-applicazione)
   - [Keep awake](#keep-awake)
   - [Auto-quit, disinstallatore e shelf](#auto-quit-disinstallatore-e-shelf)
@@ -44,6 +48,7 @@ della sessione.
   - [Controllo da riga di comando e D-Bus](#controllo-da-riga-di-comando-e-d-bus)
   - [Scene](#scene)
   - [Cronologia degli appunti](#cronologia-degli-appunti)
+- [Manuale utente](#manuale-utente)
 - [Stack tecnologico](#stack-tecnologico)
 - [Architettura](#architettura)
 - [Struttura del repository](#struttura-del-repository)
@@ -71,18 +76,36 @@ di non mostrare nulla.
 Il pannello può mostrare sparkline storiche per ciascuna metrica (CPU, GPU,
 memoria, rete, alimentazione, batteria), attivabili singolarmente nelle
 impostazioni. Una sezione "rete per processo" elenca i processi che consumano
-piu banda; usa `/proc` e `ss` e funziona in modalità best-effort - richiede che
+più banda; usa `/proc` e `ss` e funziona in modalità best-effort - richiede che
 `ss` sia installato e potrebbe non rilevare tutto il traffico in tutte le
 configurazioni.
 
+Una sezione "processi principali" elenca i processi più pesanti, ognuno con un
+pulsante che lo termina dopo una richiesta di conferma. La lettura delle ventole
+è dietro un flag beta che non ha ancora una riga nelle impostazioni: si attiva
+con `gsettings set io.github.AndreaBonn.Sysbar monitor-show-fan-control-beta true`
+e riaprendo il pannello.
+
 ![Pannello: metriche di sistema e rete](./assets/screenshots/panel-system.png)
+
+### Avvisi a soglia
+
+Il monitor può inviare una notifica desktop quando una metrica supera un limite
+che hai impostato: carico della CPU (con una durata minima, così un picco
+istantaneo non genera notifiche), memoria usata, riempimento del filesystem
+radice, temperatura e carica della batteria. Ogni avviso scatta una volta sola
+quando il valore supera la soglia e si riarma solo dopo che il valore è
+rientrato, quindi una condizione prolungata non si ripete. Impostare una soglia
+a `0` disattiva quel singolo avviso; l'interruttore "Attiva avvisi" li disattiva
+tutti insieme. Si configurano nella scheda Avvisi della finestra delle
+preferenze.
 
 ### Mixer del volume per applicazione
 
 Volume e mute indipendenti per ogni applicazione in esecuzione, tramite PipeWire
 o PulseAudio. Il mixer compare nel pannello e si aggiorna man mano che le
 applicazioni aprono e chiudono stream audio. Il pannello include anche un
-selettore rapido per il dispositivo di uscita e di ingresso predefinito, cosi da
+selettore rapido per il dispositivo di uscita e di ingresso predefinito, così da
 cambiare l'hardware audio senza aprire le impostazioni audio di sistema.
 
 ![Pannello: alimentazione e mixer per app](./assets/screenshots/panel-mixer.png)
@@ -111,7 +134,7 @@ globale configurabile (vedi Scorciatoie globali di seguito).
 
 ### Scorciatoie globali
 
-Dalle impostazioni è possibile assegnare scorciatoie da tastiera a piu azioni:
+Dalle impostazioni è possibile assegnare scorciatoie da tastiera a più azioni:
 attivare keep awake, aprire lo shelf, aprire la cronologia degli appunti,
 aprire la command palette e attivare la scena Focus. Le scorciatoie vengono
 registrate tramite il portale XDG GlobalShortcuts e funzionano su tutto il
@@ -191,11 +214,14 @@ e Power saving - e non possono essere eliminate, ma modificarne una crea un
 override ripristinabile, così le tue modifiche restano senza perdere
 l'originale:
 
-- **Focus** - attiva keep awake, abilita il non-disturbare, silenzia il
-  microfono.
-- **Presentation** - attiva keep awake, abilita il non-disturbare.
-- **Power saving** - disattiva keep awake, riduce le impostazioni del display
-  per risparmiare energia.
+- **Focus** - keep awake attivo, non-disturbare attivo, microfono silenziato,
+  avvisi a soglia disattivati.
+- **Presentation** - keep awake attivo senza limite di tempo, non-disturbare
+  attivo, microfono attivo, sospensione alla chiusura del coperchio lasciata al
+  sistema.
+- **Power saving** - keep awake disattivo, non-disturbare disattivo, microfono
+  attivo, intervallo di campionamento portato a 5 secondi, avviso di batteria
+  scarica al 20%.
 
 Una scena creata da te è un elenco di azioni, ciascuna di uno di tre tipi:
 commutare un interruttore di sistema (keep awake, non-disturbare, microfono),
@@ -203,6 +229,14 @@ impostare una chiave scelta da un elenco fisso di impostazioni
 consentite, oppure scegliere il dispositivo di uscita audio predefinito. Le
 scene sono salvate in `~/.local/share/sysbar/scenes/manifest.json`, leggibile
 solo dal tuo utente.
+
+Un'azione può fallire per motivi esterni a Sysbar: il microfono richiede
+PipeWire, il non-disturbare richiede l'interfaccia desktop di GNOME. Quando una
+scena si applica solo in parte, una notifica dice quale scena era e quante delle
+sue azioni hanno avuto effetto, invece di lasciarti dedurlo dallo stato del
+tray. Il sottomenu del tray contiene fino a 8 scene; oltre quel numero le altre
+restano raggiungibili dalla finestra Scenes, dalla palette e dalla riga di
+comando.
 
 Le scene si attivano a mano dal tray o dalla finestra Scenes, con una
 scorciatoia globale (solo per Focus, vedi Scorciatoie globali sopra), oppure
@@ -221,8 +255,21 @@ copia di nuovo negli appunti. La cronologia è accessibile dal menu tray e da un
 scorciatoia globale configurabile. La funzionalità è disattivata per impostazione
 predefinita e va abilitata nelle impostazioni.
 
+La cronologia conserva le ultime 50 voci; quelle fissate non vengono mai
+scartate per fare spazio. Le voci che sembrano una password o un token restano
+mascherate nella command palette finché non chiedi di vederle.
+
 Nota sulla privacy: la cronologia degli appunti è salvata in chiaro su disco.
 Non abilitarla se copi regolarmente dati sensibili come password o token.
+
+## Manuale utente
+
+Le sezioni qui sopra dicono che cosa fa ciascuna funzionalità.
+[MANUAL.it.md](./MANUAL.it.md) spiega come si usa: il primo avvio, che cosa fa
+ogni voce del menu tray, ogni scheda della finestra delle preferenze, come si
+costruisce una scena e le si dà un trigger, come si assegnano le scorciatoie
+globali e che cosa controllare quando una funzionalità si dichiara non
+disponibile. È disponibile anche [in inglese](./MANUAL.md).
 
 ## Stack tecnologico
 
@@ -271,10 +318,10 @@ extension inclusa su Wayland).
 
 ```text
 src/sysbar/
-  app/        ciclo di vita, tray, rendering metriche
+  app/        ciclo di vita, tray, wiring per feature, catalogo dei comandi
   core/       config GSettings, rilevamento capability, i18n, logging
   services/   logica feature framework-agnostica (ports + adapter)
-  ui/         finestre GTK4: pannello, settings, onboarding, shelf, disinstallatore
+  ui/         finestre GTK4: pannello, settings, onboarding, palette, scene, shelf, appunti, disinstallatore
   support/    diagnostica (selftest, dump sensori)
 tests/        mirror di src/sysbar
 data/         schema GSettings, file .desktop, autostart, icone app, GNOME Shell extension, traduzioni
@@ -391,7 +438,8 @@ Tutta la configurazione runtime vive in GSettings, schema
 `io.github.AndreaBonn.Sysbar`, path `/io/github/AndreaBonn/Sysbar/`. Le chiavi sono
 documentate in `data/io.github.AndreaBonn.Sysbar.gschema.xml`. In produzione non
 servono secret né variabili d'ambiente. Le impostazioni sono raggruppate in una
-finestra Preferenze con una scheda per area.
+finestra Preferenze con una scheda per area: Generale, Monitor, Avvisi, Keep
+Awake, Funzionalità e About.
 
 ### Preferenze generali
 

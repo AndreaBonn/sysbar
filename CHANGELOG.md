@@ -99,6 +99,10 @@ First stable release.
   must be enabled explicitly in Settings (history is stored in plain text on disk).
 - History sparklines for CPU, GPU, memory, network, power and battery in the panel,
   toggleable per metric.
+- Threshold alerts: a desktop notification when CPU load, memory, disk,
+  temperature or battery crosses a configured limit. Edge-triggered, so a
+  sustained breach notifies once; CPU also requires the breach to hold for a
+  configured number of seconds. Configured in the Alerts tab.
 - Per-process network throughput section in the panel, best-effort via `ss`.
 - Default audio output and input device switcher in the panel.
 - Configurable global shortcuts for keep-awake, shelf, clipboard manager and Focus scene,
