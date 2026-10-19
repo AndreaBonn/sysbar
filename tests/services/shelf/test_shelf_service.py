@@ -237,3 +237,18 @@ def test_load_with_an_unreadable_manifest_deletes_nothing(tmp_path: Path) -> Non
     _service(tmp_path).load()
 
     assert Path(image.path).exists()
+
+
+def test_add_dropped_text_classifies_only_supported_url_prefixes(tmp_path: Path) -> None:
+    service = _service(tmp_path)
+    for value, kind in [
+        ("https://x", ItemKind.URL),
+        ("http://x", ItemKind.URL),
+        ("ftp://x", ItemKind.URL),
+        ("httpx", ItemKind.TEXT),
+        ("http:/x", ItemKind.TEXT),
+    ]:
+        item = service.add_dropped_text(value=value)
+        assert item.kind is kind
+        assert item.text == value
+    assert len(service.items) == 5

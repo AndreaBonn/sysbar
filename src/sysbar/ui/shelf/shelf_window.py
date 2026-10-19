@@ -18,11 +18,11 @@ from gi.repository import Adw, Gdk, Gio, GLib, GObject, Gtk  # noqa: E402
 
 from ...core.i18n import _  # noqa: E402
 from ...services.shelf.models import ItemKind, ShelfItem  # noqa: E402
+from ...services.shelf.pending_clear import PendingClear  # noqa: E402
 from ...services.shelf.shelf_service import ShelfService  # noqa: E402
 
 log = logging.getLogger(__name__)
 
-_URL_SCHEMES = ("http://", "https://", "ftp://")
 _KIND_ICONS = {
     ItemKind.FILE: "text-x-generic-symbolic",
     ItemKind.IMAGE: "image-x-generic-symbolic",
@@ -49,7 +49,7 @@ class ShelfWindow(Adw.Window):
         self._flow = Gtk.FlowBox(selection_mode=Gtk.SelectionMode.NONE, min_children_per_line=1)
         self._stack = Gtk.Stack()
         self._toasts = Adw.ToastOverlay()
-        self._pending: list[ShelfItem] = []
+        self._pending = PendingClear(service=service)
         self.connect("close-request", self._on_close_request)
         self._build_ui()
         self._setup_drop_target()
@@ -77,33 +77,18 @@ class ShelfWindow(Adw.Window):
 
     def _on_clear(self, _button: Gtk.Button) -> None:
         """S2: the clear is held for a few seconds so it can be undone."""
-        self._commit_pending()
-        detached = self._service.detach_all()
-        if not detached:
+        if not self._pending.clear():
             return
-        self._pending = detached
         toast = Adw.Toast(title=_("Shelf cleared"), button_label=_("Undo"), timeout=_UNDO_SECONDS)
         toast.connect("button-clicked", self._on_undo)
-        toast.connect("dismissed", lambda _toast: self._commit_pending())
+        toast.connect("dismissed", lambda _toast: self._pending.commit())
         self._toasts.add_toast(toast)
 
     def _on_undo(self, _toast: Adw.Toast) -> None:
-        pending, self._pending = self._pending, []
-        self._service.restore(pending)
-
-    def _commit_pending(self) -> None:
-        """Delete what the last clear detached, unless it was undone.
-
-        Called when the toast goes away, before a second clear and when the
-        window closes; whatever slips past (the app killed mid-toast) is pruned
-        from staging at the next load.
-        """
-        pending, self._pending = self._pending, []
-        if pending:
-            self._service.discard(pending)
+        self._pending.undo()
 
     def _on_close_request(self, _window: Gtk.Window) -> bool:
-        self._commit_pending()
+        self._pending.commit()
         return False
 
     def _setup_drop_target(self) -> None:
@@ -123,15 +108,9 @@ class ShelfWindow(Adw.Window):
             self._service.add_image(bytes(value.save_to_png_bytes().get_data()))
             return True
         if isinstance(value, str):
-            self._add_text_or_url(value)
+            self._service.add_dropped_text(value=value)
             return True
         return False
-
-    def _add_text_or_url(self, value: str) -> None:
-        if value.startswith(_URL_SCHEMES):
-            self._service.add_url(value)
-        else:
-            self._service.add_text(value)
 
     def _rebuild_tiles(self) -> None:
         child = self._flow.get_first_child()

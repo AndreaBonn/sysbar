@@ -27,6 +27,7 @@ log = logging.getLogger(__name__)
 _MANIFEST_NAME = "manifest.json"
 _STAGING_NAME = "staging"
 _TEXT_LABEL_MAX = 40
+_URL_SCHEMES = ("http://", "https://", "ftp://")
 
 
 class ShelfService(GObject.Object):
@@ -64,6 +65,12 @@ class ShelfService(GObject.Object):
         return self._append(
             ShelfItem(id=self._id_factory(), kind=ItemKind.TEXT, label=label, text=text)
         )
+
+    def add_dropped_text(self, value: str) -> ShelfItem:
+        """Classify dropped text by the URL schemes accepted by the shelf."""
+        if value.startswith(_URL_SCHEMES):
+            return self.add_url(url=value)
+        return self.add_text(text=value)
 
     def add_image(self, data: bytes, suffix: str = ".png") -> ShelfItem:
         self._staging.mkdir(parents=True, exist_ok=True)
