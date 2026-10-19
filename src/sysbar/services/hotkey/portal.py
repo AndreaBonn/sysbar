@@ -19,6 +19,8 @@ import gi
 gi.require_version("Gio", "2.0")
 from gi.repository import Gio, GLib  # noqa: E402
 
+from .portal_protocol import request_path, session_handle_from  # noqa: E402
+
 log = logging.getLogger(__name__)
 
 _PORTAL_NAME = "org.freedesktop.portal.Desktop"
@@ -27,7 +29,6 @@ _SHORTCUTS_IFACE = "org.freedesktop.portal.GlobalShortcuts"
 _REQUEST_IFACE = "org.freedesktop.portal.Request"
 _HANDLE_TOKEN = "sysbar_shortcuts"
 _SESSION_TOKEN = "sysbar_session"
-_RESPONSE_SUCCESS = 0
 
 
 class PortalGlobalShortcuts:  # pragma: no cover - xdg-desktop-portal boundary
@@ -67,21 +68,24 @@ class PortalGlobalShortcuts:  # pragma: no cover - xdg-desktop-portal boundary
             self._session_requested = True
             self._create_session()
 
-    def _create_session(self) -> None:
+    def _subscribe_session_response(self) -> None:
         # The Request object path is deterministic from our unique name and the
         # handle token (portal spec), so we can subscribe to its Response before
         # the call returns and read the real session handle from there.
-        unique = self._connection.get_unique_name().lstrip(":").replace(".", "_")
-        request_path = f"{_PORTAL_PATH}/request/{unique}/{_HANDLE_TOKEN}"
         self._connection.signal_subscribe(
             _PORTAL_NAME,
             _REQUEST_IFACE,
             "Response",
-            request_path,
+            request_path(
+                unique_name=self._connection.get_unique_name(), handle_token=_HANDLE_TOKEN
+            ),
             None,
             Gio.DBusSignalFlags.NONE,
             self._on_session_response,
         )
+
+    def _create_session(self) -> None:
+        self._subscribe_session_response()
         options = {
             "handle_token": GLib.Variant("s", _HANDLE_TOKEN),
             "session_handle_token": GLib.Variant("s", _SESSION_TOKEN),
@@ -109,10 +113,11 @@ class PortalGlobalShortcuts:  # pragma: no cover - xdg-desktop-portal boundary
         params: GLib.Variant,
     ) -> None:
         response_code, results = params.unpack()
-        if response_code != _RESPONSE_SUCCESS or "session_handle" not in results:
+        handle = session_handle_from(response_code=response_code, results=results)
+        if handle is None:
             log.warning("global shortcuts session refused", extra={"code": response_code})
             return
-        self._session_handle = results["session_handle"]
+        self._session_handle = handle
         self._bind_pending()
 
     def _bind_pending(self) -> None:
