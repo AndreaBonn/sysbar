@@ -130,9 +130,9 @@
     <key name="menu-bar-power" type="b"><default>false</default><summary>Deprecated: show power in tray</summary></key>
 
     <!-- Per-metric placement: 'off', 'bar' (always-visible label) or 'menu' (dropdown). -->
-    <key name="menu-bar-cpu-placement" type="s"><default>'off'</default><summary>CPU placement: off, bar or menu</summary></key>
+    <key name="menu-bar-cpu-placement" type="s"><default>'bar'</default><summary>CPU placement: off, bar or menu</summary></key>
     <key name="menu-bar-gpu-placement" type="s"><default>'off'</default><summary>GPU placement: off, bar or menu</summary></key>
-    <key name="menu-bar-memory-placement" type="s"><default>'off'</default><summary>Memory placement: off, bar or menu</summary></key>
+    <key name="menu-bar-memory-placement" type="s"><default>'bar'</default><summary>Memory placement: off, bar or menu</summary></key>
     <key name="menu-bar-network-placement" type="s"><default>'off'</default><summary>Network placement: off, bar or menu</summary></key>
     <key name="menu-bar-battery-placement" type="s"><default>'off'</default><summary>Battery placement: off, bar or menu</summary></key>
     <key name="menu-bar-power-placement" type="s"><default>'off'</default><summary>Power placement: off, bar or menu</summary></key>

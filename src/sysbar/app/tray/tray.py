@@ -9,6 +9,7 @@ import gi
 gi.require_version("Gio", "2.0")
 from gi.repository import Gio  # noqa: E402
 
+from ...core.branding import app_icons_dir  # noqa: E402
 from ...core.constants import TRAY_ICON_NAME, TRAY_TITLE  # noqa: E402
 from .dbus_menu import DBusMenuServer  # noqa: E402
 from .menu_model import MenuModel  # noqa: E402
@@ -23,7 +24,13 @@ class Tray:
         on_activate: Callable[[], None],
         on_menu_about_to_show: Callable[[], bool] | None = None,
     ) -> None:
-        self._sni = StatusNotifierItem(TRAY_TITLE, TRAY_ICON_NAME, on_activate)
+        icons_dir = app_icons_dir()
+        self._sni = StatusNotifierItem(
+            TRAY_TITLE,
+            TRAY_ICON_NAME,
+            on_activate,
+            icon_theme_path=str(icons_dir) if icons_dir is not None else "",
+        )
         self._menu = DBusMenuServer(MENU_OBJECT_PATH, on_about_to_show=on_menu_about_to_show)
 
     def register(self, connection: Gio.DBusConnection) -> None:

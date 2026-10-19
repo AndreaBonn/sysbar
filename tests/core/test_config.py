@@ -5,7 +5,11 @@ import pytest  # noqa: E402
 from gi.repository import Gio  # noqa: E402
 
 from sysbar.core.config import Config  # noqa: E402
-from sysbar.core.constants import APP_ID  # noqa: E402
+from sysbar.core.constants import (  # noqa: E402
+    APP_ID,
+    CURRENT_FEATURE_SET,
+    TRAY_BAR_DEFAULT_SINCE,
+)
 
 
 @pytest.fixture
@@ -67,8 +71,15 @@ def test_auto_quit_exceptions_setter_sanitizes(config: Config) -> None:
     assert config.auto_quit_exceptions == ["org.gnome.Nautilus", "x"]
 
 
-def test_metric_placement_default_is_off(config: Config) -> None:
-    assert config.metric_placement("cpu") == "off"
+def test_cpu_and_memory_are_in_the_bar_by_default(config: Config) -> None:
+    # A first run shows two live values, so the tray icon is not mute.
+    assert config.metric_placement("cpu") == "bar"
+    assert config.metric_placement("memory") == "bar"
+
+
+def test_other_metrics_are_off_by_default(config: Config) -> None:
+    assert config.metric_placement("network") == "off"
+    assert config.metric_placement("battery") == "off"
 
 
 def test_metric_placement_reads_stored_value(config: Config) -> None:
@@ -91,6 +102,31 @@ def test_migrate_legacy_false_bool_stays_off(config: Config) -> None:
     config.settings.set_boolean("menu-bar-memory", False)
     config.migrate_legacy_placements()
     assert config.metric_placement("memory") == "off"
+
+
+def test_migrate_keeps_an_existing_install_off_despite_the_new_bar_default(
+    config: Config,
+) -> None:
+    # Someone who already finished onboarding never chose a placement: the
+    # schema default used to be "off", and an update must not change their bar.
+    config.set_bool("has-onboarded", True)
+    config.migrate_legacy_placements()
+    assert config.metric_placement("cpu") == "off"
+    assert config.metric_placement("memory") == "off"
+
+
+def test_migrate_keeps_the_bar_for_a_user_onboarded_on_the_current_set(
+    config: Config,
+) -> None:
+    config.set_bool("has-onboarded", True)
+    config.settings.set_int("features-onboarding-version", TRAY_BAR_DEFAULT_SINCE)
+    config.migrate_legacy_placements()
+    assert config.metric_placement("cpu") == "bar"
+
+
+def test_migrate_leaves_a_new_install_on_the_bar_default(config: Config) -> None:
+    config.migrate_legacy_placements()
+    assert config.metric_placement("cpu") == "bar"
 
 
 def test_migrate_does_not_overwrite_user_choice(config: Config) -> None:
@@ -143,3 +179,9 @@ def test_constructs_without_backend_from_installed_schema(compiled_schema: str) 
     # Exercises the no-backend branch: the schema resolves via GSETTINGS_SCHEMA_DIR.
     config = Config(schema_id=APP_ID)
     assert isinstance(config.settings, Gio.Settings)
+
+
+def test_the_bar_default_cannot_postdate_the_feature_set_written_at_onboarding() -> None:
+    # Onboarding stamps CURRENT_FEATURE_SET; if it were lower than the threshold,
+    # every new user would be pinned to "off" on their second launch.
+    assert TRAY_BAR_DEFAULT_SINCE <= CURRENT_FEATURE_SET

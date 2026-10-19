@@ -14,10 +14,8 @@ import logging
 import gi
 
 gi.require_version("Gio", "2.0")
-gi.require_version("GLib", "2.0")
-from gi.repository import Gio, GLib  # noqa: E402
+from gi.repository import Gio  # noqa: E402
 
-from ..core.constants import AUTHOR_GITHUB_URL  # noqa: E402
 from . import tray_state  # noqa: E402
 from .context import AppContext  # noqa: E402
 from .features import Features  # noqa: E402
@@ -29,14 +27,6 @@ from .tray_renderer import render_tray_label  # noqa: E402
 _LABEL_SEPARATOR = " · "
 
 log = logging.getLogger(__name__)
-
-
-def open_author_profile() -> None:
-    """Open the author's GitHub profile from the tray menu credit row."""
-    try:
-        Gio.AppInfo.launch_default_for_uri(AUTHOR_GITHUB_URL, None)
-    except GLib.Error:
-        log.exception("Failed to open author GitHub profile")
 
 
 class TrayController:
@@ -73,6 +63,9 @@ class TrayController:
             if segment
         ]
         self._tray.set_label(_LABEL_SEPARATOR.join(segments))
+        self._tray.set_icon(
+            tray_state.tray_icon_name(keep_awake_active=self._features.keep_awake.is_active)
+        )
 
     def sync_sampling(self) -> None:
         """Tell the monitor whether the tray still needs samples, then redraw."""

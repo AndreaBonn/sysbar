@@ -18,7 +18,7 @@ from __future__ import annotations
 from collections.abc import Callable
 from dataclasses import dataclass
 
-from ...core.constants import AUTHOR_NAME, MAX_PERIPHERAL_ROWS, TRAY_METRICS
+from ...core.constants import MAX_PERIPHERAL_ROWS, TRAY_METRICS
 from ...core.i18n import _
 from ...services.scenes.constants import MAX_SCENE_ROWS
 from .menu_model import TOGGLE_OFF, TOGGLE_ON, TYPE_SEPARATOR, MenuItem
@@ -45,7 +45,8 @@ class MenuActions:
     open_clipboard: Callable[[], None]
     open_uninstaller: Callable[[], None]
     open_settings: Callable[[], None]
-    open_github: Callable[[], None]
+    open_palette: Callable[[], None]
+    open_scenes: Callable[[], None]
     quit: Callable[[], None]
     activate_scene: Callable[[str], None] = _ignore_scene
     clear_scene: Callable[[], None] = _ignore
@@ -153,6 +154,7 @@ def _action_rows(
     scenes: tuple[SceneMenuEntry, ...],
 ) -> list[MenuItem]:
     return [
+        _header(_("Quick actions")),
         MenuItem(
             label=_("Keep awake"),
             toggle_type="checkmark",
@@ -162,16 +164,36 @@ def _action_rows(
         *_quick_toggle_rows(toggles=toggles, actions=actions),
         _scenes_submenu(scenes=scenes, actions=actions),
         MenuItem(item_type=TYPE_SEPARATOR),
+        *_open_rows(
+            shelf_enabled=shelf_enabled, clipboard_enabled=clipboard_enabled, actions=actions
+        ),
+        MenuItem(item_type=TYPE_SEPARATOR),
+        MenuItem(label=_("Quit"), action=actions.quit),
+    ]
+
+
+def _open_rows(
+    *, shelf_enabled: bool, clipboard_enabled: bool, actions: MenuActions
+) -> list[MenuItem]:
+    """The "Open" section: windows, with the rare uninstaller one level down."""
+    return [
+        _header(_("Open")),
+        MenuItem(label=_("Search commands…"), action=actions.open_palette),
         MenuItem(label=_("Open panel"), action=actions.open_panel),
         MenuItem(label=_("Open shelf"), action=actions.open_shelf, visible=shelf_enabled),
         MenuItem(label=_("Clipboard"), action=actions.open_clipboard, visible=clipboard_enabled),
-        MenuItem(label=_("Uninstall app…"), action=actions.open_uninstaller),
+        MenuItem(label=_("Manage scenes…"), action=actions.open_scenes),
         MenuItem(label=_("Settings"), action=actions.open_settings),
-        MenuItem(item_type=TYPE_SEPARATOR),
-        MenuItem(label=_("Quit"), action=actions.quit),
-        MenuItem(item_type=TYPE_SEPARATOR),
-        MenuItem(label=f"© {AUTHOR_NAME}", action=actions.open_github),
+        MenuItem(
+            label=_("More tools"),
+            children=[MenuItem(label=_("Uninstall app…"), action=actions.open_uninstaller)],
+        ),
     ]
+
+
+def _header(label: str) -> MenuItem:
+    """A greyed-out section title: dbusmenu has no header type, a disabled row is the idiom."""
+    return MenuItem(label=label, enabled=False)
 
 
 def _scene_activator(actions: MenuActions, scene_id: str) -> Callable[[], None]:

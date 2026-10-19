@@ -118,7 +118,7 @@ def test_clipboard_window_builds(gtk: object, tmp_path: Path) -> None:
 def test_settings_window_builds(gtk: object, compiled_schema: str) -> None:
     from sysbar.ui.settings.settings_window import SettingsWindow
 
-    window = SettingsWindow(Config(), AutostartManager())
+    window = SettingsWindow(Config(), AutostartManager(), on_show_onboarding=lambda: None)
     assert window.get_title()
     window.destroy()
 
@@ -134,7 +134,12 @@ def test_shelf_window_builds(gtk: object, tmp_path: Path) -> None:
 def test_onboarding_window_builds(gtk: object) -> None:
     from sysbar.ui.onboarding.onboarding_window import OnboardingWindow
 
-    window = OnboardingWindow(Capabilities(), on_finish=lambda: None)
+    window = OnboardingWindow(
+        Capabilities(),
+        config=Config(),
+        autostart=AutostartManager(),
+        on_finish=lambda: None,
+    )
     assert window.get_title() is not None
     window.destroy()
 

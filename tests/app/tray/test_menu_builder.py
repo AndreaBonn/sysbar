@@ -1,6 +1,6 @@
 from sysbar.app.tray.menu_builder import MenuActions, QuickToggleState, build_menu_items
 from sysbar.app.tray.menu_model import TOGGLE_OFF, TOGGLE_ON, TYPE_SEPARATOR, MenuItem
-from sysbar.core.constants import AUTHOR_NAME, MAX_PERIPHERAL_ROWS, TRAY_METRICS
+from sysbar.core.constants import MAX_PERIPHERAL_ROWS, TRAY_METRICS
 
 _METRIC_SEPARATOR_INDEX = len(TRAY_METRICS) + MAX_PERIPHERAL_ROWS
 
@@ -20,7 +20,8 @@ def _actions() -> MenuActions:
         open_clipboard=_noop,
         open_uninstaller=_noop,
         open_settings=_noop,
-        open_github=_noop,
+        open_palette=_noop,
+        open_scenes=_noop,
         quit=_noop,
     )
 
@@ -187,7 +188,8 @@ def test_scenes_submenu_activate_and_clear_callbacks() -> None:
         open_clipboard=_noop,
         open_uninstaller=_noop,
         open_settings=_noop,
-        open_github=_noop,
+        open_palette=_noop,
+        open_scenes=_noop,
         quit=_noop,
         activate_scene=lambda scene_id: calls.append(f"activate:{scene_id}"),
         clear_scene=lambda: calls.append("clear"),
@@ -214,20 +216,37 @@ def test_action_rows_are_present_and_enabled() -> None:
     items = _build()
     labels = [i.label for i in items if i.item_type != TYPE_SEPARATOR and i.label]
     assert labels == [
+        "Quick actions",
         "Keep awake",
         "Mute microphone",
         "Microphone in use",
         "Turn on Do Not Disturb",
         "Switch to dark mode",
         "Scenes",
+        "Open",
+        "Search commands…",
         "Open panel",
         "Open shelf",
         "Clipboard",
-        "Uninstall app…",
+        "Manage scenes…",
         "Settings",
+        "More tools",
         "Quit",
-        f"© {AUTHOR_NAME}",
     ]
+
+
+def test_section_headers_are_read_only_labels() -> None:
+    items = _build()
+    headers = [i for i in items if i.label in ("Quick actions", "Open")]
+    assert len(headers) == 2
+    assert all(h.visible and not h.enabled and h.action is None for h in headers)
+
+
+def test_uninstaller_moves_into_the_more_tools_submenu() -> None:
+    items = _build()
+    more = next(i for i in items if i.label == "More tools")
+    assert [child.label for child in more.children] == ["Uninstall app…"]
+    assert all(i.label != "Uninstall app…" for i in items)
 
 
 def test_quick_toggles_hidden_when_unavailable() -> None:
@@ -276,7 +295,8 @@ def test_microphone_toggle_callback_wired() -> None:
         open_clipboard=_noop,
         open_uninstaller=_noop,
         open_settings=_noop,
-        open_github=_noop,
+        open_palette=_noop,
+        open_scenes=_noop,
         quit=_noop,
     )
     items = build_menu_items(
@@ -299,9 +319,8 @@ def test_quit_appears_exactly_once() -> None:
     assert len(quit_rows) == 1
 
 
-def test_action_callbacks_are_wired() -> None:
-    calls: list[str] = []
-    actions = MenuActions(
+def _recording_actions(calls: list[str]) -> MenuActions:
+    return MenuActions(
         toggle_keep_awake=lambda: calls.append("toggle"),
         toggle_microphone=_noop,
         toggle_dnd=_noop,
@@ -311,10 +330,14 @@ def test_action_callbacks_are_wired() -> None:
         open_clipboard=_noop,
         open_uninstaller=lambda: calls.append("uninstall"),
         open_settings=lambda: calls.append("settings"),
-        open_github=lambda: calls.append("github"),
+        open_palette=lambda: calls.append("palette"),
+        open_scenes=lambda: calls.append("scenes"),
         quit=lambda: calls.append("quit"),
     )
-    items = build_menu_items(
+
+
+def _build_with(actions: MenuActions) -> list[MenuItem]:
+    return build_menu_items(
         {},
         keep_awake_on=False,
         shelf_enabled=False,
@@ -322,37 +345,32 @@ def test_action_callbacks_are_wired() -> None:
         toggles=QuickToggleState(),
         actions=actions,
     )
+
+
+def test_action_callbacks_are_wired() -> None:
+    calls: list[str] = []
+    items = _build_with(_recording_actions(calls))
     quit_row = next(i for i in items if i.label == "Quit")
     assert quit_row.action is not None
     quit_row.action()
     assert calls == ["quit"]
 
 
-def test_github_credit_is_last_and_wired() -> None:
+def test_palette_scenes_and_uninstaller_rows_are_wired() -> None:
     calls: list[str] = []
-    actions = MenuActions(
-        toggle_keep_awake=_noop,
-        toggle_microphone=_noop,
-        toggle_dnd=_noop,
-        toggle_dark_mode=_noop,
-        open_panel=_noop,
-        open_shelf=_noop,
-        open_clipboard=_noop,
-        open_uninstaller=_noop,
-        open_settings=_noop,
-        open_github=lambda: calls.append("github"),
-        quit=_noop,
-    )
-    items = build_menu_items(
-        {},
-        keep_awake_on=False,
-        shelf_enabled=False,
-        clipboard_enabled=False,
-        toggles=QuickToggleState(),
-        actions=actions,
-    )
-    credit = items[-1]
-    assert credit.label == f"© {AUTHOR_NAME}"
-    assert credit.action is not None
-    credit.action()
-    assert calls == ["github"]
+    items = _build_with(_recording_actions(calls))
+    more = next(i for i in items if i.label == "More tools")
+    rows = [
+        next(i for i in items if i.label == "Search commands…"),
+        next(i for i in items if i.label == "Manage scenes…"),
+        more.children[0],
+    ]
+    for row in rows:
+        assert row.action is not None
+        row.action()
+    assert calls == ["palette", "scenes", "uninstall"]
+
+
+def test_quit_is_the_last_row() -> None:
+    items = _build()
+    assert items[-1].label == "Quit"

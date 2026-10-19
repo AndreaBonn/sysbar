@@ -27,7 +27,11 @@ DBUS_OBJECT_PATH = "/" + APP_ID.replace(".", "/")
 
 # Tray icon. A themed symbolic name is used so the icon is visible in a source
 # checkout; packaging installs the branded "io.github.AndreaBonn.Sysbar" icon (M9).
-TRAY_ICON_NAME = "utilities-system-monitor-symbolic"
+# Symbolic variants of the brand mark, shipped under data/icons/hicolor/symbolic.
+# The awake variant carries a dot so an active keep-awake session is visible
+# from the bar even with the countdown turned off.
+TRAY_ICON_NAME = f"{APP_ID}-symbolic"
+TRAY_ICON_AWAKE_NAME = f"{APP_ID}-awake-symbolic"
 TRAY_TITLE = "Sysbar"
 
 # GitHub identity used by the optional update check (services/update_service.py).
@@ -145,7 +149,11 @@ PANEL_SECTION_ORDER: tuple[str, ...] = (
 )
 
 # Feature tour versioning (post-update showcase).
-CURRENT_FEATURE_SET = 4
+CURRENT_FEATURE_SET = 5
+# Feature set from which CPU and memory sit in the tray bar by default. An
+# install onboarded on an earlier set keeps the "off" it had (see
+# Config.migrate_legacy_placements).
+TRAY_BAR_DEFAULT_SINCE = 5
 PANEL_NAVIGATION_FEATURE_SET = 4
 
 # Capability re-check cadence for dynamic capabilities (session, extension).

@@ -48,6 +48,7 @@ _INTROSPECTION = """
     <property name="Title" type="s" access="read"/>
     <property name="Status" type="s" access="read"/>
     <property name="IconName" type="s" access="read"/>
+    <property name="IconThemePath" type="s" access="read"/>
     <property name="ItemIsMenu" type="b" access="read"/>
     <property name="Menu" type="o" access="read"/>
     <property name="XAyatanaLabel" type="s" access="read"/>
@@ -67,9 +68,19 @@ _INTROSPECTION = """
 class StatusNotifierItem:
     """Serve and register a StatusNotifierItem on the session bus."""
 
-    def __init__(self, title: str, icon_name: str, on_activate: Callable[[], None]) -> None:
+    def __init__(
+        self,
+        title: str,
+        icon_name: str,
+        on_activate: Callable[[], None],
+        *,
+        icon_theme_path: str = "",
+    ) -> None:
         self._title = title
         self._icon_name = icon_name
+        # Extra directory the host searches for ``icon_name``: a source checkout
+        # keeps the symbolic tray icons under data/icons, outside any theme path.
+        self._icon_theme_path = icon_theme_path
         self._label = ""
         self._on_activate = on_activate
         self._connection: Gio.DBusConnection | None = None
@@ -163,6 +174,7 @@ class StatusNotifierItem:
             "Title": GLib.Variant("s", self._title),
             "Status": GLib.Variant("s", "Active"),
             "IconName": GLib.Variant("s", self._icon_name),
+            "IconThemePath": GLib.Variant("s", self._icon_theme_path),
             "ItemIsMenu": GLib.Variant("b", False),
             "Menu": GLib.Variant("o", MENU_OBJECT_PATH),
             "XAyatanaLabel": GLib.Variant("s", self._label),

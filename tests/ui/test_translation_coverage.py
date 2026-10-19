@@ -107,7 +107,8 @@ def _exercise_tray_menu() -> None:
         open_clipboard=_noop,
         open_uninstaller=_noop,
         open_settings=_noop,
-        open_github=_noop,
+        open_palette=_noop,
+        open_scenes=_noop,
         quit=_noop,
         activate_scene=_noop_scene,
         clear_scene=_noop,
@@ -273,9 +274,14 @@ def _exercise_windows(tmp_path: Path) -> None:
         PaletteWindow(lambda _query: []),
         ScenesWindow(_FakeSceneController()),
         ClipboardWindow(ClipboardService(tmp_path / "clipboard"), on_copy=lambda _text: None),
-        SettingsWindow(Config(), AutostartManager()),
+        SettingsWindow(Config(), AutostartManager(), on_show_onboarding=lambda: None),
         ShelfWindow(shelf_service),
-        OnboardingWindow(Capabilities(), on_finish=lambda: None),
+        OnboardingWindow(
+            Capabilities(),
+            config=Config(),
+            autostart=AutostartManager(),
+            on_finish=lambda: None,
+        ),
         UninstallerWindow(
             AppUninstaller(
                 home=_Path("/tmp"),

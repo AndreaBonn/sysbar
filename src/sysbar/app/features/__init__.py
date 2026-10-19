@@ -21,6 +21,7 @@ from .auto_quit import AutoQuitFeature
 from .clipboard import ClipboardFeature
 from .keep_awake import KeepAwakeFeature
 from .monitor import MonitorFeature
+from .onboarding import OnboardingFeature
 from .palette import PaletteFeature
 from .panel import PanelFeature
 from .scenes import ScenesFeature
@@ -51,3 +52,4 @@ class Features:
     auto_quit: AutoQuitFeature
     uninstaller: UninstallerFeature
     updates: UpdateCheckFeature
+    onboarding: OnboardingFeature

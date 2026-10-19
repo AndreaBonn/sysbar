@@ -14,7 +14,13 @@ gi.require_version("GLib", "2.0")
 from gi.repository import Gio, GLib  # noqa: E402
 
 from . import validation  # noqa: E402
-from .constants import APP_ID, PLACEMENT_BAR, TRAY_METRICS  # noqa: E402
+from .constants import (  # noqa: E402
+    APP_ID,
+    PLACEMENT_BAR,
+    PLACEMENT_OFF,
+    TRAY_BAR_DEFAULT_SINCE,
+    TRAY_METRICS,
+)
 
 
 class Config:
@@ -111,18 +117,31 @@ class Config:
         return validation.sanitized_placement(raw)
 
     def migrate_legacy_placements(self) -> None:
-        """Seed placement keys from the deprecated boolean tray keys, once.
+        """Seed placement keys for installs that predate their current defaults, once.
 
         For each metric whose placement was never set by the user, a legacy
-        ``menu-bar-<metric>`` set to ``true`` becomes ``bar``. Idempotent: a
-        placement chosen by the user (including ``off``) is never overwritten.
+        ``menu-bar-<metric>`` set to ``true`` becomes ``bar``. On an existing
+        install (onboarding done, or a legacy key written) any other unset
+        placement is pinned to ``off``: the schema default used to be ``off``
+        and is now ``bar`` for CPU and memory, a change meant for new users only.
+        "Existing" means onboarded on a feature set older than
+        :data:`TRAY_BAR_DEFAULT_SINCE`, so a new user's second launch is not
+        mistaken for an upgrade.
+        Idempotent: a placement chosen by the user is never overwritten.
         """
+        existing = (
+            self.get_bool("has-onboarded")
+            and self._settings.get_int("features-onboarding-version") < TRAY_BAR_DEFAULT_SINCE
+        )
         for metric in TRAY_METRICS:
             placement_key = f"menu-bar-{metric}-placement"
             if self._settings.get_user_value(placement_key) is not None:
                 continue
-            if self._settings.get_boolean(f"menu-bar-{metric}"):
+            legacy_key = f"menu-bar-{metric}"
+            if self._settings.get_boolean(legacy_key):
                 self._settings.set_string(placement_key, PLACEMENT_BAR)
+            elif existing or self._settings.get_user_value(legacy_key) is not None:
+                self._settings.set_string(placement_key, PLACEMENT_OFF)
 
     @property
     def auto_quit_exceptions(self) -> list[str]:

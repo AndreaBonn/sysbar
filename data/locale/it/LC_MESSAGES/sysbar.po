@@ -597,3 +597,129 @@ msgstr "Sotto questa carica (%)"
 
 msgid "Undo when the condition ends"
 msgstr "Annulla quando la condizione finisce"
+
+msgid "Quick actions"
+msgstr "Azioni rapide"
+
+msgid "Open"
+msgstr "Apri"
+
+msgid "Search commands…"
+msgstr "Cerca comandi…"
+
+msgid "Manage scenes…"
+msgstr "Gestisci scene…"
+
+msgid "More tools"
+msgstr "Altri strumenti"
+
+msgid "Awake"
+msgstr "Sveglio"
+
+msgid "A drop zone for files you need in a moment"
+msgstr "Un'area dove appoggiare i file che ti servono a breve"
+
+msgid "Audio mixer and microphone"
+msgstr "Mixer audio e microfono"
+
+msgid "CPU, memory, network, battery and the busiest apps."
+msgstr "CPU, memoria, rete, batteria e le app che consumano di più."
+
+msgid "Click it for the live panel"
+msgstr "Cliccala per il pannello in tempo reale"
+
+msgid "Close apps automatically"
+msgstr "Chiudi le app automaticamente"
+
+msgid "Do Not Disturb and dark style"
+msgstr "Non disturbare e stile scuro"
+
+msgid "Find again anything you copied"
+msgstr "Ritrova tutto ciò che hai copiato"
+
+msgid "Find the Sysbar icon in the top bar"
+msgstr "Trova l'icona di Sysbar nella barra in alto"
+
+msgid "How it works"
+msgstr "Come funziona"
+
+msgid "Keep awake, microphone, Do Not Disturb, scenes and every window."
+msgstr "Tieni sveglio, microfono, Non disturbare, scene e tutte le finestre."
+
+msgid "Made by {name}"
+msgstr "Creato da {name}"
+
+msgid "Needs PipeWire or PulseAudio."
+msgstr "Serve PipeWire o PulseAudio."
+
+msgid "Needs a GNOME session."
+msgstr "Serve una sessione GNOME."
+
+msgid "Needs administrator rights (polkit). Cleaning leftover files still works."
+msgstr "Servono i permessi di amministratore (polkit). La pulizia dei file rimasti funziona comunque."
+
+msgid "Needs systemd-logind."
+msgstr "Serve systemd-logind."
+
+msgid "Next to the clock. It can show live values such as CPU and memory."
+msgstr "Accanto all'orologio. Può mostrare valori in tempo reale come CPU e memoria."
+
+msgid "No temperature sensors were found on this computer."
+msgstr "Su questo computer non sono stati trovati sensori di temperatura."
+
+msgid "Not available here"
+msgstr "Non disponibile qui"
+
+msgid "Nothing detected yet"
+msgstr "Ancora nulla di rilevato"
+
+msgid "On Wayland it needs the Sysbar extension for GNOME Shell: run gnome-extensions enable sysbar-window-manager@andreabonn.github.io and log in again."
+msgstr "Su Wayland serve l'estensione di Sysbar per GNOME Shell: esegui gnome-extensions enable sysbar-window-manager@andreabonn.github.io, poi esci e rientra."
+
+msgid "Ready on this computer"
+msgstr "Pronto su questo computer"
+
+msgid "Remove system packages"
+msgstr "Rimozione dei pacchetti di sistema"
+
+msgid "Right-click for quick actions"
+msgstr "Clic destro per le azioni rapide"
+
+msgid "Show CPU and memory in the top bar"
+msgstr "Mostra CPU e memoria nella barra in alto"
+
+msgid "Show now"
+msgstr "Mostra ora"
+
+msgid "Show the welcome again"
+msgstr "Mostra di nuovo il benvenuto"
+
+msgid "The author's profile on GitHub"
+msgstr "Il profilo dell'autore su GitHub"
+
+msgid "Start with"
+msgstr "Per iniziare"
+
+msgid "Sysbar lives in the top bar, next to the clock. Choose below what to start with; everything can be changed later in Preferences."
+msgstr "Sysbar vive nella barra in alto, accanto all'orologio. Scegli qui sotto da cosa partire; puoi cambiare tutto in seguito dalle Preferenze."
+
+msgid "Temperatures"
+msgstr "Temperature"
+
+msgid "The top-bar icon cannot appear on this desktop, so Sysbar would stay invisible. Turn on the “AppIndicator and KStatusNotifierItem Support” extension in the Extensions app, then log in again."
+msgstr "Su questo desktop l'icona nella barra in alto non può comparire, quindi Sysbar resterebbe invisibile. Attiva l'estensione “AppIndicator and KStatusNotifierItem Support” nell'app Estensioni, poi esci e rientra."
+
+msgid "Top-bar icon"
+msgstr "Icona nella barra in alto"
+
+msgid "Turn on the “AppIndicator and KStatusNotifierItem Support” extension in the Extensions app, then log in again."
+msgstr "Attiva l'estensione “AppIndicator and KStatusNotifierItem Support” nell'app Estensioni, poi esci e rientra."
+
+msgid "UPower is not running, so battery levels are unknown."
+msgstr "UPower non è in esecuzione, quindi i livelli della batteria non sono noti."
+
+msgid "You can change these later in Preferences"
+msgstr "Puoi cambiarle in seguito dalle Preferenze"
+
+msgid "Your desktop does not offer them to apps."
+msgstr "Il tuo desktop non le mette a disposizione delle app."

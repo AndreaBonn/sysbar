@@ -2,23 +2,25 @@
 
 from __future__ import annotations
 
-from collections.abc import Sequence
+import logging
+from collections.abc import Callable, Sequence
 
 import gi
 
 gi.require_version("Gtk", "4.0")
 gi.require_version("Adw", "1")
-from gi.repository import Adw, Gdk, Gio, Gtk  # noqa: E402
+from gi.repository import Adw, Gdk, Gio, GLib, Gtk  # noqa: E402
 
 from ... import __version__  # noqa: E402
 from ...core.branding import has_app_icon  # noqa: E402
 from ...core.config import Config  # noqa: E402
-from ...core.constants import APP_ICON_NAME  # noqa: E402
+from ...core.constants import APP_ICON_NAME, AUTHOR_GITHUB_URL, AUTHOR_NAME  # noqa: E402
 from ...core.i18n import _  # noqa: E402
 from ...core.localization import install_language  # noqa: E402
 from ...services.autostart import AutostartManager  # noqa: E402
-from ..footer import build_footer  # noqa: E402
 from .widgets import ComboBinding, bound_spin, bound_switch  # noqa: E402
+
+log = logging.getLogger(__name__)
 
 _LANGUAGE_KEY = "app-language"
 _ABOUT_LOGO_PIXELS = 96
@@ -56,6 +58,8 @@ class SettingsWindow(Adw.PreferencesWindow):
         config: Config,
         autostart: AutostartManager,
         unavailable_metrics: frozenset[str] = frozenset(),
+        *,
+        on_show_onboarding: Callable[[], None],
     ) -> None:
         super().__init__(title=_("Sysbar Preferences"))
         self.set_default_size(640, 560)
@@ -63,6 +67,7 @@ class SettingsWindow(Adw.PreferencesWindow):
         self._settings = config.settings
         self._autostart = autostart
         self._unavailable_metrics = unavailable_metrics
+        self._on_show_onboarding = on_show_onboarding
         self._combos: list[ComboBinding] = []
 
         self.add(self._general_page())
@@ -227,17 +232,14 @@ class SettingsWindow(Adw.PreferencesWindow):
         group = Adw.PreferencesGroup(title=_("About"))
         group.add(Adw.ActionRow(title=_("Version"), subtitle=__version__))
 
-        restart_row = Adw.ActionRow(title=_("Run onboarding again"))
-        button = Gtk.Button(label=_("Restart"), valign=Gtk.Align.CENTER)
-        button.connect("clicked", self._on_restart_onboarding)
-        restart_row.add_suffix(button)
-        restart_row.set_activatable_widget(button)
-        group.add(restart_row)
+        welcome_row = Adw.ActionRow(title=_("Show the welcome again"))
+        button = Gtk.Button(label=_("Show now"), valign=Gtk.Align.CENTER)
+        button.connect("clicked", lambda _button: self._on_show_onboarding())
+        welcome_row.add_suffix(button)
+        welcome_row.set_activatable_widget(button)
+        group.add(welcome_row)
+        group.add(_author_row())
         page.add(group)
-
-        credit = Adw.PreferencesGroup()
-        credit.add(build_footer())
-        page.add(credit)
         return page
 
     def _on_autostart_toggled(self, row: Adw.SwitchRow, _param: object) -> None:
@@ -252,6 +254,26 @@ class SettingsWindow(Adw.PreferencesWindow):
         self._settings.disconnect(self._language_handler)
         return False
 
-    def _on_restart_onboarding(self, _button: Gtk.Button) -> None:
-        self._settings.set_boolean("has-onboarded", False)
-        self._settings.set_int("onboarding-step", 0)
+
+def _author_row() -> Adw.ActionRow:
+    """S1: the credit lives here, once, instead of at the foot of every window."""
+    row = Adw.ActionRow(
+        title=_("Made by {name}").format(name=AUTHOR_NAME),
+        subtitle=_("The author's profile on GitHub"),
+        activatable=True,
+    )
+    row.add_suffix(Gtk.Image(icon_name="go-next-symbolic"))
+    row.connect("activated", lambda _row: _open_author_profile(row.get_root()))
+    return row
+
+
+def _open_author_profile(parent: Gtk.Window | None) -> None:
+    launcher = Gtk.UriLauncher.new(AUTHOR_GITHUB_URL)
+    launcher.launch(parent, None, _on_launched)
+
+
+def _on_launched(launcher: Gtk.UriLauncher, result: Gio.AsyncResult) -> None:
+    try:
+        launcher.launch_finish(result)
+    except GLib.Error:
+        log.exception("could not open the author's profile")

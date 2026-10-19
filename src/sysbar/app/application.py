@@ -29,7 +29,6 @@ from ..core.config import Config  # noqa: E402
 from ..core.constants import (  # noqa: E402
     APP_ID,
     CAPABILITY_REFRESH_INTERVAL_SECONDS,
-    CURRENT_FEATURE_SET,
 )
 from ..core.localization import install_language  # noqa: E402
 from ..services.autostart import AutostartManager  # noqa: E402
@@ -49,6 +48,7 @@ from .features.clipboard import ClipboardFeature  # noqa: E402
 from .features.hotkeys import HotkeyFeature  # noqa: E402
 from .features.keep_awake import KeepAwakeFeature  # noqa: E402
 from .features.monitor import MonitorFeature  # noqa: E402
+from .features.onboarding import OnboardingFeature  # noqa: E402
 from .features.palette import PaletteFeature  # noqa: E402
 from .features.panel import PanelFeature  # noqa: E402
 from .features.scenes import SceneDrivers, ScenesFeature  # noqa: E402
@@ -59,7 +59,7 @@ from .features.updates import UpdateCheckFeature  # noqa: E402
 from .palette_entries import collect  # noqa: E402
 from .shortcuts import ShortcutTargets, build_hotkey_bindings  # noqa: E402
 from .tray.menu_builder import MenuActions  # noqa: E402
-from .tray_controller import TrayController, open_author_profile  # noqa: E402
+from .tray_controller import TrayController  # noqa: E402
 from .windows import WindowSlot  # noqa: E402
 
 if TYPE_CHECKING:
@@ -128,6 +128,7 @@ class SysbarApplication(Adw.Application):
             auto_quit=AutoQuitFeature(context),
             uninstaller=UninstallerFeature(context),
             updates=UpdateCheckFeature(context),
+            onboarding=OnboardingFeature(context),
         )
 
     def _start(self, context: AppContext) -> None:
@@ -147,8 +148,7 @@ class SysbarApplication(Adw.Application):
         if not self._held:
             self._held = True
             self.hold()
-            if not self.config.get_bool("has-onboarded"):
-                self._show_onboarding()
+            self.features.onboarding.show_if_first_run()
         else:
             self._open_panel()
 
@@ -204,7 +204,8 @@ class SysbarApplication(Adw.Application):
             open_clipboard=self._open_clipboard,
             open_uninstaller=self._open_uninstaller,
             open_settings=self._open_settings,
-            open_github=open_author_profile,
+            open_palette=features.palette.open,
+            open_scenes=features.scenes.open,
             quit=self.quit,
             activate_scene=features.scenes.activate,
             clear_scene=features.scenes.clear,
@@ -281,17 +282,8 @@ class SysbarApplication(Adw.Application):
             self.config,
             self._autostart,
             tray_state.unavailable_metrics(self.features.monitor.latest),
+            on_show_onboarding=self.features.onboarding.show,
         )
 
     def _open_settings(self) -> None:
         self._settings.present()
-
-    def _show_onboarding(self) -> None:
-        from ..ui.onboarding.onboarding_window import OnboardingWindow
-
-        window = OnboardingWindow(self._capabilities, on_finish=self._finish_onboarding)
-        window.present()
-
-    def _finish_onboarding(self) -> None:
-        self.config.set_bool("has-onboarded", True)
-        self.config.settings.set_int("features-onboarding-version", CURRENT_FEATURE_SET)

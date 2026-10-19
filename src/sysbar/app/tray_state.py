@@ -21,8 +21,11 @@ from ..core.constants import (
     HARDWARE_OPTIONAL_METRICS,
     PLACEMENT_MENU,
     PLACEMENT_OFF,
+    TRAY_ICON_AWAKE_NAME,
+    TRAY_ICON_NAME,
     TRAY_METRICS,
 )
+from ..core.i18n import _
 from ..services.metrics import metric_format as mf
 from ..services.scenes.models import Scene, scene_display_name
 from ..services.system_monitor.snapshot import SystemSnapshot
@@ -99,14 +102,22 @@ def unavailable_metrics(snapshot: SystemSnapshot | None) -> frozenset[str]:
 def countdown_text(*, active: bool, show: bool, remaining_seconds: float | None) -> str:
     """The keep-awake segment of the tray label.
 
-    Empty when the session is off or the countdown is disabled; the bare play
-    marker for an indefinite session; marker plus time for a timed one.
+    Empty when the session is off; a plain "Awake" when the countdown is
+    disabled, so the session still shows in the bar; the bare play marker for
+    an indefinite session; marker plus time for a timed one.
     """
-    if not active or not show:
+    if not active:
         return ""
+    if not show:
+        return _("Awake")
     if remaining_seconds is None:
         return KEEP_AWAKE_PLAY
     return f"{KEEP_AWAKE_PLAY} {mf.format_countdown(remaining_seconds)}"
+
+
+def tray_icon_name(*, keep_awake_active: bool) -> str:
+    """The tray icon: the awake variant while keep awake holds the session."""
+    return TRAY_ICON_AWAKE_NAME if keep_awake_active else TRAY_ICON_NAME
 
 
 def scene_entries(scenes: Iterable[Scene], active_id: str) -> tuple[SceneMenuEntry, ...]:

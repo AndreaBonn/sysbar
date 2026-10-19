@@ -17,6 +17,8 @@ from sysbar.core.constants import (  # noqa: E402
     PLACEMENT_MENU,
     PLACEMENT_OFF,
     TEMPERATURE_FAHRENHEIT,
+    TRAY_ICON_AWAKE_NAME,
+    TRAY_ICON_NAME,
 )
 from sysbar.services.scenes.models import Scene  # noqa: E402
 from sysbar.services.system_monitor.models import PeripheralBattery  # noqa: E402
@@ -187,8 +189,21 @@ def test_countdown_text_is_empty_when_keep_awake_is_off() -> None:
     assert tray_state.countdown_text(active=False, show=True, remaining_seconds=90) == ""
 
 
-def test_countdown_text_is_empty_when_the_countdown_is_disabled() -> None:
-    assert tray_state.countdown_text(active=True, show=False, remaining_seconds=90) == ""
+def test_countdown_text_says_awake_when_the_countdown_is_disabled() -> None:
+    # Without the countdown the session would otherwise leave no trace in the bar.
+    assert tray_state.countdown_text(active=True, show=False, remaining_seconds=90) == "Awake"
+
+
+# --- tray_icon_name -------------------------------------------------------
+
+
+def test_tray_icon_is_the_branded_symbolic_icon_when_idle() -> None:
+    assert tray_state.tray_icon_name(keep_awake_active=False) == TRAY_ICON_NAME
+
+
+def test_tray_icon_switches_to_the_awake_variant_while_keep_awake_holds() -> None:
+    assert tray_state.tray_icon_name(keep_awake_active=True) == TRAY_ICON_AWAKE_NAME
+    assert TRAY_ICON_AWAKE_NAME != TRAY_ICON_NAME
 
 
 def test_countdown_text_is_the_bare_marker_for_an_indefinite_session() -> None:
