@@ -56,7 +56,9 @@ class TrayController:
         if self._tray is None:
             return
         self._tray.set_label(
-            tray_state.tray_label((self._features.keep_awake.countdown_text(), self.metric_label()))
+            tray_state.tray_label(
+                segments=(self._features.keep_awake.countdown_text(), self.metric_label())
+            )
         )
         self._tray.set_icon(
             tray_state.tray_icon_name(keep_awake_active=self._features.keep_awake.is_active)

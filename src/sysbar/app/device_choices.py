@@ -10,7 +10,7 @@ from dataclasses import dataclass
 
 from ..services.audio.models import AudioDevice
 
-_FIRST_DEVICE_INDEX = 0
+FIRST_DEVICE_INDEX = 0
 
 
 @dataclass(frozen=True)
@@ -35,7 +35,7 @@ def default_choices(devices: list[AudioDevice]) -> DeviceChoices:
     DeviceChoices
         Labels and names in the same order, with no selection for an empty list.
     """
-    selected = _FIRST_DEVICE_INDEX if devices else None
+    selected = FIRST_DEVICE_INDEX if devices else None
     for index, device in enumerate(devices):
         if device.is_default:
             selected = index
@@ -61,7 +61,7 @@ def name_at(choices: DeviceChoices, index: int) -> str | None:
     str or None
         Device name, or None when the index does not identify a row.
     """
-    if _FIRST_DEVICE_INDEX <= index < len(choices.names):
+    if FIRST_DEVICE_INDEX <= index < len(choices.names):
         return choices.names[index]
     return None
 
@@ -86,5 +86,5 @@ def scene_output_choices(devices: list[AudioDevice], selected_name: str | None) 
     return DeviceChoices(
         labels=tuple(device.description or device.name for device in devices),
         names=names,
-        selected=names.index(selected_name) if selected_name in names else _FIRST_DEVICE_INDEX,
+        selected=names.index(selected_name) if selected_name in names else FIRST_DEVICE_INDEX,
     )

@@ -1,8 +1,8 @@
 from collections.abc import Callable
 from datetime import datetime, timedelta
 
-from sysbar.services.keep_awake.manager import WHAT_IDLE_SLEEP, WHAT_LID, KeepAwakeManager
-from sysbar.services.keep_awake.ports import EndReason
+from sysbar.services.keep_awake.manager import WHAT_LID, KeepAwakeManager
+from sysbar.services.keep_awake.ports import WHAT_IDLE_SLEEP, EndReason
 
 
 class FakeInhibitor:

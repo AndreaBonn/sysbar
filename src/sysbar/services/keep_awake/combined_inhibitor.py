@@ -5,10 +5,9 @@ from __future__ import annotations
 import logging
 from dataclasses import dataclass
 
-from .ports import ScreenSaverInhibitor, SleepInhibitor
+from .ports import WHAT_IDLE_SLEEP, ScreenSaverInhibitor, SleepInhibitor
 
 log = logging.getLogger(__name__)
-_WHAT_IDLE_SLEEP = "idle:sleep"
 
 
 @dataclass(frozen=True)
@@ -26,7 +25,7 @@ class CombinedInhibitor:
 
     def acquire(self, what: str) -> object | None:
         fd = self._sleep.acquire(what)
-        cookie = self._screensaver.acquire() if what == _WHAT_IDLE_SLEEP else None
+        cookie = self._screensaver.acquire() if what == WHAT_IDLE_SLEEP else None
         if fd is None and cookie is None:
             log.warning("no inhibitor available", extra={"what": what})
             return None

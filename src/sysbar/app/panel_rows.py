@@ -70,15 +70,19 @@ def _power(watts: float | None) -> str | None:
 def metric_rows(snapshot: SystemSnapshot, temperature_unit: str) -> dict[str, MetricRow]:
     """The value of every metric row for one snapshot, keyed by row key."""
     return {
-        "cpu": MetricRow(_percent(snapshot.cpu_percent), snapshot.cpu_percent),
-        "cpu_temp": MetricRow(_temperature(snapshot.cpu_temp_celsius, temperature_unit)),
-        "gpu": MetricRow(_percent(snapshot.gpu_percent), snapshot.gpu_percent),
-        "memory": MetricRow(memory_text(snapshot), snapshot.memory_percent),
-        "uptime": MetricRow(_uptime(snapshot.uptime_seconds)),
-        "net_speed": MetricRow(net_pair(snapshot.net_rx_rate, snapshot.net_tx_rate, rate=True)),
-        "net_total": MetricRow(net_pair(snapshot.net_rx_total, snapshot.net_tx_total, rate=False)),
-        "battery": MetricRow(battery_text(snapshot), snapshot.battery_percent),
-        "power": MetricRow(_power(snapshot.power_watts)),
+        "cpu": MetricRow(text=_percent(snapshot.cpu_percent), level=snapshot.cpu_percent),
+        "cpu_temp": MetricRow(text=_temperature(snapshot.cpu_temp_celsius, temperature_unit)),
+        "gpu": MetricRow(text=_percent(snapshot.gpu_percent), level=snapshot.gpu_percent),
+        "memory": MetricRow(text=memory_text(snapshot), level=snapshot.memory_percent),
+        "uptime": MetricRow(text=_uptime(snapshot.uptime_seconds)),
+        "net_speed": MetricRow(
+            text=net_pair(snapshot.net_rx_rate, snapshot.net_tx_rate, rate=True)
+        ),
+        "net_total": MetricRow(
+            text=net_pair(snapshot.net_rx_total, snapshot.net_tx_total, rate=False)
+        ),
+        "battery": MetricRow(text=battery_text(snapshot), level=snapshot.battery_percent),
+        "power": MetricRow(text=_power(snapshot.power_watts)),
     }
 
 

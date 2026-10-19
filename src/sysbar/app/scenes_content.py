@@ -14,8 +14,8 @@ from ..services.audio.models import AudioDevice
 from ..services.scenes.actions import SystemToggle
 from ..services.scenes.editing import SceneDraft, TriggerChoice, draft_from
 from ..services.scenes.models import PRESET_SCENE_IDS, Scene
+from .device_choices import FIRST_DEVICE_INDEX
 
-_FIRST_DEVICE_INDEX = 0
 _UNCHANGED_DEVICE = ""
 
 # Combo order for the trigger condition; the index maps into this tuple.
@@ -120,7 +120,7 @@ def form_draft(values: FormValues, base: Scene) -> SceneDraft:
         toggles={key: value for key, value in toggles.items() if value is not None},
         output_device=(
             values.device_names[index]
-            if _FIRST_DEVICE_INDEX <= index < len(values.device_names)
+            if FIRST_DEVICE_INDEX <= index < len(values.device_names)
             else _UNCHANGED_DEVICE
         ),
         preserved=draft_from(scene=base).preserved,

@@ -121,5 +121,7 @@ class MetricsSection(Gtk.Box):
 
     def update_snapshot(self, snapshot: SystemSnapshot) -> None:
         """Refresh all metric rows; rows without data are hidden."""
-        for key, value in metric_rows(snapshot, self.temperature_unit).items():
+        for key, value in metric_rows(
+            snapshot=snapshot, temperature_unit=self.temperature_unit
+        ).items():
             self._rows[key].show(value.text, value.level)

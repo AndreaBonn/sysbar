@@ -19,12 +19,11 @@ import gi
 gi.require_version("Gio", "2.0")
 from gi.repository import Gio, GLib  # noqa: E402
 
-from .portal_protocol import request_path, session_handle_from  # noqa: E402
+from .portal_protocol import PORTAL_PATH, request_path, session_handle_from  # noqa: E402
 
 log = logging.getLogger(__name__)
 
 _PORTAL_NAME = "org.freedesktop.portal.Desktop"
-_PORTAL_PATH = "/org/freedesktop/portal/desktop"
 _SHORTCUTS_IFACE = "org.freedesktop.portal.GlobalShortcuts"
 _REQUEST_IFACE = "org.freedesktop.portal.Request"
 _HANDLE_TOKEN = "sysbar_shortcuts"
@@ -44,7 +43,7 @@ class PortalGlobalShortcuts:  # pragma: no cover - xdg-desktop-portal boundary
             Gio.DBusProxyFlags.NONE,
             None,
             _PORTAL_NAME,
-            _PORTAL_PATH,
+            PORTAL_PATH,
             _SHORTCUTS_IFACE,
             None,
         )
@@ -53,7 +52,7 @@ class PortalGlobalShortcuts:  # pragma: no cover - xdg-desktop-portal boundary
             _PORTAL_NAME,
             _SHORTCUTS_IFACE,
             "Activated",
-            _PORTAL_PATH,
+            PORTAL_PATH,
             None,
             Gio.DBusSignalFlags.NONE,
             self._on_activated,

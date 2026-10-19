@@ -13,6 +13,10 @@ from typing import Protocol
 # A handle returned by an inhibitor when an inhibition is taken; opaque to us.
 InhibitorToken = object
 
+# The logind "what" of a keep-awake session. The combined inhibitor also takes
+# the ScreenSaver inhibition only for this one, so both sides read it here.
+WHAT_IDLE_SLEEP = "idle:sleep"
+
 
 class EndReason(StrEnum):
     """Why a keep-awake session ended."""

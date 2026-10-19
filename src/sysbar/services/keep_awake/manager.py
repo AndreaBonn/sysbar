@@ -19,11 +19,17 @@ gi.require_version("GLib", "2.0")
 from gi.repository import GObject  # noqa: E402
 
 from ...core.constants import BATTERY_WATCHDOG_INTERVAL_SECONDS  # noqa: E402
-from .ports import BatterySource, EndReason, Inhibitor, InhibitorToken, Scheduler  # noqa: E402
+from .ports import (  # noqa: E402
+    WHAT_IDLE_SLEEP,
+    BatterySource,
+    EndReason,
+    Inhibitor,
+    InhibitorToken,
+    Scheduler,
+)
 
 log = logging.getLogger(__name__)
 
-WHAT_IDLE_SLEEP = "idle:sleep"
 WHAT_LID = "handle-lid-switch"
 _SECONDS_PER_MINUTE = 60
 
