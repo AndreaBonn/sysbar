@@ -22,7 +22,7 @@
 | T17 | app/clipboard_content.py (Could) | T0 | R1 | ok | revert | fatto (a8b4da1) |
 | T18 | gate traduzioni sui rami dei moduli puri | T3-T17 | R8 | seq | revert | fatto (a2c693b, 5cdf166) |
 | T19 | misura finale + checklist runtime | tutti | R4 | seq | n/a | |
-| T20 | riscrittura test DA RISCRIVERE/DEBOLE di test-audit.md | T0 | R7 | ok | revert | |
+| T20 | riscrittura test DA RISCRIVERE/DEBOLE di test-audit.md | T0 | R7 | ok | revert | fatto (63e0634..669127a parte A, 86805ae..71f3574 parte B) |
 | T21 | isolamento dconf della suite | - | R6 | ok | revert | fatto (f7f08b5) |
 | T22 | fix blocco della combo dispositivi audio (set_model rientrante in notify::selected), emerso in T5 | - | R9 | - | revert | fatto (07c9041) |
 
