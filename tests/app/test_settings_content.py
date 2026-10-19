@@ -1,13 +1,35 @@
 from __future__ import annotations
 
+import pytest
+
 from sysbar.app.settings_content import (
     ALERTS,
     PLACEMENT_OPTIONS,
     SHORTCUTS,
     AlertSpec,
     alert_subtitle,
+    threshold_on_switch,
     tray_preview_text,
 )
+
+
+@pytest.mark.parametrize(
+    ("enabled", "current", "expected"),
+    [
+        (True, -1, 90),
+        (False, -1, None),
+        (True, 85, None),
+        (False, 85, 0),
+        (True, 0, 90),
+        (False, 0, None),
+        (True, 1, None),
+        (False, 1, 0),
+    ],
+)
+def test_threshold_on_switch_state_and_boundaries_return_write_value(
+    enabled: bool, current: int, expected: int | None
+) -> None:
+    assert threshold_on_switch(spec=ALERTS[0], enabled=enabled, current=current) == expected
 
 
 def _spec(key: str) -> AlertSpec:

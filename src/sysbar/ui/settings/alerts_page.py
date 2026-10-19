@@ -13,7 +13,13 @@ gi.require_version("Gtk", "4.0")
 gi.require_version("Adw", "1")
 from gi.repository import Adw, Gio  # noqa: E402
 
-from ...app.settings_content import ALERTS, CPU_SECONDS_KEY, AlertSpec, alert_subtitle  # noqa: E402
+from ...app.settings_content import (  # noqa: E402
+    ALERTS,
+    CPU_SECONDS_KEY,
+    AlertSpec,
+    alert_subtitle,
+    threshold_on_switch,
+)
 from ...core.i18n import _  # noqa: E402
 from .widgets import bound_spin, bound_switch  # noqa: E402
 
@@ -63,11 +69,13 @@ class AlertsPage(Adw.PreferencesPage):
         return row
 
     def _on_switched(self, row: Adw.ExpanderRow, _param: object, spec: AlertSpec) -> None:
-        current = self._settings.get_int(spec.key)
-        if row.get_enable_expansion() and current <= 0:
-            self._settings.set_int(spec.key, spec.suggested)
-        elif not row.get_enable_expansion() and current > 0:
-            self._settings.set_int(spec.key, 0)
+        threshold = threshold_on_switch(
+            spec=spec,
+            enabled=row.get_enable_expansion(),
+            current=self._settings.get_int(spec.key),
+        )
+        if threshold is not None:
+            self._settings.set_int(spec.key, threshold)
 
     def _on_changed(self, _settings: Gio.Settings, key: str) -> None:
         for spec, row in self._rows:

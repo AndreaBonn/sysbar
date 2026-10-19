@@ -46,6 +46,30 @@ ALERTS: tuple[AlertSpec, ...] = (
 CPU_SECONDS_KEY = "alert-cpu-seconds"
 
 
+def threshold_on_switch(spec: AlertSpec, *, enabled: bool, current: int) -> int | None:
+    """Choose the threshold to write, since 0 in GSettings means "off".
+
+    Parameters
+    ----------
+    spec : AlertSpec
+        Alert with the suggested threshold for activation.
+    enabled : bool
+        Requested switch state.
+    current : int
+        Threshold currently stored in GSettings.
+
+    Returns
+    -------
+    int or None
+        Suggested threshold, zero, or None when no write is needed.
+    """
+    if enabled and current <= 0:
+        return spec.suggested
+    if not enabled and current > 0:
+        return 0
+    return None
+
+
 def alert_subtitle(spec: AlertSpec, value: int, *, cpu_seconds: int) -> str:
     """Say in words when the alert fires, or that it is off."""
     if value <= 0:
