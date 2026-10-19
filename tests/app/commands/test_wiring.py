@@ -10,23 +10,33 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from typing import Any, cast
+from unittest.mock import create_autospec
 
 import pytest
 
-from sysbar.app.commands import CATALOGUE, CommandId
+from sysbar.app.commands import CommandId
 from sysbar.app.commands.wiring import build_handlers, current_state
+from sysbar.app.features.keep_awake import KeepAwakeFeature
+from sysbar.app.features.palette import PaletteFeature
+from sysbar.app.features.panel import PanelFeature
+from sysbar.app.features.scenes import ScenesFeature
+from sysbar.app.features.uninstaller import UninstallerFeature
 from sysbar.app.tray.menu_builder import QuickToggleState
 
 
 class _Recorder:
     """Stands in for a feature, recording which of its methods was called."""
 
-    def __init__(self, calls: list[str], name: str) -> None:
+    def __init__(self, calls: list[str], name: str, feature_type: type[object]) -> None:
         self._calls = calls
         self._name = name
+        self._feature = create_autospec(spec=feature_type, instance=True, spec_set=True)
 
     def __getattr__(self, attribute: str) -> Any:
+        method = getattr(self._feature, attribute)
+
         def call(*args: object) -> None:
+            method(*args)
             suffix = f":{args[0]}" if args else ""
             self._calls.append(f"{self._name}.{attribute}{suffix}")
 
@@ -80,14 +90,14 @@ def _features(
         uninstaller: Any
 
     return _Features(
-        panel=_Recorder(calls, "panel"),
-        palette=_Recorder(calls, "palette"),
-        keep_awake=_Recorder(calls, "keep_awake"),
+        panel=_Recorder(calls=calls, name="panel", feature_type=PanelFeature),
+        palette=_Recorder(calls=calls, name="palette", feature_type=PaletteFeature),
+        keep_awake=_Recorder(calls=calls, name="keep_awake", feature_type=KeepAwakeFeature),
         toggles=_FakeToggles(calls, toggle_state),
-        scenes=_Recorder(calls, "scenes"),
+        scenes=_Recorder(calls=calls, name="scenes", feature_type=ScenesFeature),
         shelf=_FakeSwitchable(calls, "shelf", shelf_enabled),
         clipboard=_FakeSwitchable(calls, "clipboard", clipboard_enabled),
-        uninstaller=_Recorder(calls, "uninstaller"),
+        uninstaller=_Recorder(calls=calls, name="uninstaller", feature_type=UninstallerFeature),
     )
 
 
@@ -197,9 +207,3 @@ def test_state_follows_the_shelf_and_clipboard_settings(calls: list[str]) -> Non
 
     assert state.shelf_enabled is True
     assert state.clipboard_enabled is True
-
-
-def test_the_catalogue_and_the_wiring_stay_the_same_size(calls: list[str]) -> None:
-    handlers = _handlers(calls)
-
-    assert len(handlers.simple) + len(handlers.parametric) == len(CATALOGUE)

@@ -173,17 +173,20 @@ def test_a_parametric_action_refuses_an_empty_argument(record: list[str]) -> Non
     assert record == []
 
 
-def test_glib_itself_drops_an_activation_with_no_argument(record: list[str]) -> None:
-    """GLib refuses this before dispatch, so the handler is never reached.
+def test_parametric_dispatch_refuses_missing_argument_without_calling_handler(
+    record: list[str],
+) -> None:
+    from sysbar.app.commands.actions import _parametric_dispatch
+    from sysbar.app.commands.catalogue import find
 
-    Asserted so the layering is explicit: the check inside ``_string_argument``
-    is not what stops this case, and removing it would not show up here.
-    """
-    actions = install_actions(_FakeTarget(), _handlers(record), CommandState())
+    command = find(command_id="activate-scene")
+    assert command is not None
+    dispatch = _parametric_dispatch(command=command, handler=lambda value: record.append(value))
 
-    actions[CommandId.ACTIVATE_SCENE].activate(None)
-
+    dispatch(None, None)
     assert record == []
+    dispatch(None, GLib.Variant("s", "focus"))
+    assert record == ["focus"]
 
 
 def test_the_receiver_refuses_a_missing_argument() -> None:
