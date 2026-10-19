@@ -148,12 +148,6 @@ def _kinds(entries: list[Any]) -> set[EntryKind]:
     return {entry.kind for entry in entries}
 
 
-def test_commands_are_always_present(record: list[str]) -> None:
-    entries = collect(cast(Any, _features()), _handlers(record))
-
-    assert EntryKind.COMMAND in _kinds(entries)
-
-
 def test_an_empty_session_still_lists_the_commands(record: list[str]) -> None:
     entries = collect(cast(Any, _features()), _handlers(record))
 
@@ -165,7 +159,9 @@ def test_scenes_are_collected(record: list[str]) -> None:
 
     entries = collect(cast(Any, features), _handlers(record))
 
-    assert EntryKind.SCENE in _kinds(entries)
+    assert [(e.id, e.title) for e in entries if e.kind is EntryKind.SCENE] == [
+        ("scene:focus", "Focus")
+    ]
 
 
 def test_a_scene_row_activates_through_the_feature(record: list[str]) -> None:
@@ -183,7 +179,9 @@ def test_clipboard_entries_are_collected(record: list[str]) -> None:
 
     entries = collect(cast(Any, features), _handlers(record))
 
-    assert EntryKind.CLIPBOARD in _kinds(entries)
+    assert [(e.id, e.title) for e in entries if e.kind is EntryKind.CLIPBOARD] == [
+        ("clip:1", "hello")
+    ]
 
 
 def test_a_clipboard_row_copies_through_the_feature(record: list[str]) -> None:
@@ -202,7 +200,7 @@ def test_shelf_items_are_collected(record: list[str]) -> None:
 
     entries = collect(cast(Any, features), _handlers(record))
 
-    assert EntryKind.SHELF in _kinds(entries)
+    assert [(e.id, e.title) for e in entries if e.kind is EntryKind.SHELF] == [("shelf:1", "link")]
 
 
 def test_a_shelf_row_opens_through_the_feature(record: list[str]) -> None:
@@ -224,7 +222,10 @@ def test_both_output_and_input_devices_are_collected(record: list[str]) -> None:
     entries = collect(cast(Any, _features(audio=audio)), _handlers(record))
     devices = [entry for entry in entries if entry.kind is EntryKind.DEVICE]
 
-    assert len(devices) == 2
+    assert [(entry.id, entry.title) for entry in devices] == [
+        ("device:sink:sink1", "Speakers"),
+        ("device:source:src1", "Microphone"),
+    ]
 
 
 def test_output_and_input_rows_carry_different_subtitles(record: list[str]) -> None:
@@ -234,9 +235,12 @@ def test_output_and_input_rows_carry_different_subtitles(record: list[str]) -> N
     )
 
     entries = collect(cast(Any, _features(audio=audio)), _handlers(record))
-    subtitles = {entry.subtitle for entry in entries if entry.kind is EntryKind.DEVICE}
+    subtitles = [(entry.id, entry.subtitle) for entry in entries if entry.kind is EntryKind.DEVICE]
 
-    assert len(subtitles) == 2
+    assert subtitles == [
+        ("device:sink:sink1", "Set as audio output"),
+        ("device:source:src1", "Set as audio input"),
+    ]
 
 
 def test_selecting_an_output_goes_to_the_output_setter(record: list[str]) -> None:

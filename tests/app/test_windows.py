@@ -85,13 +85,6 @@ def test_close_request_notifies_the_callback_once() -> None:
     assert closed == ["closed"]
 
 
-def test_close_callback_is_optional() -> None:
-    slot: WindowSlot[_FakeWindow] = WindowSlot(_CountingFactory())
-    window = slot.present()
-
-    assert window.emit_close() is False
-
-
 def test_if_open_runs_the_action_on_the_live_window() -> None:
     slot = WindowSlot(_CountingFactory())
     slot.present()

@@ -171,8 +171,7 @@ def test_menu_metrics_renders_the_metrics_placed_in_the_menu() -> None:
 
     values = tray_state.menu_metrics(snapshot, TrayOptions(cpu=PLACEMENT_MENU))
 
-    assert "cpu" in values
-    assert "42" in values["cpu"]
+    assert values == {"cpu": "CPU 42%"}
 
 
 def test_menu_device_rows_is_empty_when_the_toggle_is_off(config: Config) -> None:
@@ -201,7 +200,7 @@ def test_menu_device_rows_renders_one_row_per_peripheral(config: Config) -> None
 
     rows = tray_state.menu_device_rows(config, snapshot)
 
-    assert len(rows) == 2
+    assert rows == ("M 80%", "K 55%")
 
 
 # --- unavailable_metrics --------------------------------------------------
@@ -257,8 +256,7 @@ def test_countdown_text_is_the_bare_marker_for_an_indefinite_session() -> None:
 def test_countdown_text_appends_the_formatted_remaining_time() -> None:
     text = tray_state.countdown_text(active=True, show=True, remaining_seconds=90)
 
-    assert text.startswith("▶ ")
-    assert text != "▶"
+    assert text == "▶ 1:30"
 
 
 # --- scene_entries --------------------------------------------------------
