@@ -138,13 +138,12 @@ def test_weight_breaks_a_tie_between_equal_matches() -> None:
     assert rank(entries, "open shelf", limit=10)[0].weight == 5
 
 
-def test_ranking_is_stable_across_runs() -> None:
-    entries = [_entry("Alpha command"), _entry("Beta command"), _entry("Gamma command")]
+def test_equal_matches_are_ordered_alphabetically_whatever_the_input_order() -> None:
+    entries = [_entry("Gamma command"), _entry("Alpha command"), _entry("Delta command")]
 
-    first = [entry.title for entry in rank(entries, "command", limit=10)]
-    second = [entry.title for entry in rank(entries, "command", limit=10)]
+    titles = [entry.title for entry in rank(entries, "command", limit=10)]
 
-    assert first == second
+    assert titles == ["Alpha command", "Delta command", "Gamma command"]
 
 
 def test_rank_matches_the_search_text_not_the_displayed_title() -> None:
