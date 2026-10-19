@@ -16,7 +16,11 @@ gi.require_version("GLib", "2.0")
 from gi.repository import GLib  # noqa: E402
 
 from ...core.i18n import _  # noqa: E402
-from ...services.keep_awake.inhibitor import SystemInhibitor  # noqa: E402
+from ...services.keep_awake.combined_inhibitor import CombinedInhibitor  # noqa: E402
+from ...services.keep_awake.inhibitor import (  # noqa: E402
+    LogindSleepInhibitor,
+    ScreenSaverInhibitor,
+)
 from ...services.keep_awake.manager import KeepAwakeManager  # noqa: E402
 from ...services.keep_awake.ports import EndReason  # noqa: E402
 from ...services.keep_awake.scheduler import GLibScheduler  # noqa: E402
@@ -45,7 +49,10 @@ class KeepAwakeFeature:
         self._on_changed = on_changed
         self._on_tick = on_tick
         self._countdown_timer = _NO_TIMER
-        self._manager = KeepAwakeManager(SystemInhibitor(), SysfsPowerReader(), GLibScheduler())
+        inhibitor = CombinedInhibitor(
+            sleep=LogindSleepInhibitor(), screensaver=ScreenSaverInhibitor()
+        )
+        self._manager = KeepAwakeManager(inhibitor, SysfsPowerReader(), GLibScheduler())
         self._manager.connect("changed", self._on_manager_changed)
         self._manager.connect("session-ended", self._on_session_ended)
 

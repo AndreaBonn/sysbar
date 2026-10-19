@@ -1,8 +1,8 @@
 """System inhibitor adapter.
 
-Holds a logind sleep/idle (or lid) inhibition via a file descriptor, plus a
-freedesktop ScreenSaver inhibition to keep the display awake. Releasing closes
-the descriptor and uninhibits the screensaver. This is boundary code (D-Bus),
+Provides logind file-descriptor and freedesktop ScreenSaver cookie adapters.
+Composition and partial-success decisions live in the pure combined inhibitor.
+This is boundary code (D-Bus),
 exercised manually; the session logic that drives it is unit-tested separately.
 """
 
@@ -11,15 +11,12 @@ from __future__ import annotations
 import contextlib
 import logging
 import os
-from dataclasses import dataclass
 
 import gi
 
 gi.require_version("Gio", "2.0")
 gi.require_version("GLib", "2.0")
 from gi.repository import Gio, GLib  # noqa: E402
-
-from .manager import WHAT_IDLE_SLEEP  # noqa: E402
 
 log = logging.getLogger(__name__)
 
@@ -32,36 +29,16 @@ _WHO = "Sysbar"
 _WHY = "Keep awake"
 
 
-@dataclass
-class _Held:
-    fd: int | None
-    screensaver_cookie: int | None
-
-
-class SystemInhibitor:
-    """Acquire/release sleep, lid and screensaver inhibitions."""
+class LogindSleepInhibitor:
+    """Hold logind inhibitions through Unix file descriptors."""
 
     def __init__(self) -> None:
         self._system_bus: Gio.DBusConnection | None = None
-        self._session_bus: Gio.DBusConnection | None = None
 
-    def acquire(self, what: str) -> object | None:
-        fd = self._logind_inhibit(what)
-        cookie = self._screensaver_inhibit() if what == WHAT_IDLE_SLEEP else None
-        if fd is None and cookie is None:
-            log.warning("no inhibitor available", extra={"what": what})
-            return None
-        return _Held(fd=fd, screensaver_cookie=cookie)
+    def release(self, fd: int) -> None:
+        os.close(fd)
 
-    def release(self, token: object) -> None:
-        if not isinstance(token, _Held):
-            return
-        if token.fd is not None:
-            os.close(token.fd)
-        if token.screensaver_cookie is not None:
-            self._screensaver_uninhibit(token.screensaver_cookie)
-
-    def _logind_inhibit(self, what: str) -> int | None:
+    def acquire(self, what: str) -> int | None:
         try:
             bus = self._get_system_bus()
             result, fd_list = bus.call_with_unix_fd_list_sync(
@@ -81,7 +58,19 @@ class SystemInhibitor:
             log.warning("logind inhibit failed", extra={"what": what, "error": str(error)})
             return None
 
-    def _screensaver_inhibit(self) -> int | None:
+    def _get_system_bus(self) -> Gio.DBusConnection:
+        if self._system_bus is None:
+            self._system_bus = Gio.bus_get_sync(Gio.BusType.SYSTEM, None)
+        return self._system_bus
+
+
+class ScreenSaverInhibitor:
+    """Hold display inhibitions through ScreenSaver cookies."""
+
+    def __init__(self) -> None:
+        self._session_bus: Gio.DBusConnection | None = None
+
+    def acquire(self) -> int | None:
         try:
             bus = self._get_session_bus()
             result = bus.call_sync(
@@ -96,10 +85,11 @@ class SystemInhibitor:
                 None,
             )
             return int(result.unpack()[0])
-        except GLib.Error:
+        except GLib.Error as error:
+            log.warning("screensaver inhibit failed", extra={"error": str(error)})
             return None
 
-    def _screensaver_uninhibit(self, cookie: int) -> None:
+    def release(self, cookie: int) -> None:
         with contextlib.suppress(GLib.Error):
             self._get_session_bus().call_sync(
                 _SCREENSAVER_NAME,
@@ -112,11 +102,6 @@ class SystemInhibitor:
                 2000,
                 None,
             )
-
-    def _get_system_bus(self) -> Gio.DBusConnection:
-        if self._system_bus is None:
-            self._system_bus = Gio.bus_get_sync(Gio.BusType.SYSTEM, None)
-        return self._system_bus
 
     def _get_session_bus(self) -> Gio.DBusConnection:
         if self._session_bus is None:
