@@ -1,3 +1,5 @@
+import pytest
+
 from sysbar.core.errors import (
     AppError,
     CapabilityError,
@@ -26,8 +28,10 @@ def test_validation_error_has_validation_code() -> None:
     assert ValidationError("bad input").code == "VALIDATION_ERROR"
 
 
-def test_validation_error_is_app_error() -> None:
-    assert isinstance(ValidationError("x"), AppError)
+def test_validation_error_is_caught_as_app_error() -> None:
+    with pytest.raises(AppError) as caught:
+        raise ValidationError("x")
+    assert caught.value.code == "VALIDATION_ERROR"
 
 
 def test_not_found_error_formats_entity_and_identifier() -> None:

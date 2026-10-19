@@ -178,7 +178,7 @@ def test_show_device_batteries_reads_stored_true(config: Config) -> None:
 def test_constructs_without_backend_from_installed_schema(compiled_schema: str) -> None:
     # Exercises the no-backend branch: the schema resolves via GSETTINGS_SCHEMA_DIR.
     config = Config(schema_id=APP_ID)
-    assert isinstance(config.settings, Gio.Settings)
+    assert config.settings.get_property("schema-id") == APP_ID
 
 
 def test_the_bar_default_cannot_postdate_the_feature_set_written_at_onboarding() -> None:

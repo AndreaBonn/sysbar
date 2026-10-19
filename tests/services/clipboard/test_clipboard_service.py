@@ -80,8 +80,7 @@ def test_pinned_entry_is_not_evicted(tmp_path: Path) -> None:
     service.toggle_pin(first.id)
     service.capture("b")
     service.capture("c")
-    texts = [e.text for e in service.items]
-    assert "keep" in texts
+    assert [e.text for e in service.items] == ["keep", "c"]
 
 
 def test_items_list_pinned_first(tmp_path: Path) -> None:
@@ -124,7 +123,7 @@ def test_search_blank_returns_all(tmp_path: Path) -> None:
     service = _service(tmp_path)
     service.capture("a")
     service.capture("b")
-    assert len(service.search("  ")) == 2
+    assert [e.text for e in service.search("  ")] == ["b", "a"]
 
 
 def test_persistence_roundtrip(tmp_path: Path) -> None:
