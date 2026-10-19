@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from typing import Protocol
 
-from .models import PackageManager
+from .models import AppTarget, PackageManager
 
 
 class PackageQuery(Protocol):
@@ -38,3 +38,24 @@ def identify(
     if flatpak:
         return PackageManager.FLATPAK, flatpak
     return PackageManager.MANUAL, None
+
+
+def target_from_app(
+    name: str, *, desktop_id: str | None, exec_path: str | None, query: PackageQuery
+) -> AppTarget:
+    """Build a target without desktop suffixes so package queries use the app id.
+
+    Executable resolution stays at the system boundary; missing executables
+    still allow identification through the flatpak app id.
+    """
+    app_id = desktop_id or ""
+    if app_id.endswith(".desktop"):
+        app_id = app_id.removesuffix(".desktop")
+    manager, ref = identify(exec_path=exec_path, app_id=app_id or None, query=query)
+    return AppTarget(
+        name=name,
+        app_id=app_id or None,
+        exec_path=exec_path,
+        manager=manager,
+        package_ref=ref,
+    )

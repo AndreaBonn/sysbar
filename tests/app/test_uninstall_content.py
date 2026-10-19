@@ -61,3 +61,28 @@ def test_package_subtitle_names_the_installer_or_why_it_is_unavailable() -> None
     assert package_subtitle(PackageManager.MANUAL, None, removable=False) == (
         "Not available: installed by hand, or no administrator rights"
     )
+
+
+def test_removal_message_reports_freed_bytes_and_failed_count() -> None:
+    from sysbar.app.uninstall_content import removal_message
+    from sysbar.services.uninstall.models import RemovalResult
+
+    assert removal_message(RemovalResult(freed_bytes=2_500_000, failed=[])) == (
+        "Done: 2.4 MB moved to the Trash"
+    )
+    assert (
+        removal_message(RemovalResult(freed_bytes=2_500_000, failed=["/a", "/b"]))
+        == "Freed 2.4 MB; 2 items could not be moved"
+    )
+
+
+def test_leftover_subtitle_formats_size_and_home_relative_path() -> None:
+    from sysbar.app.uninstall_content import leftover_subtitle
+    from sysbar.services.uninstall.models import Leftover
+
+    for path, shown in [
+        ("/home/ann/.config/foo", "~/.config/foo"),
+        ("/var/lib/foo", "/var/lib/foo"),
+    ]:
+        leftover = Leftover(category=LeftoverCategory.CONFIG, path=path, size_bytes=2_500_000)
+        assert leftover_subtitle(leftover=leftover, home="/home/ann") == f"2.4 MB · {shown}"

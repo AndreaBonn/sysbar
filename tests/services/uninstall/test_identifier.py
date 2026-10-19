@@ -46,3 +46,50 @@ def test_identify_manual_when_unowned() -> None:
     manager, ref = identify("/opt/app/app", "org.app", FakeQuery())
     assert manager is PackageManager.MANUAL
     assert ref is None
+
+
+def test_target_from_app_strips_only_desktop_suffix() -> None:
+    from sysbar.services.uninstall.identifier import target_from_app
+    from sysbar.services.uninstall.models import AppTarget
+
+    for desktop_id, app_id in [
+        ("org.gnome.Foo.desktop", "org.gnome.Foo"),
+        ("org.desktop.Foo", "org.desktop.Foo"),
+        ("", None),
+        (None, None),
+    ]:
+        assert target_from_app(
+            name="Foo", desktop_id=desktop_id, exec_path=None, query=FakeQuery()
+        ) == AppTarget(name="Foo", app_id=app_id, exec_path=None, manager=PackageManager.MANUAL)
+
+
+def test_target_from_app_without_executable_identifies_flatpak() -> None:
+    from sysbar.services.uninstall.identifier import target_from_app
+
+    target = target_from_app(
+        name="Foo",
+        desktop_id="org.gnome.Foo.desktop",
+        exec_path=None,
+        query=FakeQuery(flatpak="org.gnome.Foo"),
+    )
+    assert target.exec_path is None
+    assert target.manager is PackageManager.FLATPAK
+    assert target.package_ref == "org.gnome.Foo"
+
+
+def test_target_from_app_identifies_apt_and_snap_executables() -> None:
+    from sysbar.services.uninstall.identifier import target_from_app
+
+    for path, query, manager, ref in [
+        ("/usr/bin/gedit", FakeQuery(apt="gedit"), PackageManager.APT, "gedit"),
+        (
+            "/snap/spotify/current/bin/spotify",
+            FakeQuery(snap="spotify"),
+            PackageManager.SNAP,
+            "spotify",
+        ),
+    ]:
+        target = target_from_app(name="Editor", desktop_id=None, exec_path=path, query=query)
+        assert target.exec_path == path
+        assert target.manager is manager
+        assert target.package_ref == ref

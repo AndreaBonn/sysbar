@@ -13,7 +13,7 @@ from dataclasses import dataclass
 from ..core.i18n import _
 from ..services.metrics import metric_format as mf
 from ..services.palette.matcher import normalize
-from ..services.uninstall.models import LeftoverCategory, PackageManager
+from ..services.uninstall.models import Leftover, LeftoverCategory, PackageManager, RemovalResult
 
 _CATEGORY_LABELS = {
     LeftoverCategory.CONFIG: "Settings",
@@ -75,3 +75,18 @@ def package_subtitle(manager: PackageManager, package_ref: str | None, *, remova
             manager=manager.value, package=package_ref
         )
     return _("Not available: installed by hand, or no administrator rights")
+
+
+def leftover_subtitle(leftover: Leftover, *, home: str) -> str:
+    """Show the residue size and a home-relative path."""
+    return f"{mf.format_bytes(leftover.size_bytes)} · {short_path(str(leftover.path), home=home)}"
+
+
+def removal_message(result: RemovalResult) -> str:
+    """Describe the bytes moved to the Trash and any failed items."""
+    freed = mf.format_bytes(result.freed_bytes)
+    if result.failed:
+        return _("Freed {size}; {count} items could not be moved").format(
+            size=freed, count=len(result.failed)
+        )
+    return _("Done: {size} moved to the Trash").format(size=freed)

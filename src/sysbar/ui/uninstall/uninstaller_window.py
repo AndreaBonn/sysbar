@@ -22,14 +22,14 @@ from gi.repository import Adw, Gio, Gtk  # noqa: E402
 from ...app.uninstall_content import (  # noqa: E402
     category_label,
     filter_apps,
+    leftover_subtitle,
     package_subtitle,
+    removal_message,
     removal_summary,
-    short_path,
 )
 from ...core.i18n import _  # noqa: E402
-from ...services.metrics import metric_format as mf  # noqa: E402
 from ...services.uninstall.app_uninstaller import AppUninstaller  # noqa: E402
-from ...services.uninstall.identifier import PackageQuery, identify  # noqa: E402
+from ...services.uninstall.identifier import PackageQuery, target_from_app  # noqa: E402
 from ...services.uninstall.models import AppTarget, Leftover  # noqa: E402
 
 _WINDOW_WIDTH = 560
@@ -125,18 +125,13 @@ class UninstallerWindow(Adw.Window):
         self._populate_residue()
 
     def _target_for(self, app_info: Gio.AppInfo) -> AppTarget:
-        app_id = app_info.get_id() or ""
-        if app_id.endswith(".desktop"):
-            app_id = app_id[:-8]
         executable = app_info.get_executable()
         exec_path = shutil.which(executable) if executable else None
-        manager, ref = identify(exec_path, app_id or None, self._query)
-        return AppTarget(
+        return target_from_app(
             name=app_info.get_display_name(),
-            app_id=app_id or None,
+            desktop_id=app_info.get_id(),
             exec_path=exec_path,
-            manager=manager,
-            package_ref=ref,
+            query=self._query,
         )
 
     # --- leftovers ---------------------------------------------------------
@@ -151,8 +146,7 @@ class UninstallerWindow(Adw.Window):
         for leftover in self._uninstaller.scan(self._target):
             row = Adw.SwitchRow(
                 title=category_label(leftover.category),
-                subtitle=f"{mf.format_bytes(leftover.size_bytes)} · "
-                f"{short_path(str(leftover.path), home=home)}",
+                subtitle=leftover_subtitle(leftover=leftover, home=home),
                 active=True,
             )
             row.connect("notify::active", lambda _row, _param: self._update_summary())
@@ -193,11 +187,4 @@ class UninstallerWindow(Adw.Window):
     def _on_remove(self, _button: Gtk.Button) -> None:
         result = self._uninstaller.remove(self._selected(), self._package_switch.get_active())
         self._populate_residue()
-        freed = mf.format_bytes(result.freed_bytes)
-        if result.failed:
-            message = _("Freed {size}; {count} items could not be moved").format(
-                size=freed, count=len(result.failed)
-            )
-        else:
-            message = _("Done: {size} moved to the Trash").format(size=freed)
-        self._status.set_label(message)
+        self._status.set_label(removal_message(result=result))
