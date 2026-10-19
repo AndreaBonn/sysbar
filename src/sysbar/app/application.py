@@ -285,6 +285,7 @@ class SysbarApplication(Adw.Application):
             self._autostart,
             tray_state.unavailable_metrics(self.features.monitor.latest),
             on_show_onboarding=self.features.onboarding.show,
+            tray_preview=lambda: self._tray.metric_preview() if self._tray is not None else None,
         )
 
     def _open_settings(self) -> None:

@@ -59,7 +59,7 @@ class TrayController:
             return
         segments = [
             segment
-            for segment in (self._features.keep_awake.countdown_text(), self._metric_label())
+            for segment in (self._features.keep_awake.countdown_text(), self.metric_label())
             if segment
         ]
         self._tray.set_label(_LABEL_SEPARATOR.join(segments))
@@ -73,7 +73,14 @@ class TrayController:
         self.refresh_label()
         self.refresh_menu()
 
-    def _metric_label(self) -> str:
+    def metric_preview(self) -> str | None:
+        """The metric part of the bar label, or ``None`` before the first sample."""
+        if self._features.monitor.latest is None:
+            return None
+        return self.metric_label()
+
+    def metric_label(self) -> str:
+        """The metric part of the bar label, as it reads now (empty before the first sample)."""
         snapshot = self._features.monitor.latest
         if snapshot is None:
             return ""

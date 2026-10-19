@@ -790,3 +790,81 @@ msgstr "in carica"
 
 msgid "on battery"
 msgstr "a batteria"
+
+msgid "A drop zone for files, links and text you need in a moment"
+msgstr "Un'area dove appoggiare file, link e testi che ti servono a breve"
+
+msgid "Above {amount}"
+msgstr "Oltre {amount}"
+
+msgid "Above {amount} for {seconds} seconds"
+msgstr "Oltre {amount} per {seconds} secondi"
+
+msgid "Battery low"
+msgstr "Batteria scarica"
+
+msgid "Below {amount}"
+msgstr "Sotto il {amount}"
+
+msgid "CPU busy"
+msgstr "CPU molto impegnata"
+
+msgid "Choose where each value appears: always visible in the top bar, only in the menu, or hidden."
+msgstr "Scegli dove compare ogni valore: sempre visibile nella barra in alto, solo nel menu, oppure nascosto."
+
+msgid "Disk almost full"
+msgstr "Disco quasi pieno"
+
+msgid "For at least (seconds)"
+msgstr "Per almeno (secondi)"
+
+msgid "Get a notification when something needs your attention."
+msgstr "Ricevi una notifica quando qualcosa richiede la tua attenzione."
+
+msgid "Global shortcut"
+msgstr "Scorciatoia globale"
+
+msgid "Hidden"
+msgstr "Nascosto"
+
+msgid "Limit"
+msgstr "Soglia"
+
+msgid "Memory almost full"
+msgstr "Memoria quasi piena"
+
+msgid "Menu only"
+msgstr "Solo nel menu"
+
+msgid "Only the icon: nothing is placed in the top bar"
+msgstr "Solo l'icona: nella barra in alto non c'è nessun valore"
+
+msgid "Pick what Sysbar does for you. You can change it any time."
+msgstr "Scegli cosa fa Sysbar per te. Puoi cambiarlo quando vuoi."
+
+msgid "Quit an app when you close its last window"
+msgstr "Chiude un'app quando ne chiudi l'ultima finestra"
+
+msgid "Running hot"
+msgstr "Temperatura alta"
+
+msgid "Set the volume of each app from the panel"
+msgstr "Regola il volume di ogni app dal pannello"
+
+msgid "Shake the mouse to open"
+msgstr "Scuoti il mouse per aprirla"
+
+msgid "Top bar"
+msgstr "Barra in alto"
+
+msgid "Top bar preview"
+msgstr "Anteprima della barra in alto"
+
+msgid "X11 sessions only"
+msgstr "Solo nelle sessioni X11"
+
+msgid "Not active"
+msgstr "Non attivo"
+
+msgid "Waiting for the first reading…"
+msgstr "In attesa della prima lettura…"

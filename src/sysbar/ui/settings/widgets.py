@@ -40,7 +40,7 @@ def bound_spin(
     if subtitle:
         row.set_subtitle(_(subtitle))
     row.set_value(settings.get_int(key))
-    row.connect("notify::value", lambda spin, _param: settings.set_int(key, int(spin.get_value())))
+    row.connect("notify::value", _write_spin, settings, key)
     return row
 
 
@@ -84,3 +84,11 @@ class ComboBinding:
             self._settings.set_int(self._key, int(value))
         else:
             self._settings.set_string(self._key, str(value))
+
+
+def _write_spin(spin: Adw.SpinRow, _param: object, settings: Gio.Settings, key: str) -> None:
+    # Skip a write that would not change anything: a caller syncing the spin from
+    # GSettings would otherwise echo its own value back.
+    value = int(spin.get_value())
+    if value != settings.get_int(key):
+        settings.set_int(key, value)
