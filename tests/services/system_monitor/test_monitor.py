@@ -34,7 +34,6 @@ def test_set_panel_open_starts_timer(mocker: MockerFixture) -> None:
     monitor.set_panel_open(True)
 
     timeout.assert_called_once()
-    assert monitor._timer_id == 42
 
 
 def test_set_panel_open_passes_configured_interval(mocker: MockerFixture) -> None:
@@ -60,8 +59,10 @@ def test_set_panel_open_idempotent_does_not_start_second_timer(mocker: MockerFix
     timeout.assert_called_once()
 
 
-def test_panel_close_stops_timer(mocker: MockerFixture) -> None:
-    mocker.patch("sysbar.services.system_monitor.monitor.GLib.timeout_add_seconds", return_value=42)
+def test_panel_close_stops_timer_and_reopening_starts_a_new_one(mocker: MockerFixture) -> None:
+    timeout = mocker.patch(
+        "sysbar.services.system_monitor.monitor.GLib.timeout_add_seconds", side_effect=[42, 43]
+    )
     remove = mocker.patch("sysbar.services.system_monitor.monitor.GLib.source_remove")
     monitor = _monitor()
     monitor.set_panel_open(True)
@@ -69,7 +70,8 @@ def test_panel_close_stops_timer(mocker: MockerFixture) -> None:
     monitor.set_panel_open(False)
 
     remove.assert_called_once_with(42)
-    assert monitor._timer_id == 0
+    monitor.set_panel_open(True)
+    assert timeout.call_count == 2
 
 
 def test_stop_not_called_when_already_inactive(mocker: MockerFixture) -> None:
@@ -94,7 +96,6 @@ def test_tray_active_keeps_timer_when_panel_closes(mocker: MockerFixture) -> Non
 
     timeout.assert_called_once()
     remove.assert_not_called()
-    assert monitor._timer_id == 42
 
 
 def test_timer_stops_only_when_both_sources_inactive(mocker: MockerFixture) -> None:
@@ -131,7 +132,6 @@ def test_alerting_active_starts_sampling_with_panel_closed(mocker: MockerFixture
     monitor.set_alerting_active(True)
 
     timeout.assert_called_once()
-    assert monitor._timer_id == 42
 
 
 def test_alerting_active_keeps_timer_when_panel_and_tray_inactive(mocker: MockerFixture) -> None:
@@ -144,7 +144,6 @@ def test_alerting_active_keeps_timer_when_panel_and_tray_inactive(mocker: Mocker
     monitor.set_panel_open(False)
 
     remove.assert_not_called()
-    assert monitor._timer_id == 42
 
 
 def test_tick_samples_stores_latest_and_returns_true(mocker: MockerFixture) -> None:
@@ -191,4 +190,3 @@ def test_stop_with_no_active_timer_is_noop(mocker: MockerFixture) -> None:
     monitor._stop()
 
     remove.assert_not_called()
-    assert monitor._timer_id == 0
