@@ -17,6 +17,17 @@ from ...core.config import Config
 from .actions import SystemToggle
 
 
+def toggle_supported(toggle: SystemToggle, *, dnd_available: bool, mic_available: bool) -> bool:
+    """Report whether the backend required by a scene toggle is available."""
+    match toggle:
+        case SystemToggle.KEEP_AWAKE:
+            return True
+        case SystemToggle.DO_NOT_DISTURB:
+            return dnd_available
+        case SystemToggle.MICROPHONE_MUTED:
+            return mic_available
+
+
 class SettingWriteError(ValueError):
     """Raised when a value cannot be written to the key it names."""
 

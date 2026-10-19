@@ -15,6 +15,7 @@ from sysbar.services.scenes.adapters import (  # noqa: E402
     CallbackToggles,
     ConfigSettingsWriter,
     SettingWriteError,
+    toggle_supported,
 )
 
 
@@ -136,3 +137,21 @@ def test_callback_audio_passes_the_device_through() -> None:
     CallbackAudio(set_output=record).set_output_device("alsa.hdmi")
 
     assert seen == ["alsa.hdmi"]
+
+
+@pytest.mark.parametrize("dnd_available", [False, True])
+@pytest.mark.parametrize("mic_available", [False, True])
+@pytest.mark.parametrize("toggle", list(SystemToggle))
+def test_toggle_supported_capabilities_select_only_the_matching_backend(
+    toggle: SystemToggle, dnd_available: bool, mic_available: bool
+) -> None:
+    expected = {
+        SystemToggle.KEEP_AWAKE: True,
+        SystemToggle.DO_NOT_DISTURB: dnd_available,
+        SystemToggle.MICROPHONE_MUTED: mic_available,
+    }
+
+    assert (
+        toggle_supported(toggle, dnd_available=dnd_available, mic_available=mic_available)
+        is expected[toggle]
+    )

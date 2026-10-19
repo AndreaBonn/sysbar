@@ -18,13 +18,19 @@ from typing import TYPE_CHECKING
 from ...core.i18n import _
 from ...services.audio.models import AudioDevice
 from ...services.scenes.actions import SystemToggle
-from ...services.scenes.adapters import CallbackAudio, CallbackToggles, ConfigSettingsWriter
-from ...services.scenes.apply import ScenePorts, applied_count
+from ...services.scenes.adapters import (
+    CallbackAudio,
+    CallbackToggles,
+    ConfigSettingsWriter,
+    toggle_supported,
+)
+from ...services.scenes.apply import ScenePorts
 from ...services.scenes.editing import rule_id_for
 from ...services.scenes.engine import TriggerActions, TriggerEngine
 from ...services.scenes.models import SCENE_FOCUS, Scene, scene_display_name
 from ...services.scenes.service import SceneService
 from ...services.scenes.store import SceneStore
+from ...services.scenes.summary import partial_note, trigger_announcement
 from ...services.scenes.triggers import TriggerRule, TriggerState
 from .. import tray_state
 from ..context import AppContext
@@ -118,10 +124,9 @@ class ScenesFeature:
         that reads as the machine misbehaving unless it says what it did.
         """
         name = self._name_of(scene_id)
-        partial = self._partial_note(name)
         self._context.notifier.notify(
             _("Scene activated"),
-            partial or _("A trigger switched to {scene}.").format(scene=name),
+            trigger_announcement(scene_name=name, outcomes=self._service.last_outcomes),
             notification_id="scene-trigger",
         )
 
@@ -129,28 +134,15 @@ class ScenesFeature:
         scene = self._service.find(scene_id)
         return scene_display_name(scene) if scene is not None else scene_id
 
-    def _partial_note(self, name: str) -> str:
-        """How much of the last activation took effect, empty when all of it did.
-
-        An action whose capability is missing is a skip, not a failure, so the
-        scene still counts as activated. Saying nothing about it is how a scene
-        quietly does half of what its name promises.
-        """
-        outcomes = self._service.last_outcomes
-        applied = applied_count(outcomes)
-        if not outcomes or applied == len(outcomes):
-            return ""
-        return _("{applied} of {total} actions in {scene} took effect.").format(
-            applied=applied, total=len(outcomes), scene=name
-        )
-
     def _warn_if_partial(self, scene_id: str) -> None:
         """Notify only when a scene did less than it says.
 
         On a scene that applies whole this stays silent: the user just asked
         for it and does not need telling that it worked.
         """
-        note = self._partial_note(self._name_of(scene_id))
+        note = partial_note(
+            outcomes=self._service.last_outcomes, scene_name=self._name_of(scene_id)
+        )
         if not note:
             return
         self._context.notifier.notify(
@@ -262,13 +254,9 @@ class SceneDrivers:
 
     def _supports(self, toggle: SystemToggle) -> bool:
         state = self._toggles.state()
-        match toggle:
-            case SystemToggle.KEEP_AWAKE:
-                return True
-            case SystemToggle.DO_NOT_DISTURB:
-                return state.dnd_available
-            case SystemToggle.MICROPHONE_MUTED:
-                return state.mic_available
+        return toggle_supported(
+            toggle, dnd_available=state.dnd_available, mic_available=state.mic_available
+        )
 
     def available_outputs(self) -> list[AudioDevice]:
         return self._audio.outputs()

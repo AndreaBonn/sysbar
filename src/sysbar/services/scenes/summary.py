@@ -12,6 +12,7 @@ from typing import assert_never
 
 from ...core.i18n import _
 from .actions import SetOutputDevice, SetSetting, SetToggle, SystemToggle
+from .apply import ActionOutcome, applied_count
 from .models import Scene
 
 _SEPARATOR = " · "
@@ -47,3 +48,25 @@ def describe_scene(scene: Scene, *, device_name: Callable[[str], str | None] | N
     if settings:
         parts.append(_("+{count} more").format(count=settings))
     return _SEPARATOR.join(parts) if parts else _("Changes nothing yet")
+
+
+def partial_note(outcomes: list[ActionOutcome], scene_name: str) -> str:
+    """How much of an activation took effect, empty when all of it did.
+
+    An action whose capability is missing is a skip, not a failure, so the
+    scene still counts as activated. Saying nothing about it is how a scene
+    quietly does half of what its name promises.
+    """
+    applied = applied_count(outcomes)
+    if not outcomes or applied == len(outcomes):
+        return ""
+    return _("{applied} of {total} actions in {scene} took effect.").format(
+        applied=applied, total=len(outcomes), scene=scene_name
+    )
+
+
+def trigger_announcement(scene_name: str, outcomes: list[ActionOutcome]) -> str:
+    """Name the triggered scene, reporting any actions that did not take effect."""
+    return partial_note(outcomes=outcomes, scene_name=scene_name) or _(
+        "A trigger switched to {scene}."
+    ).format(scene=scene_name)
