@@ -16,8 +16,9 @@ from sysbar.core.capabilities import Capabilities
 from sysbar.core.config import Config
 from sysbar.services.audio.models import AudioDevice, SinkInput
 from sysbar.services.autostart import AutostartManager
+from sysbar.services.scenes.actions import SetOutputDevice, SetToggle, SystemToggle
 from sysbar.services.scenes.models import Scene
-from sysbar.services.scenes.triggers import TriggerRule
+from sysbar.services.scenes.triggers import BatteryBelow, TriggerRule
 from sysbar.services.shelf.shelf_service import ShelfService
 from sysbar.services.uninstall.app_uninstaller import AppUninstaller
 from sysbar.services.uninstall.models import PackageManager
@@ -320,6 +321,7 @@ class _FakeSceneController:
         self.saved: list[Scene] = []
         self.deleted: list[str] = []
         self.saved_triggers: list[TriggerRule | None] = []
+        self.output_devices: list[AudioDevice] = []
 
     def activate(self, scene_id: str) -> None:
         self.active_id = scene_id
@@ -332,7 +334,7 @@ class _FakeSceneController:
         return True
 
     def outputs(self) -> list[AudioDevice]:
-        return []
+        return self.output_devices
 
     def trigger_for(self, scene_id: str) -> TriggerRule | None:
         return None
@@ -385,6 +387,54 @@ def test_editing_a_preset_saves_it_without_losing_actions(gtk: object) -> None:
     saved = controller.saved[0]
     assert set(saved.actions) == set(preset.actions)
     window.destroy()
+
+
+def test_scene_editor_saves_selected_output_toggle_and_battery_trigger(gtk: object) -> None:
+    from sysbar.ui.scenes.scenes_window import ScenesWindow
+
+    controller = _FakeSceneController()
+    controller.output_devices = [
+        AudioDevice(
+            index=10, name="speakers", description="Speakers", kind="sink", is_default=True
+        ),
+        AudioDevice(index=11, name="hdmi", description="HDMI", kind="sink", is_default=False),
+    ]
+    window = ScenesWindow(controller=controller)
+    window._edit(None)
+    editor = window._editor
+    assert editor._percent_row.get_visible() is False
+    assert editor._restore_row.get_visible() is False
+    assert editor._device_row.get_selected_item().get_string() == "Leave unchanged"
+    editor._device_row.set_selected(2)
+    editor._trigger_row.set_selected(3)
+    editor._percent_row.set_value(30)
+    editor._restore_row.set_active(True)
+    editor._toggle_rows[SystemToggle.KEEP_AWAKE].set_selected(1)
+    assert editor._percent_row.get_visible() is True
+    assert editor._restore_row.get_visible() is True
+    assert editor._trigger_row.get_selected_item().get_string() == "Battery drops below a level"
+    assert (
+        editor._toggle_rows[SystemToggle.KEEP_AWAKE].get_selected_item().get_string() == "Turn on"
+    )
+    editor._save()
+    _assert_saved_scene_form(controller=controller)
+    window.destroy()
+
+
+def _assert_saved_scene_form(controller: _FakeSceneController) -> None:
+    saved = controller.saved[0]
+    assert saved.actions == (
+        SetToggle(toggle=SystemToggle.KEEP_AWAKE, value=True),
+        SetOutputDevice(device="hdmi"),
+    )
+    assert controller.saved_triggers == [
+        TriggerRule(
+            id=f"scene:{saved.id}",
+            scene_id=saved.id,
+            condition=BatteryBelow(percent=30),
+            restore_on_exit=True,
+        )
+    ]
 
 
 def test_activating_a_scene_from_the_list_marks_it_active(gtk: object) -> None:
