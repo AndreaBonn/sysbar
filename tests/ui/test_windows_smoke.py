@@ -733,3 +733,34 @@ def test_uninstaller_chooses_app_and_reports_removal(gtk: object, tmp_path: Path
         assert window._status.get_label() == "Done: 4 B moved to the Trash"
     finally:
         window.destroy()
+
+
+def test_mixer_section_unavailable_message_is_translated(gtk: object, tmp_path: Path) -> None:
+    """The recording gate only sees strings routed through ``_()``, so check the render.
+
+    A literal handed to ``set_title`` never reaches the recorder, which is how
+    an English message stayed in the Italian UI. Here the real catalog is compiled
+    and installed, and the row's title is read back.
+    """
+    import gettext
+    import shutil
+    import subprocess
+
+    from sysbar.core import i18n
+    from sysbar.ui.panel.mixer_section import MixerSection
+
+    msgfmt = shutil.which("msgfmt")
+    if msgfmt is None:
+        pytest.skip("msgfmt not available")
+    po = Path(__file__).resolve().parents[2] / "data/locale/it/LC_MESSAGES/sysbar.po"
+    mo = tmp_path / "sysbar.mo"
+    subprocess.run([msgfmt, "-o", str(mo), str(po)], check=True)
+    saved = i18n._translation
+    with mo.open("rb") as handle:
+        i18n.set_translation(gettext.GNUTranslations(handle))
+    try:
+        section = MixerSection()
+        section.set_unavailable()
+        assert section._empty.get_title() == "PipeWire/PulseAudio non disponibile"
+    finally:
+        i18n.set_translation(saved)

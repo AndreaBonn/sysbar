@@ -652,6 +652,9 @@ msgstr "Creato da {name}"
 msgid "Needs PipeWire or PulseAudio."
 msgstr "Serve PipeWire o PulseAudio."
 
+msgid "PipeWire/PulseAudio not available"
+msgstr "PipeWire/PulseAudio non disponibile"
+
 msgid "Needs a GNOME session."
 msgstr "Serve una sessione GNOME."
 

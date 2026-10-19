@@ -227,6 +227,7 @@ def _exercise_windows(tmp_path: Path) -> None:
     from sysbar.ui.onboarding.onboarding_window import OnboardingWindow
     from sysbar.ui.onboarding.whats_new_window import WhatsNewWindow
     from sysbar.ui.palette.palette_window import PaletteWindow
+    from sysbar.ui.panel.mixer_section import MixerSection
     from sysbar.ui.panel.panel_window import PanelWindow
     from sysbar.ui.scenes.scenes_window import ScenesWindow
     from sysbar.ui.settings.settings_window import SettingsWindow
@@ -304,6 +305,7 @@ def _exercise_windows(tmp_path: Path) -> None:
     ]
     for window in windows:
         window.destroy()
+    MixerSection().set_unavailable()  # a title set outside any window constructor
 
 
 def _exercise_panel_and_palette_content() -> None:

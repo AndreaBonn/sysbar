@@ -75,7 +75,7 @@ class MixerSection(Adw.PreferencesGroup):
         self.add(self._empty)
 
     def set_unavailable(self) -> None:
-        self._empty.set_title("PipeWire/PulseAudio not available")
+        self._empty.set_title(_("PipeWire/PulseAudio not available"))
 
     def bind(self, mixer: AppVolumeMixer) -> None:
         self._mixer = mixer
