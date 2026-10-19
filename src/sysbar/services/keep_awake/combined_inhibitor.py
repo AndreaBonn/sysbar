@@ -17,7 +17,13 @@ class _Held:
 
 
 class CombinedInhibitor:
-    """Acquire/release sleep, lid and screensaver inhibitions."""
+    """Hold a logind inhibition and a ScreenSaver one as a single token.
+
+    logind keeps the machine from sleeping (or the lid from suspending it);
+    the ScreenSaver inhibition keeps the display awake, so it is taken only
+    for an idle:sleep session. Either part may fail on its own: the token
+    holds whatever was acquired, and is None only when neither was.
+    """
 
     def __init__(self, sleep: SleepInhibitor, screensaver: ScreenSaverInhibitor) -> None:
         self._sleep = sleep

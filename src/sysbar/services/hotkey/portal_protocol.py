@@ -9,7 +9,12 @@ _RESPONSE_SUCCESS = 0
 
 
 def request_path(unique_name: str, handle_token: str) -> str:
-    """Derive the Request path so callers can subscribe before CreateSession."""
+    """The Request object path for a call made with ``handle_token``.
+
+    The portal spec makes it deterministic from our unique bus name and the
+    token, so a caller can subscribe to its Response before the call returns
+    and never miss a fast reply.
+    """
     unique = unique_name.lstrip(":").replace(".", "_")
     return f"{PORTAL_PATH}/request/{unique}/{handle_token}"
 

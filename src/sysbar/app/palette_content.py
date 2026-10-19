@@ -14,7 +14,8 @@ from ..core.i18n import _
 from ..services.palette.models import EntryKind, PaletteEntry
 
 _KIND_VALUES = frozenset(kind.value for kind in EntryKind)
-# K2: an icon and a section title per kind, so a masked clip never passes for a command.
+# K2: a section title per kind (the window adds the matching icon), so a masked
+# clip never passes for a command.
 _KIND_TITLES = {
     EntryKind.COMMAND: "Actions",
     EntryKind.TOGGLE: "Quick toggles",
@@ -26,6 +27,8 @@ _KIND_TITLES = {
 
 
 class RunDecision(Enum):
+    """What Enter does on a row: run it, apply its fix, or nothing."""
+
     RUN = auto()
     FIX = auto()
     IGNORE = auto()
@@ -33,6 +36,8 @@ class RunDecision(Enum):
 
 @dataclass(frozen=True)
 class RowPresentation:
+    """How one result row reads and which buttons it carries."""
+
     subtitle: str
     activatable: bool
     dimmed: bool

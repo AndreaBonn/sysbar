@@ -94,7 +94,11 @@ class FormValues:
 
 
 def trigger_rows_visibility(choice: TriggerChoice) -> tuple[bool, bool]:
-    """Only the threshold condition has a percentage to ask about."""
+    """Visibility of the (percentage, restore) rows for a trigger condition.
+
+    Only the threshold condition has a percentage to ask about; every
+    condition but "never" can restore the previous scene when it ends.
+    """
     return choice is TriggerChoice.BATTERY_BELOW, choice is not TriggerChoice.NEVER
 
 

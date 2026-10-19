@@ -43,6 +43,8 @@ _WINDOW_HEIGHT = 460
 _REVEAL_ICON = "view-reveal-symbolic"
 _MOVE_DOWN = 1
 _MOVE_UP = -1
+# K2: the icon pairs with the kind's section title (app/palette_content.py),
+# so a masked clip never passes for a command.
 _KIND_ICONS = {
     EntryKind.COMMAND: "system-run-symbolic",
     EntryKind.TOGGLE: "emblem-ok-symbolic",

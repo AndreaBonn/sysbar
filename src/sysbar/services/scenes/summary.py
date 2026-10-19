@@ -2,7 +2,8 @@
 
 "Built in, 4 actions" says how a scene is stored. A user choosing one wants to
 know what will happen: the toggles it flips and the device it switches to are
-named; settings, which have no short user-facing name, are counted.
+named; settings, which have no short user-facing name, are counted. The module
+also words an activation's outcome: how much of a scene took effect.
 """
 
 from __future__ import annotations
