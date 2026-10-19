@@ -335,3 +335,134 @@ def test_closing_the_whats_new_window_marks_the_notes_as_seen(gtk: object) -> No
     window.close()
 
     assert seen == [True]
+
+
+def test_palette_window_run_invokes_a_runnable_entry_and_closes(gtk: object) -> None:
+    from sysbar.services.palette.models import EntryKind, PaletteEntry, Runnable
+    from sysbar.ui.palette.palette_window import PaletteWindow
+
+    calls: list[str] = []
+    entry = PaletteEntry(
+        id="open-panel",
+        title="Open the panel",
+        kind=EntryKind.COMMAND,
+        activation=Runnable(invoke=lambda: calls.append("ran")),
+    )
+    window = PaletteWindow(lambda _query: [entry])
+
+    window._run(0)
+
+    assert calls == ["ran"]
+    assert window._closing is True
+    window.destroy()
+
+
+def test_palette_window_run_applies_the_fix_of_an_unavailable_entry(gtk: object) -> None:
+    from sysbar.services.palette.models import EntryKind, PaletteEntry, Unavailable
+    from sysbar.ui.palette.palette_window import PaletteWindow
+
+    fixed: list[str] = []
+    entry = PaletteEntry(
+        id="mic",
+        title="Mute microphone",
+        kind=EntryKind.TOGGLE,
+        activation=Unavailable(
+            reason="Off", fix=lambda: fixed.append("fixed"), fix_label="Turn on"
+        ),
+    )
+    window = PaletteWindow(lambda _query: [entry])
+
+    window._run(0)
+
+    assert fixed == ["fixed"]
+    assert window._closing is False
+    window.destroy()
+
+
+def test_palette_window_run_ignores_a_dead_end_entry(gtk: object) -> None:
+    from sysbar.services.palette.models import EntryKind, PaletteEntry, Unavailable
+    from sysbar.ui.palette.palette_window import PaletteWindow
+
+    entry = PaletteEntry(
+        id="mic",
+        title="Mute microphone",
+        kind=EntryKind.TOGGLE,
+        activation=Unavailable(reason="No microphone"),
+    )
+    window = PaletteWindow(lambda _query: [entry])
+
+    window._run(0)
+
+    assert window._closing is False
+    window.destroy()
+
+
+def test_palette_window_shows_a_section_header_and_the_empty_title(gtk: object) -> None:
+    from sysbar.services.palette.models import EntryKind, PaletteEntry, Runnable
+    from sysbar.ui.palette.palette_window import PaletteWindow
+
+    entry = PaletteEntry(
+        id="open-panel",
+        title="Open the panel",
+        kind=EntryKind.COMMAND,
+        activation=Runnable(invoke=lambda: None),
+    )
+    window = PaletteWindow(lambda query: [entry] if not query else [])
+
+    header = window._list.get_row_at_index(0).get_header()
+    assert header is not None
+    assert header.get_label() == "Actions"
+    window._entry.set_text("zzz")
+    window._refresh()
+    assert window._empty.get_title() == "Nothing matches “zzz”"
+    window.destroy()
+
+
+def _tooltips(widget: object) -> list[str]:
+    """Collect the tooltip of every descendant widget that has one."""
+    found: list[str] = []
+    child = widget.get_first_child()  # type: ignore[attr-defined]
+    while child is not None:
+        tooltip = child.get_tooltip_text()
+        if tooltip:
+            found.append(tooltip)
+        found.extend(_tooltips(child))
+        child = child.get_next_sibling()
+    return found
+
+
+def test_clipboard_window_shows_empty_states_and_pin_tooltips(gtk: object, tmp_path: Path) -> None:
+    from sysbar.services.clipboard.service import ClipboardService
+    from sysbar.ui.clipboard.clipboard_window import ClipboardWindow
+
+    service = ClipboardService(tmp_path / "clipboard")
+    window = ClipboardWindow(service, on_copy=lambda _text: None)
+    assert window._empty.get_title() == "Nothing copied yet"
+
+    service.capture("hello")
+    assert "Pin" in _tooltips(window._rows[0])
+    assert "Unpin" not in _tooltips(window._rows[0])
+    window._search.set_text("zzz")
+    window._rebuild()
+    assert window._empty.get_title() == "No entries match"
+    window.destroy()
+
+
+def test_palette_window_header_only_on_the_first_row_of_a_kind(gtk: object) -> None:
+    from sysbar.services.palette.models import EntryKind, PaletteEntry, Runnable
+    from sysbar.ui.palette.palette_window import PaletteWindow
+
+    entries = [
+        PaletteEntry(
+            id=f"cmd-{n}",
+            title=f"Command {n}",
+            kind=EntryKind.COMMAND,
+            activation=Runnable(invoke=lambda: None),
+        )
+        for n in range(2)
+    ]
+    window = PaletteWindow(lambda _query: entries)
+
+    assert window._list.get_row_at_index(0).get_header() is not None
+    assert window._list.get_row_at_index(1).get_header() is None
+    window.destroy()
