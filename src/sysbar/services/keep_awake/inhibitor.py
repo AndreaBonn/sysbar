@@ -8,7 +8,6 @@ exercised manually; the session logic that drives it is unit-tested separately.
 
 from __future__ import annotations
 
-import contextlib
 import logging
 import os
 
@@ -90,7 +89,7 @@ class ScreenSaverInhibitor:
             return None
 
     def release(self, cookie: int) -> None:
-        with contextlib.suppress(GLib.Error):
+        try:
             self._get_session_bus().call_sync(
                 _SCREENSAVER_NAME,
                 _SCREENSAVER_PATH,
@@ -101,6 +100,11 @@ class ScreenSaverInhibitor:
                 Gio.DBusCallFlags.NONE,
                 2000,
                 None,
+            )
+        except GLib.Error as error:
+            # The display stays inhibited until the process exits; say so.
+            log.warning(
+                "screensaver uninhibit failed", extra={"cookie": cookie, "error": str(error)}
             )
 
     def _get_session_bus(self) -> Gio.DBusConnection:

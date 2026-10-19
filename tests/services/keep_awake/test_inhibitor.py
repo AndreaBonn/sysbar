@@ -29,3 +29,22 @@ def test_screensaver_inhibit_failure_logs_context(
     record = caplog.records[-1]
     assert record.message == "screensaver inhibit failed"
     assert record.__dict__["error"] == str(error)
+
+
+def test_screensaver_uninhibit_failure_logs_the_cookie(
+    monkeypatch: pytest.MonkeyPatch,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """A failed UnInhibit leaves the display inhibited until the process exits."""
+
+    class _FailingBus:
+        def call_sync(self, *_args: object) -> None:
+            raise GLib.Error("name has no owner")
+
+    adapter = ScreenSaverInhibitor()
+    monkeypatch.setattr(adapter, "_get_session_bus", _FailingBus)
+    with caplog.at_level(logging.WARNING):
+        adapter.release(cookie=7)
+
+    assert [record.message for record in caplog.records] == ["screensaver uninhibit failed"]
+    assert caplog.records[0].__dict__["cookie"] == 7
