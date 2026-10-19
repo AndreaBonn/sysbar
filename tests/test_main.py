@@ -7,10 +7,14 @@ from pytest_mock import MockerFixture
 from sysbar import __main__
 
 
-def test_version_flag_exits() -> None:
+def test_version_flag_exits(capsys: pytest.CaptureFixture[str]) -> None:
+    from importlib.metadata import version
+
     parser = __main__.build_parser()
-    with pytest.raises(SystemExit):
+    with pytest.raises(SystemExit) as caught:
         parser.parse_args(["--version"])
+    assert caught.value.code == 0
+    assert capsys.readouterr().out == f"sysbar {version('sysbar')}\n"
 
 
 def test_selftest_flag_is_set() -> None:
