@@ -1,4 +1,10 @@
-"""Hold detached shelf items until undo or commit, independently of the window."""
+"""The undo window of "Clear shelf" (S2).
+
+A clear detaches every item but deletes nothing until the toast goes away, so
+the user can take it back. Which batch is pending, when it is finally deleted
+and what undo restores is decided here, testable against a real
+:class:`ShelfService`; the window only shows the toast.
+"""
 
 from __future__ import annotations
 
