@@ -4,11 +4,20 @@ The ``compiled_schema`` fixture compiles the GSettings schema into a temporary
 directory and points ``GSETTINGS_SCHEMA_DIR`` at it, so configuration tests run
 without installing the package. Tests that need it are skipped when
 ``glib-compile-schemas`` is unavailable.
+
+The whole session runs on the in-memory GSettings backend, so no test can reach
+the dconf database of whoever runs the suite.
 """
 
 from __future__ import annotations
 
 import os
+
+# Set before anything imports Gio: the default settings backend is chosen once per
+# process. Without this, every ``Config()`` built without an explicit backend
+# writes to the developer's real dconf database.
+os.environ["GSETTINGS_BACKEND"] = "memory"
+
 import shutil
 import subprocess
 from collections.abc import Iterator

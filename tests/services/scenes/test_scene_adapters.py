@@ -2,11 +2,15 @@
 
 from __future__ import annotations
 
+import gi
 import pytest
 
-from sysbar.core.config import Config
-from sysbar.services.scenes.actions import SystemToggle
-from sysbar.services.scenes.adapters import (
+gi.require_version("Gio", "2.0")
+from gi.repository import Gio  # noqa: E402
+
+from sysbar.core.config import Config  # noqa: E402
+from sysbar.services.scenes.actions import SystemToggle  # noqa: E402
+from sysbar.services.scenes.adapters import (  # noqa: E402
     CallbackAudio,
     CallbackToggles,
     ConfigSettingsWriter,
@@ -14,8 +18,13 @@ from sysbar.services.scenes.adapters import (
 )
 
 
+def _config() -> Config:
+    """A config on its own memory backend, so no write survives into another test."""
+    return Config(backend=Gio.memory_settings_backend_new())
+
+
 def test_config_writer_writes_each_type_the_schema_declares(compiled_schema: str) -> None:
-    config = Config()
+    config = _config()
     writer = ConfigSettingsWriter(config)
 
     writer.set("alert-enabled", True)
@@ -33,7 +42,7 @@ def test_config_writer_refuses_a_value_type_the_key_cannot_hold(compiled_schema:
     Left unchecked that reads as success, and the scene reports an action as
     applied when nothing was written.
     """
-    config = Config()
+    config = _config()
     writer = ConfigSettingsWriter(config)
     config.settings.set_int("monitor-interval-seconds", 5)
 
@@ -44,7 +53,7 @@ def test_config_writer_refuses_a_value_type_the_key_cannot_hold(compiled_schema:
 
 
 def test_config_writer_refuses_a_value_of_an_unsupported_type(compiled_schema: str) -> None:
-    config = Config()
+    config = _config()
     writer = ConfigSettingsWriter(config)
     config.settings.set_int("monitor-interval-seconds", 5)
 
@@ -55,7 +64,7 @@ def test_config_writer_refuses_a_value_of_an_unsupported_type(compiled_schema: s
 
 
 def test_config_writer_refuses_a_key_the_schema_does_not_have(compiled_schema: str) -> None:
-    writer = ConfigSettingsWriter(Config())
+    writer = ConfigSettingsWriter(_config())
 
     with pytest.raises(SettingWriteError):
         writer.set("no-such-key", True)
@@ -65,7 +74,7 @@ def test_config_writer_refuses_a_key_whose_type_a_scene_cannot_write(
     compiled_schema: str,
 ) -> None:
     """A scene writes scalars; a string list is not one, and saying so beats guessing."""
-    writer = ConfigSettingsWriter(Config())
+    writer = ConfigSettingsWriter(_config())
 
     with pytest.raises(SettingWriteError):
         writer.set("auto-quit-exceptions", "firefox")
