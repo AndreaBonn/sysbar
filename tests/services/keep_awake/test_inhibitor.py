@@ -4,10 +4,13 @@ from __future__ import annotations
 
 import logging
 
+import gi
 import pytest
-from gi.repository import GLib
 
-from sysbar.services.keep_awake.inhibitor import ScreenSaverInhibitor
+gi.require_version("GLib", "2.0")
+from gi.repository import GLib  # noqa: E402
+
+from sysbar.services.keep_awake.inhibitor import ScreenSaverInhibitor  # noqa: E402
 
 
 def test_screensaver_inhibit_failure_logs_context(

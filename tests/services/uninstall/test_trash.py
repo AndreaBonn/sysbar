@@ -1,7 +1,10 @@
-from gi.repository import GLib
-from pytest_mock import MockerFixture
+import gi
 
-from sysbar.services.uninstall.trash import GioTrash
+gi.require_version("GLib", "2.0")
+from gi.repository import GLib  # noqa: E402
+from pytest_mock import MockerFixture  # noqa: E402
+
+from sysbar.services.uninstall.trash import GioTrash  # noqa: E402
 
 
 def test_trash_returns_true_on_success(mocker: MockerFixture) -> None:
