@@ -663,3 +663,53 @@ def test_palette_window_header_only_on_the_first_row_of_a_kind(gtk: object) -> N
     assert window._list.get_row_at_index(0).get_header() is not None
     assert window._list.get_row_at_index(1).get_header() is None
     window.destroy()
+
+
+def test_shelf_clear_then_undo_restores_visible_tiles(gtk: object, tmp_path: Path) -> None:
+    from sysbar.ui.shelf.shelf_window import ShelfWindow
+
+    service = ShelfService(data_dir=tmp_path / "shelf")
+    item = service.add_text(text="Keep this")
+    window = ShelfWindow(service=service)
+    try:
+        assert window._stack.get_visible_child_name() == "tiles"
+        window._on_clear(None)
+        assert service.items == []
+        assert window._stack.get_visible_child_name() == "empty"
+        assert window._flow.get_first_child() is None
+        window._on_undo(None)
+        assert service.items == [item]
+        assert window._stack.get_visible_child_name() == "tiles"
+        assert window._flow.get_child_at_index(0).get_child().get_first_child() is not None
+        assert window._flow.get_child_at_index(1) is None
+    finally:
+        window.destroy()
+
+
+def test_uninstaller_chooses_app_and_reports_removal(gtk: object, tmp_path: Path) -> None:
+    from gi.repository import Gio
+
+    from sysbar.ui.uninstall.uninstaller_window import UninstallerWindow
+
+    residue = tmp_path / ".config" / "SysbarSmoke"
+    residue.mkdir(parents=True)
+    (residue / "settings").write_bytes(b"data")
+    window = UninstallerWindow(
+        uninstaller=AppUninstaller(
+            home=tmp_path, trash=_FakeTrash(), remover=_FakeRemover(), polkit_available=False
+        ),
+        query=_FakePackageQuery(),
+    )
+    try:
+        window._apps = [Gio.AppInfo.create_from_commandline("/bin/true", "SysbarSmoke", 0)]
+        window._fill_app_list()
+        window._on_app_chosen(window._app_list, window._app_list.get_row_at_index(0))
+        assert window._target is not None
+        assert window._target.name == "SysbarSmoke"
+        assert len(window._switches) == 1
+        assert window._switches[0][1].get_subtitle() == f"4 B · {residue}"
+        assert window._remove_button.get_sensitive() is True
+        window._on_remove(None)
+        assert window._status.get_label() == "Done: 4 B moved to the Trash"
+    finally:
+        window.destroy()
