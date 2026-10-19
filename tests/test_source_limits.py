@@ -29,7 +29,6 @@ _LONG_FUNCTION_ALLOWLIST = frozenset(
         "sysbar/app/tray/menu_builder.py::build_menu_items",
         "sysbar/services/hotkey/portal.py::PortalGlobalShortcuts._create_session",
         "sysbar/services/system_monitor/parsers.py::parse_upower_devices",
-        "sysbar/ui/uninstall/uninstaller_window.py::UninstallerWindow._build_ui",
     }
 )
 

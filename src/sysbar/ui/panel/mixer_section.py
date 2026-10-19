@@ -14,6 +14,7 @@ gi.require_version("Adw", "1")
 from gi.repository import Adw, Gtk  # noqa: E402
 
 from ...core.constants import MAX_APP_VOLUME, MIN_APP_VOLUME  # noqa: E402
+from ...core.i18n import _  # noqa: E402
 from ...services.audio.app_volume_mixer import AppVolumeMixer  # noqa: E402
 from ...services.audio.models import MixerApp  # noqa: E402
 
@@ -67,10 +68,10 @@ class MixerSection(Adw.PreferencesGroup):
     """Live list of per-application volume controls."""
 
     def __init__(self) -> None:
-        super().__init__(title="Mixer")
+        super().__init__(title=_("Mixer"))
         self._mixer: AppVolumeMixer | None = None
         self._rows: dict[str, _AppRow] = {}
-        self._empty = Adw.ActionRow(title="No audio playing")
+        self._empty = Adw.ActionRow(title=_("No audio playing"))
         self.add(self._empty)
 
     def set_unavailable(self) -> None:

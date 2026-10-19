@@ -280,3 +280,22 @@ def test_activating_a_scene_from_the_list_marks_it_active(gtk: object) -> None:
 
     assert controller.active_id == target.id
     window.destroy()
+
+
+def test_uninstaller_scans_nothing_until_an_app_is_chosen(gtk: object) -> None:
+    from sysbar.services.uninstall.app_uninstaller import AppUninstaller
+    from sysbar.ui.uninstall.uninstaller_window import UninstallerWindow
+
+    window = UninstallerWindow(
+        AppUninstaller(
+            home=Path("/nonexistent"),
+            trash=_FakeTrash(),
+            remover=_FakeRemover(),
+            polkit_available=False,
+        ),
+        _FakePackageQuery(),
+    )
+
+    assert window._target is None
+    assert window._remove_button.get_sensitive() is False
+    window.destroy()

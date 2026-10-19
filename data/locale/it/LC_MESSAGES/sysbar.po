@@ -14,7 +14,7 @@ msgid "Open panel"
 msgstr "Apri pannello"
 
 msgid "Open shelf"
-msgstr "Apri shelf"
+msgstr "Apri la mensola"
 
 msgid "Uninstall app…"
 msgstr "Disinstalla app…"
@@ -212,7 +212,7 @@ msgid "Auto-quit closed apps"
 msgstr "Chiudi automaticamente le app chiuse"
 
 msgid "Shelf: shake to open"
-msgstr "Shelf: scuoti per aprire"
+msgstr "Mensola: scuoti per aprire"
 
 # Settings — About page
 msgid "Version"
@@ -291,7 +291,7 @@ msgid "Clipboard history"
 msgstr "Cronologia appunti"
 
 msgid "Shelf"
-msgstr "Shelf"
+msgstr "Mensola"
 
 # Settings — Monitor extras
 msgid "Audio devices"
@@ -421,7 +421,7 @@ msgstr "Sconosciuto"
 
 # Shelf
 msgid "Clear shelf"
-msgstr "Svuota shelf"
+msgstr "Svuota la mensola"
 
 msgid "text"
 msgstr "testo"
@@ -1048,3 +1048,69 @@ msgstr "Link"
 
 msgid "Image"
 msgstr "Immagine"
+
+msgid "Also remove the system package"
+msgstr "Rimuovi anche il pacchetto di sistema"
+
+msgid "App to remove"
+msgstr "App da rimuovere"
+
+msgid "Choose an app to see what it left behind"
+msgstr "Scegli un'app per vedere cosa ha lasciato"
+
+msgid "Files left behind"
+msgstr "File rimasti"
+
+msgid "Move to the Trash"
+msgstr "Sposta nel Cestino"
+
+msgid "Remove an app"
+msgstr "Rimuovi un'app"
+
+msgid "Search installed apps…"
+msgstr "Cerca tra le app installate…"
+
+msgid "Nothing left to clean up for this app"
+msgstr "Per questa app non c'è nulla da pulire"
+
+msgid "Found {count} items, {size} in total"
+msgstr "Trovati {count} elementi, {size} in tutto"
+
+msgid "Move {count} items ({size}) to the Trash"
+msgstr "Sposta {count} elementi ({size}) nel Cestino"
+
+msgid "Installed with {manager}: {package}"
+msgstr "Installata con {manager}: {package}"
+
+msgid "Not available: installed by hand, or no administrator rights"
+msgstr "Non disponibile: installata a mano, oppure mancano i permessi di amministratore"
+
+msgid "Leftovers of {app}. They go to the Trash, so you can still restore them."
+msgstr "Residui di {app}. Finiscono nel Cestino, quindi puoi ancora recuperarli."
+
+msgid "Freed {size}; {count} items could not be moved"
+msgstr "Liberati {size}; {count} elementi non sono stati spostati"
+
+msgid "Done: {size} moved to the Trash"
+msgstr "Fatto: {size} spostati nel Cestino"
+
+msgid "Cache"
+msgstr "Cache"
+
+msgid "Saved data"
+msgstr "Dati salvati"
+
+msgid "History and state"
+msgstr "Cronologia e stato"
+
+msgid "Menu shortcut"
+msgstr "Voce del menu"
+
+msgid "Flatpak data"
+msgstr "Dati Flatpak"
+
+msgid "Mixer"
+msgstr "Mixer"
+
+msgid "No audio playing"
+msgstr "Nessun audio in riproduzione"
