@@ -458,14 +458,25 @@ def test_a_manifest_with_wide_permissions_is_narrowed_on_load(tmp_path: Path) ->
     assert [scene.id for scene in store.scenes] == ["mine"]
 
 
-def test_an_already_private_manifest_is_left_alone(tmp_path: Path) -> None:
+def test_an_already_private_manifest_is_left_alone(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     payload = {"version": 1, "scenes": [], "triggers": []}
     store = _write(tmp_path, json.dumps(payload))
     manifest = tmp_path / "scenes" / "manifest.json"
     manifest.chmod(0o600)
+    chmod_calls: list[int] = []
+    real_chmod = Path.chmod
+
+    def counting_chmod(self: Path, mode: int) -> None:
+        chmod_calls.append(mode)
+        real_chmod(self, mode)
+
+    monkeypatch.setattr(Path, "chmod", counting_chmod)
 
     store.load()
 
+    assert chmod_calls == []
     assert stat.S_IMODE(manifest.stat().st_mode) == 0o600
 
 

@@ -275,7 +275,9 @@ def test_hovering_at_the_threshold_does_not_flap() -> None:
 def test_an_on_battery_rule_fires_when_unplugged() -> None:
     rule = _rule(condition=OnBatteryPower(), scene_id="power-saving")
 
-    assert evaluate([rule], TriggerState(on_battery=True), TriggerMemory()).activate
+    decision = evaluate([rule], TriggerState(on_battery=True), TriggerMemory())
+
+    assert decision.activate == "power-saving"
 
 
 def test_an_on_battery_rule_does_not_fire_on_mains() -> None:
