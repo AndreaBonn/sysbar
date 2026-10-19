@@ -245,6 +245,26 @@ def test_settings_window_builds(gtk: object, compiled_schema: str) -> None:
     window.destroy()
 
 
+def test_alerts_page_switch_sets_suggested_threshold_and_off_zeroes_it(
+    gtk: object, compiled_schema: str
+) -> None:
+    from gi.repository import Gio
+
+    from sysbar.app.settings_content import ALERTS
+    from sysbar.ui.settings.alerts_page import AlertsPage
+
+    spec = ALERTS[-1]
+    settings = Gio.Settings.new("io.github.AndreaBonn.Sysbar")
+    settings.set_int(spec.key, 0)
+    page = AlertsPage(settings)
+    row = next(r for s, r in page._rows if s is spec)
+    row.set_enable_expansion(True)
+    assert settings.get_int(spec.key) == spec.suggested
+    row.set_enable_expansion(False)
+    assert settings.get_int(spec.key) == 0
+    page.disconnect_settings()
+
+
 def test_shelf_window_builds(gtk: object, tmp_path: Path) -> None:
     from sysbar.ui.shelf.shelf_window import ShelfWindow
 
