@@ -24,6 +24,8 @@ from sysbar.services.uninstall.app_uninstaller import AppUninstaller
 from sysbar.services.uninstall.models import PackageManager
 
 if TYPE_CHECKING:
+    from gi.repository import Gtk
+
     from sysbar.services.audio.device_switcher import DeviceSwitcher
 
 pytestmark = pytest.mark.ui
@@ -360,6 +362,55 @@ def test_scenes_window_lists_every_scene(gtk: object) -> None:
 
     assert len(window._rows) == len(PRESET_SCENES)
     window.destroy()
+
+
+def _scene_icon_buttons(widget: Gtk.Widget) -> list[tuple[str, str | None]]:
+    """Read icon buttons through the row's widget tree without a view accessor."""
+    from gi.repository import Gtk
+
+    found: list[tuple[str, str | None]] = []
+    child = widget.get_first_child()
+    while child is not None:
+        if isinstance(child, Gtk.Button) and child.get_icon_name():
+            found.append((child.get_icon_name(), child.get_tooltip_text()))
+        found.extend(_scene_icon_buttons(widget=child))
+        child = child.get_next_sibling()
+    return found
+
+
+def _removal_scene_controller() -> _FakeSceneController:
+    from sysbar.services.scenes.models import PRESET_SCENES, SceneOrigin
+
+    controller = _FakeSceneController()
+    controller.scenes = [
+        PRESET_SCENES[0],
+        PRESET_SCENES[1].edited(name="My presentation", actions=None),
+        Scene(
+            id="desk",
+            name="Desk",
+            origin=SceneOrigin.USER,
+            actions=(SetOutputDevice(device="hdmi"),),
+        ),
+    ]
+    controller.output_devices = [
+        AudioDevice(index=1, name="hdmi", description="Desk speakers", kind="sink", is_default=True)
+    ]
+    return controller
+
+
+def test_scenes_window_removal_buttons_and_output_description(gtk: object) -> None:
+    from sysbar.ui.scenes.scenes_window import ScenesWindow
+
+    window = ScenesWindow(controller=_removal_scene_controller())
+    try:
+        assert [_scene_icon_buttons(widget=row) for row in window._rows] == [
+            [("document-edit-symbolic", "Edit")],
+            [("document-edit-symbolic", "Edit"), ("edit-undo-symbolic", "Restore the built-in")],
+            [("document-edit-symbolic", "Edit"), ("user-trash-symbolic", "Delete")],
+        ]
+        assert window._rows[2].get_subtitle() == "Audio to Desk speakers"
+    finally:
+        window.destroy()
 
 
 def test_scenes_window_opens_the_editor_for_a_new_scene(gtk: object) -> None:
