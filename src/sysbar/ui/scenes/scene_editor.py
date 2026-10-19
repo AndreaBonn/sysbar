@@ -23,11 +23,18 @@ gi.require_version("Gtk", "4.0")
 gi.require_version("Adw", "1")
 from gi.repository import Adw, Gtk  # noqa: E402
 
+from ...app.device_choices import scene_output_choices  # noqa: E402
+from ...app.scenes_content import (  # noqa: E402
+    TOGGLE_CHOICES,
+    TRIGGER_CHOICES,
+    FormValues,
+    form_draft,
+    trigger_rows_visibility,
+)
 from ...core.i18n import _  # noqa: E402
 from ...services.scenes.actions import SystemToggle  # noqa: E402
 from ...services.scenes.editing import (  # noqa: E402
     SceneDraft,
-    TriggerChoice,
     TriggerDraft,
     apply_draft,
     draft_from,
@@ -37,20 +44,10 @@ from ...services.scenes.editing import (  # noqa: E402
 from ...services.scenes.models import Scene  # noqa: E402
 from .ports import SceneController  # noqa: E402
 
-# Combo order for a toggle: leave alone, turn on, turn off.
-_TOGGLE_CHOICES: tuple[bool | None, ...] = (None, True, False)
 _NO_DEVICE = 0
 _PERCENT_MIN = 5.0
 _PERCENT_MAX = 95.0
 _PERCENT_STEP = 5.0
-
-# Combo order for the trigger condition; the index maps into this tuple.
-_TRIGGER_CHOICES: tuple[TriggerChoice, ...] = (
-    TriggerChoice.NEVER,
-    TriggerChoice.EXTERNAL_MONITOR,
-    TriggerChoice.ON_BATTERY,
-    TriggerChoice.BATTERY_BELOW,
-)
 
 _TOGGLE_LABELS = {
     SystemToggle.KEEP_AWAKE: "Keep awake",
@@ -69,7 +66,7 @@ class SceneEditor:
         self._name = Adw.EntryRow(title=_("Name"))
         self._toggle_rows: dict[SystemToggle, Adw.ComboRow] = {}
         self._device_row = Adw.ComboRow(title=_("Audio output"))
-        self._device_names: list[str] = [""]
+        self._device_names: tuple[str, ...] = ("",)
         self._preserved_row = Adw.ActionRow(subtitle=_("Kept as it is"))
         self._trigger_row = Adw.ComboRow(title=_("Activate automatically"))
         self._percent_row = Adw.SpinRow.new_with_range(_PERCENT_MIN, _PERCENT_MAX, _PERCENT_STEP)
@@ -135,7 +132,9 @@ class SceneEditor:
         draft = draft_from(scene) if scene is not None else SceneDraft(name=_("New scene"))
         self._name.set_text(draft.name)
         for toggle, row in self._toggle_rows.items():
-            row.set_selected(_TOGGLE_CHOICES.index(draft.toggles.get(toggle)))
+            row.set_selected(
+                tuple(value for value, _label in TOGGLE_CHOICES).index(draft.toggles.get(toggle))
+            )
         self._load_devices(draft.output_device)
         self._load_trigger(scene)
         self._preserved_row.set_visible(draft.preserved_count > 0)
@@ -144,27 +143,27 @@ class SceneEditor:
         )
 
     def _load_devices(self, selected: str | None) -> None:
-        devices = self._controller.outputs()
-        names = [_("Leave unchanged")] + [device.description or device.name for device in devices]
-        self._device_names = [""] + [device.name for device in devices]
+        choices = scene_output_choices(devices=self._controller.outputs(), selected_name=selected)
+        names = [_("Leave unchanged"), *choices.labels]
+        self._device_names = choices.names
         self._device_row.set_model(Gtk.StringList.new(names))
-        self._device_row.set_selected(
-            self._device_names.index(selected) if selected in self._device_names else _NO_DEVICE
-        )
+        self._device_row.set_selected(choices.selected or _NO_DEVICE)
 
     def _load_trigger(self, scene: Scene | None) -> None:
         rule = self._controller.trigger_for(scene.id) if scene is not None else None
         draft = trigger_draft_from(rule)
-        self._trigger_row.set_selected(_TRIGGER_CHOICES.index(draft.choice))
+        self._trigger_row.set_selected(
+            tuple(choice for choice, _label in TRIGGER_CHOICES).index(draft.choice)
+        )
         self._percent_row.set_value(draft.percent)
         self._restore_row.set_active(draft.restore_on_exit)
         self._sync_trigger_rows()
 
     def _sync_trigger_rows(self) -> None:
-        """Only the threshold condition has a percentage to ask about."""
-        choice = _TRIGGER_CHOICES[self._trigger_row.get_selected()]
-        self._percent_row.set_visible(choice is TriggerChoice.BATTERY_BELOW)
-        self._restore_row.set_visible(choice is not TriggerChoice.NEVER)
+        choice = TRIGGER_CHOICES[self._trigger_row.get_selected()][0]
+        percent_visible, restore_visible = trigger_rows_visibility(choice=choice)
+        self._percent_row.set_visible(percent_visible)
+        self._restore_row.set_visible(restore_visible)
 
     # --- saving -----------------------------------------------------------
 
@@ -175,35 +174,27 @@ class SceneEditor:
         self._on_saved()
 
     def _current_draft(self, base: Scene) -> SceneDraft:
-        toggles = {
-            toggle: _TOGGLE_CHOICES[row.get_selected()] for toggle, row in self._toggle_rows.items()
-        }
-        index = self._device_row.get_selected()
-        return SceneDraft(
-            name=self._name.get_text().strip() or base.name,
-            toggles={key: value for key, value in toggles.items() if value is not None},
-            output_device=self._device_names[index] if index < len(self._device_names) else "",
-            preserved=draft_from(base).preserved,
+        values = FormValues(
+            name=self._name.get_text(),
+            toggle_indices={
+                toggle: row.get_selected() for toggle, row in self._toggle_rows.items()
+            },
+            device_index=self._device_row.get_selected(),
+            device_names=self._device_names,
         )
+        return form_draft(values=values, base=base)
 
     def _current_trigger(self) -> TriggerDraft:
         return TriggerDraft(
-            choice=_TRIGGER_CHOICES[self._trigger_row.get_selected()],
+            choice=TRIGGER_CHOICES[self._trigger_row.get_selected()][0],
             percent=self._percent_row.get_value(),
             restore_on_exit=self._restore_row.get_active(),
         )
 
 
 def _trigger_model() -> Gtk.StringList:
-    return Gtk.StringList.new(
-        [
-            _("Never"),
-            _("An external monitor is connected"),
-            _("Running on battery"),
-            _("Battery drops below a level"),
-        ]
-    )
+    return Gtk.StringList.new([_(label) for _choice, label in TRIGGER_CHOICES])
 
 
 def _toggle_model() -> Gtk.StringList:
-    return Gtk.StringList.new([_("Leave unchanged"), _("Turn on"), _("Turn off")])
+    return Gtk.StringList.new([_(label) for _choice, label in TOGGLE_CHOICES])

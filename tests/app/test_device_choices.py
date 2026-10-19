@@ -4,7 +4,7 @@ from dataclasses import FrozenInstanceError
 
 import pytest
 
-from sysbar.app.device_choices import DeviceChoices, default_choices, name_at
+from sysbar.app.device_choices import DeviceChoices, default_choices, name_at, scene_output_choices
 from sysbar.services.audio.models import AudioDevice
 
 
@@ -70,3 +70,30 @@ def test_device_choices_frozen_rejects_selection_changes() -> None:
     with pytest.raises(FrozenInstanceError):
         choices.__setattr__("selected", 1)
     assert choices.selected == 0
+
+
+def test_scene_output_choices_connected_selects_device_after_neutral_entry() -> None:
+    devices = [
+        AudioDevice(
+            index=10, name="speakers", description="Speakers", kind="sink", is_default=True
+        ),
+        AudioDevice(index=11, name="hdmi", description="", kind="sink", is_default=False),
+    ]
+    assert scene_output_choices(devices=devices, selected_name="hdmi") == DeviceChoices(
+        labels=("Speakers", "hdmi"), names=("", "speakers", "hdmi"), selected=2
+    )
+
+
+@pytest.mark.parametrize("selected_name", ["disconnected", None, ""])
+def test_scene_output_choices_missing_selection_selects_neutral(selected_name: str | None) -> None:
+    devices = _devices(defaults=(True, False))
+    assert scene_output_choices(devices=devices, selected_name="sink-1").selected == 2
+    assert scene_output_choices(devices=devices, selected_name=selected_name) == DeviceChoices(
+        labels=("Speaker 0", "Speaker 1"), names=("", "sink-0", "sink-1"), selected=0
+    )
+
+
+def test_scene_output_choices_empty_returns_only_neutral_name() -> None:
+    assert scene_output_choices(devices=[], selected_name="gone") == DeviceChoices(
+        labels=(), names=("",), selected=0
+    )
