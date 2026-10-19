@@ -14,6 +14,7 @@ gi.require_version("Gtk", "4.0")
 gi.require_version("Adw", "1")
 from gi.repository import Adw, Gtk  # noqa: E402
 
+from ...app.clipboard_content import empty_state, pin_presentation  # noqa: E402
 from ...core.i18n import _  # noqa: E402
 from ...services.clipboard.models import ClipEntry, ClipKind  # noqa: E402
 from ...services.clipboard.service import ClipboardService  # noqa: E402
@@ -22,8 +23,6 @@ CopyCallback = Callable[[str], None]
 
 _WINDOW_WIDTH = 420
 _WINDOW_HEIGHT = 560
-_PINNED_ICON = "starred-symbolic"
-_UNPINNED_ICON = "non-starred-symbolic"
 # C2: the kind as an icon and a word, not the raw enum value.
 _KIND_ICONS = {ClipKind.TEXT: "text-x-generic-symbolic", ClipKind.URL: "web-browser-symbolic"}
 _KIND_LABELS = {ClipKind.TEXT: "Text", ClipKind.URL: "Link"}
@@ -89,18 +88,12 @@ class ClipboardWindow(Adw.Window):
         self._show_empty(query)
 
     def _show_empty(self, query: str) -> None:
-        """C1: say how the history fills, or that the search found nothing."""
         if self._rows:
             self._stack.set_visible_child_name("list")
             return
-        if query:
-            self._empty.set_title(_("No entries match"))
-            self._empty.set_description(_("Try fewer letters."))
-        else:
-            self._empty.set_title(_("Nothing copied yet"))
-            self._empty.set_description(
-                _("Copy some text or a link anywhere: it appears here, ready to copy again.")
-            )
+        title, description = empty_state(query=query)
+        self._empty.set_title(title)
+        self._empty.set_description(description)
         self._stack.set_visible_child_name("empty")
 
     def _copy(self, text: str) -> None:
@@ -124,9 +117,10 @@ class ClipboardWindow(Adw.Window):
         row.add_prefix(Gtk.Image(icon_name=_KIND_ICONS[entry.kind]))
         row.connect("activated", lambda _r, text=entry.text: self._copy(text))
 
+        icon, tooltip = pin_presentation(pinned=entry.pinned)
         pin = Gtk.Button(
-            icon_name=_PINNED_ICON if entry.pinned else _UNPINNED_ICON,
-            tooltip_text=_("Unpin") if entry.pinned else _("Pin"),
+            icon_name=icon,
+            tooltip_text=tooltip,
             valign=Gtk.Align.CENTER,
         )
         pin.add_css_class("flat")
