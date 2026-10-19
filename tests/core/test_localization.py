@@ -1,3 +1,4 @@
+import gettext
 import os
 import shutil
 import subprocess
@@ -7,6 +8,14 @@ from pathlib import Path
 import pytest
 
 from sysbar.core import i18n, localization
+
+_PROJECT_ROOT = Path(__file__).resolve().parents[2]
+_ITALIAN_CATALOGUE = _PROJECT_ROOT / "data" / "locale" / "it" / "LC_MESSAGES" / "sysbar.po"
+
+
+class _Placeholder(gettext.NullTranslations):
+    def gettext(self, message: str) -> str:
+        return f"<{message}>"
 
 
 @pytest.fixture(autouse=True)
@@ -52,16 +61,18 @@ def test_install_language_empty_follows_system_locale(monkeypatch: pytest.Monkey
     assert localization.install_language("") == "it"
 
 
-def test_install_language_rebinds_active_translation() -> None:
+def test_install_language_english_replaces_the_active_translation() -> None:
+    i18n.set_translation(_Placeholder())
+    assert i18n._("Keep awake") == "<Keep awake>"
+
     localization.install_language("en")
-    # NullTranslations / missing catalog falls back to the source string.
+
+    # English has no catalogue: the source string comes back unchanged.
     assert i18n._("Keep awake") == "Keep awake"
 
 
-def test_locale_dir_returns_an_existing_or_fallback_candidate() -> None:
-    result = localization._locale_dir()
-    assert isinstance(result, Path)
-    assert result in localization._LOCALE_CANDIDATES
+def test_locale_dir_prefers_the_source_checkout_catalogues() -> None:
+    assert localization._locale_dir() == _PROJECT_ROOT / "data" / "locale"
 
 
 def test_locale_dir_uses_fallback_when_no_candidate_exists(
@@ -192,24 +203,24 @@ def test_the_italian_catalogue_has_no_duplicate_entries() -> None:
     cannot see this, because the entry is there twice. What the user gets is an
     untranslated interface and one warning in the log.
     """
-    catalogue = Path("data/locale/it/LC_MESSAGES/sysbar.po")
     ids = [
         line.removeprefix("msgid ").strip()
-        for line in catalogue.read_text(encoding="utf-8").splitlines()
+        for line in _ITALIAN_CATALOGUE.read_text(encoding="utf-8").splitlines()
         if line.startswith("msgid ")
     ]
 
     duplicates = sorted({entry for entry in ids if ids.count(entry) > 1})
 
+    assert (
+        '"Scenes"' in ids
+    )  # the scan reads real entries, so an empty duplicates list means something
     assert duplicates == []
 
 
 @pytest.mark.skipif(shutil.which("msgfmt") is None, reason="gettext tools not installed")
 def test_the_italian_catalogue_compiles(tmp_path: Path) -> None:
-    catalogue = Path("data/locale/it/LC_MESSAGES/sysbar.po")
-
     result = subprocess.run(
-        ["msgfmt", str(catalogue), "-o", str(tmp_path / "sysbar.mo")],
+        ["msgfmt", str(_ITALIAN_CATALOGUE), "-o", str(tmp_path / "sysbar.mo")],
         capture_output=True,
         text=True,
         check=False,
