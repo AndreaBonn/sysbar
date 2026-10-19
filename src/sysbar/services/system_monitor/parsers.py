@@ -153,19 +153,24 @@ def parse_upower_devices(
     """
     result: list[PeripheralBattery] = []
     for props in devices:
-        if bool(props.get(_UPOWER_KEY_POWER_SUPPLY, False)):
-            continue
-        if not bool(props.get(_UPOWER_KEY_IS_PRESENT, True)):
-            continue
-        percent = float(props.get(_UPOWER_KEY_PERCENTAGE, 0.0))
-        if percent <= 0.0:
+        if not _is_reportable(props):
             continue
         result.append(
             PeripheralBattery(
                 model=str(props.get(_UPOWER_KEY_MODEL, "")).strip(),
                 kind=int(props.get(_UPOWER_KEY_TYPE, 0)),
-                percent=percent,
+                percent=float(props.get(_UPOWER_KEY_PERCENTAGE, 0.0)),
                 charging=int(props.get(_UPOWER_KEY_STATE, 0)) == UPOWER_STATE_CHARGING,
             )
         )
     return tuple(result)
+
+
+def _is_reportable(props: dict[str, Any]) -> bool:
+    """Keep connected peripherals with a real charge reading, excluding supplies."""
+    if bool(props.get(_UPOWER_KEY_POWER_SUPPLY, False)):
+        return False
+    if not bool(props.get(_UPOWER_KEY_IS_PRESENT, True)):
+        return False
+    percent = float(props.get(_UPOWER_KEY_PERCENTAGE, 0.0))
+    return not percent <= 0.0
