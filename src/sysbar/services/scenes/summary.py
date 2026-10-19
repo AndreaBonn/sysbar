@@ -8,6 +8,7 @@ named; settings, which have no short user-facing name, are counted.
 from __future__ import annotations
 
 from collections.abc import Callable
+from typing import assert_never
 
 from ...core.i18n import _
 from .actions import SetOutputDevice, SetSetting, SetToggle, SystemToggle
@@ -41,6 +42,8 @@ def describe_scene(scene: Scene, *, device_name: Callable[[str], str | None] | N
                 parts.append(_("Audio to {device}").format(device=readable or device))
             case SetSetting():
                 settings += 1
+            case _:  # pragma: no cover
+                assert_never(action)
     if settings:
         parts.append(_("+{count} more").format(count=settings))
     return _SEPARATOR.join(parts) if parts else _("Changes nothing yet")

@@ -20,6 +20,7 @@ from collections.abc import Mapping
 from dataclasses import dataclass, field
 from enum import StrEnum
 from types import MappingProxyType
+from typing import assert_never
 
 from .actions import SceneAction, SetOutputDevice, SetToggle, SystemToggle
 from .models import Scene
@@ -157,6 +158,8 @@ def trigger_draft_from(rule: TriggerRule | None) -> TriggerDraft:
             choice, percent = TriggerChoice.ON_BATTERY, DEFAULT_BATTERY_PERCENT
         case BatteryBelow(percent=threshold):
             choice, percent = TriggerChoice.BATTERY_BELOW, threshold
+        case _:  # pragma: no cover
+            assert_never(rule.condition)
     return TriggerDraft(choice=choice, percent=percent, restore_on_exit=rule.restore_on_exit)
 
 

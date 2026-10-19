@@ -16,7 +16,7 @@ from __future__ import annotations
 import logging
 from dataclasses import dataclass
 from enum import StrEnum
-from typing import Protocol
+from typing import Protocol, assert_never
 
 from .actions import SceneAction, SetOutputDevice, SetSetting, SetToggle, SystemToggle
 
@@ -104,6 +104,8 @@ def _apply_toggle(action: SetToggle, toggles: ToggleActions) -> ActionOutcome:
             toggles.set_do_not_disturb(action.value)
         case SystemToggle.MICROPHONE_MUTED:
             toggles.set_microphone_muted(action.value)
+        case _:  # pragma: no cover
+            assert_never(action.toggle)
     return ActionOutcome(action, Status.APPLIED)
 
 
