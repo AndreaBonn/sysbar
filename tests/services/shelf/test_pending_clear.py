@@ -106,3 +106,22 @@ def test_undo_of_a_superseded_batch_restores_nothing(tmp_path: Path) -> None:
 
     pending.undo(batch=second_batch)
     assert service.items == [second]
+
+
+def test_clear_on_an_empty_shelf_keeps_the_previous_batch_undoable(tmp_path: Path) -> None:
+    """A second Clear pressed on the now empty shelf must not delete the first.
+
+    The first toast is still offering Undo; committing its batch here would
+    turn that Undo into a no-op and remove the staged files for good.
+    """
+    service = ShelfService(data_dir=tmp_path / "shelf")
+    image = service.add_image(data=b"image")
+    staged = Path(image.path or "")
+    pending = PendingClear(service=service)
+    batch = pending.clear()
+
+    assert pending.clear() is None
+
+    assert staged.read_bytes() == b"image"
+    pending.undo(batch=batch)
+    assert service.items == [image]

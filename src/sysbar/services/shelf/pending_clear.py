@@ -30,15 +30,16 @@ class PendingClear:
         self._batch = 0
 
     def clear(self) -> int | None:
-        """Commit the previous batch and detach the current shelf for undo.
+        """Detach the current shelf for undo, then commit the previous batch.
 
         Returns the number of the new batch, or ``None`` when the shelf was
-        already empty and no toast is due.
+        already empty and no toast is due. An empty clear leaves the previous
+        batch pending: its toast may still be offering Undo.
         """
-        self.commit()
         detached = self._service.detach_all()
         if not detached:
             return None
+        self.commit()
         self._batch += 1
         self._pending = detached
         return self._batch
