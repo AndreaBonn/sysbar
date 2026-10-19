@@ -8,18 +8,22 @@ service-level tests.
 from __future__ import annotations
 
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 import pytest
 
 from sysbar.core.capabilities import Capabilities
 from sysbar.core.config import Config
-from sysbar.services.audio.models import AudioDevice
+from sysbar.services.audio.models import AudioDevice, SinkInput
 from sysbar.services.autostart import AutostartManager
 from sysbar.services.scenes.models import Scene
 from sysbar.services.scenes.triggers import TriggerRule
 from sysbar.services.shelf.shelf_service import ShelfService
 from sysbar.services.uninstall.app_uninstaller import AppUninstaller
 from sysbar.services.uninstall.models import PackageManager
+
+if TYPE_CHECKING:
+    from sysbar.services.audio.device_switcher import DeviceSwitcher
 
 pytestmark = pytest.mark.ui
 
@@ -103,7 +107,7 @@ def test_metrics_section_shows_rows_with_data_and_hides_the_rest(gtk: object) ->
 
 def test_device_section_binds_and_populates(gtk: object) -> None:
     from sysbar.services.audio.device_switcher import DeviceSwitcher
-    from sysbar.services.audio.models import AudioDevice, SinkInput
+    from sysbar.services.audio.models import AudioDevice
     from sysbar.ui.panel.device_section import DeviceSection
 
     class _Backend:
@@ -125,6 +129,98 @@ def test_device_section_binds_and_populates(gtk: object) -> None:
     section.bind(switcher)
     switcher.refresh()
     assert section.get_visible()
+
+
+class _DeviceBackend:
+    def __init__(self) -> None:
+        self.outputs = [
+            AudioDevice(index=10, name="spk", description="Speakers", kind="sink", is_default=True),
+            AudioDevice(index=20, name="hdmi", description="HDMI", kind="sink", is_default=False),
+        ]
+        self.inputs = [
+            AudioDevice(index=30, name="mic", description="Mic", kind="source", is_default=True),
+            AudioDevice(index=40, name="usb", description="USB", kind="source", is_default=False),
+        ]
+        self.switched: list[str] = []
+
+    def list_sinks(self) -> list[AudioDevice]:
+        return self.outputs
+
+    def list_sources(self) -> list[AudioDevice]:
+        return self.inputs
+
+    def list_sink_inputs(self) -> list[SinkInput]:
+        return []
+
+    def set_default_sink(self, name: str) -> None:
+        self.switched.append(name)
+
+    def set_default_source(self, name: str) -> None:
+        self.switched.append(name)
+
+    def move_sink_input(self, input_index: int, sink_index: int) -> None: ...
+
+
+def _recording_switcher(backend: _DeviceBackend) -> DeviceSwitcher:
+    """Switcher that records choices without refreshing from inside the handler.
+
+    A real switch refreshes synchronously, which repopulates the combo while its
+    own notify::selected handler is still running and blocks under GTK; that
+    re-entrancy is not what these smokes are about.
+    """
+    from sysbar.services.audio.device_switcher import DeviceSwitcher
+
+    class _Recording(DeviceSwitcher):
+        def set_default_output(self, name: str) -> None:
+            backend.switched.append(name)
+
+        def set_default_input(self, name: str) -> None:
+            backend.switched.append(name)
+
+    return _Recording(backend=backend)
+
+
+def test_device_section_fill_shows_labels_defaults_and_hides_empty_rows(gtk: object) -> None:
+    from sysbar.ui.panel.device_section import DeviceSection
+
+    backend = _DeviceBackend()
+    switcher = _recording_switcher(backend)
+    section = DeviceSection()
+    section.bind(switcher=switcher)
+    switcher.refresh()
+
+    assert section.get_visible() is True
+    assert section._output_row.get_visible() is True
+    assert section._input_row.get_visible() is True
+    assert section._output_row.get_selected_item().get_string() == "Speakers"
+    assert section._output_row.get_model().get_string(1) == "HDMI"
+    assert section._input_row.get_selected_item().get_string() == "Mic"
+    assert backend.switched == []
+    section._output_row.set_selected(1)
+    assert backend.switched == ["hdmi"]
+    backend.outputs = []
+    backend.inputs = []
+    switcher.refresh()
+    assert section.get_visible() is False
+    assert section._output_row.get_visible() is False
+    assert section._input_row.get_visible() is False
+    assert section._output_row.get_model().get_n_items() == 0
+
+
+def test_device_section_input_selection_switches_the_named_device(gtk: object) -> None:
+    from sysbar.ui.panel.device_section import DeviceSection
+
+    backend = _DeviceBackend()
+    switcher = _recording_switcher(backend)
+    section = DeviceSection()
+    section.bind(switcher=switcher)
+    switcher.refresh()
+
+    assert section._input_row.get_model().get_string(1) == "USB"
+    assert backend.switched == []
+    section._input_row.set_selected(1)
+    assert backend.switched == ["usb"]
+    assert section._input_row.get_selected_item().get_string() == "USB"
 
 
 def test_clipboard_window_builds(gtk: object, tmp_path: Path) -> None:
