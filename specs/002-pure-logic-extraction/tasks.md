@@ -20,7 +20,7 @@
 | T15 | parsers._is_reportable, esce parse_upower_devices | T14 | R3 | seq | revert | fatto (4d99e23) |
 | T16 | CombinedInhibitor + log dell'errore ScreenSaver ingoiato | T0 | R1,R9 | ok | revert | fatto (2751599) |
 | T17 | app/clipboard_content.py (Could) | T0 | R1 | ok | revert | fatto (a8b4da1) |
-| T18 | gate traduzioni sui rami dei moduli puri | T3-T17 | R8 | seq | revert | |
+| T18 | gate traduzioni sui rami dei moduli puri | T3-T17 | R8 | seq | revert | fatto (a2c693b, 5cdf166) |
 | T19 | misura finale + checklist runtime | tutti | R4 | seq | n/a | |
 | T20 | riscrittura test DA RISCRIVERE/DEBOLE di test-audit.md | T0 | R7 | ok | revert | |
 | T21 | isolamento dconf della suite | - | R6 | ok | revert | fatto (f7f08b5) |
