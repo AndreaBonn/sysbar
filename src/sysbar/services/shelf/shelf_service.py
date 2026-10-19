@@ -71,7 +71,7 @@ class ShelfService(GObject.Object):
         staged = self._staging / f"{item_id}{suffix}"
         staged.write_bytes(data)
         return self._append(
-            ShelfItem(id=item_id, kind=ItemKind.IMAGE, label=staged.name, path=str(staged))
+            ShelfItem(id=item_id, kind=ItemKind.IMAGE, label=_("Image"), path=str(staged))
         )
 
     def remove(self, item_id: str) -> None:
@@ -90,6 +90,31 @@ class ShelfService(GObject.Object):
         self.save()
         self.emit("items-changed")
 
+    def detach_all(self) -> list[ShelfItem]:
+        """Empty the shelf but keep staged copies, so the clear can be undone.
+
+        Pair with :meth:`restore` (undo) or :meth:`discard` (commit).
+        """
+        detached = self._items
+        self._items = []
+        self.save()
+        self.emit("items-changed")
+        return detached
+
+    def restore(self, items: list[ShelfItem]) -> None:
+        """Put detached items back first, ahead of anything dropped since."""
+        present = {item.id for item in self._items}
+        self._items = [item for item in items if item.id not in present] + self._items
+        self.save()
+        self.emit("items-changed")
+
+    def discard(self, items: list[ShelfItem]) -> None:
+        """Delete the staged copies of detached items that were not restored."""
+        present = {item.id for item in self._items}
+        for item in items:
+            if item.id not in present:
+                self._discard_staged(item)
+
     def load(self) -> None:
         if not self._manifest.is_file():
             return
@@ -99,7 +124,24 @@ class ShelfService(GObject.Object):
         except (OSError, ValueError, KeyError):
             log.warning("could not read shelf manifest", extra={"path": str(self._manifest)})
             self._items = []
+        else:
+            self._prune_staging()
         self.emit("items-changed")
+
+    def _prune_staging(self) -> None:
+        """Delete staged copies no item refers to.
+
+        A clear held for undo saves the manifest at once but deletes staged
+        files only when committed; if the app stops in between, they would stay
+        on disk forever. Runs only after a manifest read cleanly, so a corrupt
+        manifest never empties the staging directory.
+        """
+        if not self._staging.is_dir():
+            return
+        referenced = {item.path for item in self._items if item.path}
+        for staged in self._staging.iterdir():
+            if str(staged) not in referenced:
+                staged.unlink(missing_ok=True)
 
     def save(self) -> None:
         self._data_dir.mkdir(parents=True, exist_ok=True)

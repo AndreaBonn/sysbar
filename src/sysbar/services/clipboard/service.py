@@ -88,9 +88,24 @@ class ClipboardService(GObject.Object):
         self._entries = [e for e in self._entries if e.id != entry_id]
         self._commit()
 
-    def clear(self) -> None:
-        """Drop every unpinned entry, keeping pinned ones."""
+    def clear(self) -> list[ClipEntry]:
+        """Drop every unpinned entry, keeping pinned ones; return the history before.
+
+        The returned list is what :meth:`restore` takes to undo the clear.
+        """
+        before = list(self._entries)
         self._entries = [e for e in self._entries if e.pinned]
+        self._commit()
+        return before
+
+    def restore(self, before: list[ClipEntry]) -> None:
+        """Undo a clear: entries captured since stay on top, the cleared ones follow."""
+        # Pinned entries were never cleared, so they are not restored either: a
+        # pin removed or changed since the clear stays as the user left it.
+        current_texts = {e.text for e in self._entries}
+        cleared = [e for e in before if not e.pinned and e.text not in current_texts]
+        self._entries = self._entries + cleared
+        self._evict()
         self._commit()
 
     def search(self, query: str) -> list[ClipEntry]:

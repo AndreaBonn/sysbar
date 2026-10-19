@@ -15,9 +15,8 @@ gi.require_version("Adw", "1")
 from gi.repository import Adw, Gtk  # noqa: E402
 
 from ...core.i18n import _  # noqa: E402
-from ...services.clipboard.models import ClipEntry  # noqa: E402
+from ...services.clipboard.models import ClipEntry, ClipKind  # noqa: E402
 from ...services.clipboard.service import ClipboardService  # noqa: E402
-from ..footer import build_footer  # noqa: E402
 
 CopyCallback = Callable[[str], None]
 
@@ -25,6 +24,11 @@ _WINDOW_WIDTH = 420
 _WINDOW_HEIGHT = 560
 _PINNED_ICON = "starred-symbolic"
 _UNPINNED_ICON = "non-starred-symbolic"
+# C2: the kind as an icon and a word, not the raw enum value.
+_KIND_ICONS = {ClipKind.TEXT: "text-x-generic-symbolic", ClipKind.URL: "web-browser-symbolic"}
+_KIND_LABELS = {ClipKind.TEXT: "Text", ClipKind.URL: "Link"}
+_TOAST_SECONDS = 2
+_UNDO_SECONDS = 5
 
 
 class ClipboardWindow(Adw.Window):
@@ -38,6 +42,9 @@ class ClipboardWindow(Adw.Window):
         self._group = Adw.PreferencesGroup()
         self._rows: list[Adw.ActionRow] = []
         self._search = Gtk.SearchEntry(placeholder_text=_("Search clipboard"))
+        self._stack = Gtk.Stack()
+        self._toasts = Adw.ToastOverlay()
+        self._empty = Adw.StatusPage(icon_name="edit-paste-symbolic")
         self._build_content()
         self._search.connect("search-changed", lambda _e: self._rebuild())
         self._service.connect("items-changed", lambda _s: self._rebuild())
@@ -46,8 +53,9 @@ class ClipboardWindow(Adw.Window):
     def _build_content(self) -> None:
         toolbar = Adw.ToolbarView()
         header = Adw.HeaderBar()
-        clear = Gtk.Button(icon_name="user-trash-symbolic", tooltip_text=_("Clear unpinned"))
-        clear.connect("clicked", lambda _b: self._service.clear())
+        # S5: a word, not a bare bin icon whose meaning sits in a tooltip.
+        clear = Gtk.Button(label=_("Clear"), tooltip_text=_("Clear unpinned"))
+        clear.connect("clicked", self._on_clear)
         header.pack_end(clear)
         toolbar.add_top_bar(header)
 
@@ -56,28 +64,65 @@ class ClipboardWindow(Adw.Window):
             getattr(content, f"set_margin_{margin}")(12)
         content.append(self._search)
 
+        self._group.set_description(_("Click an entry to copy it again."))
         page = Adw.PreferencesPage()
         page.add(self._group)
         scroller = Gtk.ScrolledWindow(hexpand=True, vexpand=True)
         scroller.set_child(page)
-        content.append(scroller)
+        self._stack.add_named(scroller, "list")
+        self._stack.add_named(self._empty, "empty")
+        content.append(self._stack)
 
-        toolbar.set_content(content)
-        toolbar.add_bottom_bar(build_footer())
+        self._toasts.set_child(content)
+        toolbar.set_content(self._toasts)
         self.set_content(toolbar)
 
     def _rebuild(self) -> None:
         for row in self._rows:
             self._group.remove(row)
         self._rows.clear()
-        for entry in self._service.search(self._search.get_text()):
+        query = self._search.get_text()
+        for entry in self._service.search(query):
             row = self._build_row(entry)
             self._group.add(row)
             self._rows.append(row)
+        self._show_empty(query)
+
+    def _show_empty(self, query: str) -> None:
+        """C1: say how the history fills, or that the search found nothing."""
+        if self._rows:
+            self._stack.set_visible_child_name("list")
+            return
+        if query:
+            self._empty.set_title(_("No entries match"))
+            self._empty.set_description(_("Try fewer letters."))
+        else:
+            self._empty.set_title(_("Nothing copied yet"))
+            self._empty.set_description(
+                _("Copy some text or a link anywhere: it appears here, ready to copy again.")
+            )
+        self._stack.set_visible_child_name("empty")
+
+    def _copy(self, text: str) -> None:
+        """C3: copying back gets a confirmation, not silence."""
+        self._on_copy(text)
+        self._toasts.add_toast(Adw.Toast(title=_("Copied"), timeout=_TOAST_SECONDS))
+
+    def _on_clear(self, _button: Gtk.Button) -> None:
+        """S2: clearing can be undone for a few seconds."""
+        before = self._service.clear()
+        if len(before) == len(self._service.items):
+            return  # only pinned entries, or nothing: there is nothing to undo
+        toast = Adw.Toast(title=_("History cleared"), button_label=_("Undo"), timeout=_UNDO_SECONDS)
+        toast.connect("button-clicked", lambda _toast: self._service.restore(before))
+        self._toasts.add_toast(toast)
 
     def _build_row(self, entry: ClipEntry) -> Adw.ActionRow:
-        row = Adw.ActionRow(title=entry.label, subtitle=entry.kind.value, activatable=True)
-        row.connect("activated", lambda _r, text=entry.text: self._on_copy(text))
+        row = Adw.ActionRow(
+            title=entry.label, subtitle=_(_KIND_LABELS[entry.kind]), activatable=True
+        )
+        row.add_prefix(Gtk.Image(icon_name=_KIND_ICONS[entry.kind]))
+        row.connect("activated", lambda _r, text=entry.text: self._copy(text))
 
         pin = Gtk.Button(
             icon_name=_PINNED_ICON if entry.pinned else _UNPINNED_ICON,

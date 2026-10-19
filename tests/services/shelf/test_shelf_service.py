@@ -148,3 +148,92 @@ def test_open_uri_for_relative_path_is_none() -> None:
 def test_open_uri_for_text_is_none() -> None:
     item = ShelfItem(id="1", kind=ItemKind.TEXT, label="hello", text="hello")
     assert item.open_uri is None
+
+
+def test_detach_all_empties_the_shelf_but_keeps_staged_images(tmp_path: Path) -> None:
+    service = _service(tmp_path)
+    image = service.add_image(b"png-bytes")
+    assert image.path is not None
+
+    detached = service.detach_all()
+
+    assert service.items == []
+    assert [item.id for item in detached] == [image.id]
+    assert Path(image.path).exists()
+
+
+def test_restore_brings_detached_items_back_in_their_order(tmp_path: Path) -> None:
+    service = _service(tmp_path)
+    service.add_file("/tmp/a.txt")
+    service.add_url("https://gnome.org")
+    detached = service.detach_all()
+    service.add_text("dropped meanwhile")
+
+    service.restore(detached)
+
+    assert [item.label for item in service.items] == [
+        "a.txt",
+        "https://gnome.org",
+        "dropped meanwhile",
+    ]
+
+
+def test_discard_deletes_staged_files_of_items_no_longer_on_the_shelf(tmp_path: Path) -> None:
+    service = _service(tmp_path)
+    image = service.add_image(b"png-bytes")
+    assert image.path is not None
+    detached = service.detach_all()
+
+    service.discard(detached)
+
+    assert not Path(image.path).exists()
+
+
+def test_discard_keeps_staged_files_of_restored_items(tmp_path: Path) -> None:
+    service = _service(tmp_path)
+    image = service.add_image(b"png-bytes")
+    assert image.path is not None
+    detached = service.detach_all()
+    service.restore(detached)
+
+    service.discard(detached)
+
+    assert Path(image.path).exists()
+
+
+def test_a_dropped_image_is_labelled_as_an_image_not_by_its_staged_file_name(
+    tmp_path: Path,
+) -> None:
+    service = _service(tmp_path)
+
+    item = service.add_image(b"png-bytes")
+
+    assert item.label == "Image"
+    assert item.path is not None and Path(item.path).name != item.label
+
+
+def test_load_deletes_staged_files_no_item_refers_to(tmp_path: Path) -> None:
+    # A clear held for undo, then the app closed before it was committed.
+    service = _service(tmp_path)
+    kept = service.add_image(b"kept")
+    orphan = service.add_image(b"orphan")
+    assert kept.path is not None and orphan.path is not None
+    service.remove(orphan.id)
+    Path(orphan.path).write_bytes(b"left behind")
+
+    reloaded = _service(tmp_path)
+    reloaded.load()
+
+    assert Path(kept.path).exists()
+    assert not Path(orphan.path).exists()
+
+
+def test_load_with_an_unreadable_manifest_deletes_nothing(tmp_path: Path) -> None:
+    service = _service(tmp_path)
+    image = service.add_image(b"png")
+    assert image.path is not None
+    (tmp_path / "shelf" / "manifest.json").write_text("{not json", encoding="utf-8")
+
+    _service(tmp_path).load()
+
+    assert Path(image.path).exists()

@@ -1003,3 +1003,48 @@ msgstr "Audio su {device}"
 
 msgid "Changes nothing yet"
 msgstr "Per ora non cambia nulla"
+
+msgid "Clear"
+msgstr "Svuota"
+
+msgid "Click an entry to copy it again."
+msgstr "Fai clic su una voce per copiarla di nuovo."
+
+msgid "Copy some text or a link anywhere: it appears here, ready to copy again."
+msgstr "Copia un testo o un link in qualsiasi app: comparirà qui, pronto da copiare di nuovo."
+
+msgid "Drop files, links or text here"
+msgstr "Trascina qui file, link o testo"
+
+msgid "Keep them at hand while you switch windows. Double-click an item to open it."
+msgstr "Tienili a portata di mano mentre passi da una finestra all'altra. Fai doppio clic su un elemento per aprirlo."
+
+msgid "Nothing copied yet"
+msgstr "Ancora nulla di copiato"
+
+msgid "No entries match"
+msgstr "Nessuna voce corrisponde"
+
+msgid "Try fewer letters."
+msgstr "Prova con meno lettere."
+
+msgid "Copied"
+msgstr "Copiato"
+
+msgid "History cleared"
+msgstr "Cronologia svuotata"
+
+msgid "Undo"
+msgstr "Annulla"
+
+msgid "Shelf cleared"
+msgstr "Mensola svuotata"
+
+msgid "Text"
+msgstr "Testo"
+
+msgid "Link"
+msgstr "Link"
+
+msgid "Image"
+msgstr "Immagine"

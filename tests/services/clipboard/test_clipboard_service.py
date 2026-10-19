@@ -179,3 +179,65 @@ def test_items_changed_emitted_on_capture(tmp_path: Path) -> None:
     service.connect("items-changed", lambda _src: received.append(True))
     service.capture("x")
     assert received == [True]
+
+
+def test_clear_returns_the_history_it_replaced(tmp_path: Path) -> None:
+    service = _service(tmp_path)
+    service.capture("one")
+    service.capture("two")
+
+    before = service.clear()
+
+    assert [e.text for e in before] == ["two", "one"]
+    assert service.items == []
+
+
+def test_restore_brings_cleared_entries_back_after_newer_ones(tmp_path: Path) -> None:
+    service = _service(tmp_path)
+    service.capture("one")
+    service.capture("two")
+    before = service.clear()
+    service.capture("three")
+
+    service.restore(before)
+
+    assert [e.text for e in service.items] == ["three", "two", "one"]
+
+
+def test_restore_does_not_duplicate_text_copied_again_meanwhile(tmp_path: Path) -> None:
+    service = _service(tmp_path)
+    service.capture("one")
+    before = service.clear()
+    service.capture("one")
+
+    service.restore(before)
+
+    assert [e.text for e in service.items] == ["one"]
+
+
+def test_restore_does_not_bring_back_a_pinned_entry_removed_after_the_clear(
+    tmp_path: Path,
+) -> None:
+    service = _service(tmp_path)
+    pinned = service.capture("keep me")
+    assert pinned is not None
+    service.toggle_pin(pinned.id)
+    service.capture("plain")
+    before = service.clear()
+    service.remove(pinned.id)
+
+    service.restore(before)
+
+    assert [e.text for e in service.items] == ["plain"]
+
+
+def test_restore_respects_the_size_cap_by_dropping_the_oldest(tmp_path: Path) -> None:
+    service = _service(tmp_path, max_entries=2)
+    service.capture("one")
+    service.capture("two")
+    before = service.clear()
+    service.capture("three")
+
+    service.restore(before)
+
+    assert [e.text for e in service.items] == ["three", "two"]
