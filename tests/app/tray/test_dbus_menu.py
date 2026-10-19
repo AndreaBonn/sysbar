@@ -312,9 +312,20 @@ def test_properties_payload_reflects_a_relabelled_item() -> None:
 def test_set_model_skips_emit_when_not_connected() -> None:
     server = DBusMenuServer(object_path="/MenuBar")
 
-    server.set_model(MenuModel([MenuItem(label="A")]))
+    server.set_model(model=MenuModel([MenuItem(label="A")]))
 
-    assert server._connection is None
+    invocation = _dispatch(
+        server=server, method="GetProperty", params=GLibVariant("(is)", (1, "label"))
+    )
+    assert cast("GLib.Variant", invocation.returned[0]).unpack() == ("A",)
+    connection = FakeConnection()
+    server.register(connection=connection)
+    server.set_model(model=MenuModel([MenuItem(label="B")]))
+    assert [args[3] for args in connection.emitted] == [
+        "LayoutUpdated",
+        "ItemsPropertiesUpdated",
+    ]
+    assert cast("GLib.Variant", connection.emitted[0][4]).unpack() == (2, 0)
 
 
 # --------------------------------------------------------------------------- #
@@ -411,6 +422,8 @@ def test_handle_method_get_group_properties_returns_value() -> None:
     invocation = _dispatch(server, "GetGroupProperties", params)
 
     assert len(invocation.returned) == 1
+    returned = cast("GLib.Variant", invocation.returned[0])
+    assert returned.unpack() == ([(1, {"label": "A", "enabled": True, "visible": True})],)
 
 
 def test_handle_method_get_property_returns_value() -> None:
@@ -420,6 +433,8 @@ def test_handle_method_get_property_returns_value() -> None:
     invocation = _dispatch(server, "GetProperty", params)
 
     assert len(invocation.returned) == 1
+    returned = cast("GLib.Variant", invocation.returned[0])
+    assert returned.unpack() == ("A",)
 
 
 def test_handle_method_event_returns_none(mocker: MockerFixture) -> None:

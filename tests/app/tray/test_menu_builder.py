@@ -53,9 +53,12 @@ def test_node_count_is_constant_regardless_of_state() -> None:
 
 
 def test_has_one_slot_per_tray_metric() -> None:
-    items = _build()
+    values = {metric: f"{metric} reading" for metric in TRAY_METRICS}
+    items = _build(metric_values=values)
     metric_slots = items[: len(TRAY_METRICS)]
-    assert len(metric_slots) == len(TRAY_METRICS)
+    assert [slot.label for slot in metric_slots] == [f"{metric} reading" for metric in TRAY_METRICS]
+    assert all(slot.visible and not slot.enabled for slot in metric_slots)
+    assert all(slot.item_type != TYPE_SEPARATOR for slot in metric_slots)
 
 
 def test_metric_slots_hidden_when_no_values() -> None:

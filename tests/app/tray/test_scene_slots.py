@@ -106,7 +106,7 @@ def test_scenes_beyond_the_pool_are_not_shown(actions: MenuActions) -> None:
     rows = _scene_rows(_build(actions, _scenes(MAX_SCENE_ROWS + 3)))
     labels = [slot.label for slot in rows[:MAX_SCENE_ROWS]]
 
-    assert f"Scene {MAX_SCENE_ROWS}" not in labels
+    assert labels == [f"Scene {index}" for index in range(MAX_SCENE_ROWS)]
 
 
 def test_the_scenes_submenu_is_hidden_when_there_are_no_scenes(actions: MenuActions) -> None:
@@ -146,4 +146,5 @@ def test_scene_names_never_reach_gettext(
 
     _build(actions, user_named)
 
+    assert "Scenes" in recorder.seen
     assert "Riunione col cliente" not in recorder.seen
