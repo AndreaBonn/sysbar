@@ -1,3 +1,10 @@
+"""What the clipboard history window says when it is empty and how pins read.
+
+Kept apart from the window so the copy can be tested without a display.
+"""
+
+from __future__ import annotations
+
 from ..core.i18n import _
 
 _PINNED_ICON = "starred-symbolic"

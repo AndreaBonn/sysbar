@@ -1,3 +1,12 @@
+"""What the command palette shows and decides, kept free of GTK.
+
+The window places rows and reacts to keys; which action Enter takes, how a
+row reads and which section header it opens are decided here, so they can be
+tested without a display.
+"""
+
+from __future__ import annotations
+
 from dataclasses import dataclass
 from enum import Enum, auto
 
