@@ -2,9 +2,11 @@
 
 from __future__ import annotations
 
+import gettext
+
 import pytest
 
-from sysbar.core.i18n import _
+from sysbar.core import i18n
 from sysbar.services.scenes.actions import SetSetting, SetToggle, SystemToggle
 from sysbar.services.scenes.models import (
     PRESET_SCENE_IDS,
@@ -165,15 +167,22 @@ def test_every_preset_does_something() -> None:
     assert all(preset.actions for preset in PRESET_SCENES)
 
 
-def test_a_built_in_scene_name_is_translated() -> None:
+class _Italian(gettext.NullTranslations):
+    def gettext(self, message: str) -> str:
+        return {"Focus": "Concentrazione"}.get(message, message)
+
+
+def test_a_built_in_scene_name_is_translated(monkeypatch: pytest.MonkeyPatch) -> None:
     """Built-in names are in the catalogue; the tray, palette and window agree."""
-    preset = PRESET_SCENES[0]
+    monkeypatch.setattr(i18n, "_translation", _Italian())
+    focus = next(preset for preset in PRESET_SCENES if preset.name == "Focus")
 
-    assert scene_display_name(preset) == _(preset.name)
+    assert scene_display_name(focus) == "Concentrazione"
 
 
-def test_a_user_scene_name_is_shown_verbatim() -> None:
+def test_a_user_scene_name_is_shown_verbatim(monkeypatch: pytest.MonkeyPatch) -> None:
     """Passing a user's own name through gettext would demand a msgid for it."""
-    mine = Scene(id="mine", name="Presentation", origin=SceneOrigin.USER)
+    monkeypatch.setattr(i18n, "_translation", _Italian())
+    mine = Scene(id="mine", name="Focus", origin=SceneOrigin.USER)
 
-    assert scene_display_name(mine) == "Presentation"
+    assert scene_display_name(mine) == "Focus"
