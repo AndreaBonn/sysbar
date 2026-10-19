@@ -15,8 +15,9 @@ gi.require_version("Gtk", "4.0")
 gi.require_version("Adw", "1")
 from gi.repository import Adw, Gdk, Gtk  # noqa: E402
 
+from ...app.panel_summary import PanelSummary, QuickTile  # noqa: E402
 from ...core.branding import has_app_icon  # noqa: E402
-from ...core.constants import APP_ICON_NAME, DEFAULT_TEMPERATURE_UNIT  # noqa: E402
+from ...core.constants import APP_ICON_NAME  # noqa: E402
 from ...core.i18n import _  # noqa: E402
 from ...services.audio.app_volume_mixer import AppVolumeMixer  # noqa: E402
 from ...services.audio.device_switcher import DeviceSwitcher  # noqa: E402
@@ -25,10 +26,10 @@ from ...services.system_monitor.history import MetricHistory  # noqa: E402
 from ...services.system_monitor.net_per_process import ProcNetRate  # noqa: E402
 from ...services.system_monitor.processes import ProcessUsage  # noqa: E402
 from ...services.system_monitor.snapshot import SystemSnapshot  # noqa: E402
-from ..footer import build_footer  # noqa: E402
 from .device_section import DeviceSection  # noqa: E402
+from .metrics_section import MetricsSection  # noqa: E402
 from .mixer_section import MixerSection  # noqa: E402
-from .sparkline import Sparkline  # noqa: E402
+from .overview_section import OverviewSection, TileCallback  # noqa: E402
 
 KillCallback = Callable[[int, str], None]
 
@@ -54,27 +55,15 @@ def _title_widget() -> Gtk.Widget:
     return box
 
 
-# Maps a metric row key to the graphable metric whose sparkline it carries.
-_ROW_SPARKLINE_METRIC = {
-    "cpu": "cpu",
-    "gpu": "gpu",
-    "memory": "memory",
-    "net_speed": "network",
-    "battery": "battery",
-    "power": "power",
-}
-
-
 class PanelWindow(Adw.Window):
     """The popover-style panel anchored to the tray."""
 
     def __init__(self) -> None:
         super().__init__(title="Sysbar", decorated=False, resizable=False)
         self.set_default_size(_PANEL_WIDTH, _PANEL_HEIGHT)
-        self._temperature_unit = DEFAULT_TEMPERATURE_UNIT
-        self._rows: dict[str, Adw.ActionRow] = {}
-        self._sparklines: dict[str, Sparkline] = {}
-        self._graph_enabled: frozenset[str] = frozenset()
+        self._overview = OverviewSection()
+        self._metrics = MetricsSection()
+        self._on_open_settings: Callable[[], None] | None = None
         self._device_section = DeviceSection()
         self._mixer_section = MixerSection()
         self._fan_group = Adw.PreferencesGroup(title=_("Fan Control (beta)"), visible=False)
@@ -87,7 +76,18 @@ class PanelWindow(Adw.Window):
         self._build_content()
 
     def set_temperature_unit(self, unit: str) -> None:
-        self._temperature_unit = unit
+        self._metrics.temperature_unit = unit
+
+    def bind_overview(self, on_tile: TileCallback, on_open_settings: Callable[[], None]) -> None:
+        """Route quick-toggle clicks and the header's Preferences button."""
+        self._overview.bind_tiles(on_tile)
+        self._on_open_settings = on_open_settings
+
+    def set_summary(self, summary: PanelSummary) -> None:
+        self._overview.set_summary(summary)
+
+    def set_tiles(self, tiles: list[QuickTile]) -> None:
+        self._overview.set_tiles(tiles)
 
     def set_show_fans(self, show: bool) -> None:
         self._fan_group.set_visible(show)
@@ -109,98 +109,46 @@ class PanelWindow(Adw.Window):
         toolbar = Adw.ToolbarView()
         header = Adw.HeaderBar(show_start_title_buttons=False)
         header.set_title_widget(_title_widget())
+        settings = Gtk.Button(icon_name="emblem-system-symbolic", tooltip_text=_("Preferences"))
+        settings.connect("clicked", self._on_settings_clicked)
+        header.pack_end(settings)
         toolbar.add_top_bar(header)
 
         content = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=12)
         for margin in ("top", "bottom", "start", "end"):
             getattr(content, f"set_margin_{margin}")(12)
-
-        content.append(
-            self._group(
-                _("System"),
-                (
-                    ("cpu", "CPU load"),
-                    ("cpu_temp", "CPU temperature"),
-                    ("gpu", "GPU"),
-                    ("memory", "Memory"),
-                    ("uptime", "Uptime"),
-                ),
-            )
-        )
-        content.append(self._group(_("Network"), (("net_speed", "Speed"), ("net_total", "Total"))))
-        content.append(self._group(_("Power"), (("battery", "Battery"), ("power", "Power draw"))))
-        content.append(self._fan_group)
-        content.append(self._process_group)
-        content.append(self._net_group)
-        content.append(self._device_section)
-        content.append(self._mixer_section)
+        for section in (
+            self._overview,
+            self._metrics,
+            self._fan_group,
+            self._process_group,
+            self._net_group,
+            self._device_section,
+            self._mixer_section,
+        ):
+            content.append(section)
 
         scroller = Gtk.ScrolledWindow(hexpand=True, vexpand=True)
         scroller.set_child(content)
         toolbar.set_content(scroller)
-        toolbar.add_bottom_bar(build_footer())
         self.set_content(toolbar)
 
-    def _group(self, title: str, rows: tuple[tuple[str, str], ...]) -> Adw.PreferencesGroup:
-        group = Adw.PreferencesGroup(title=title)
-        for key, label in rows:
-            row = Adw.ActionRow(title=label, subtitle="--")
-            self._rows[key] = row
-            self._attach_sparkline(key, row)
-            group.add(row)
-        return group
-
-    def _attach_sparkline(self, key: str, row: Adw.ActionRow) -> None:
-        metric = _ROW_SPARKLINE_METRIC.get(key)
-        if metric is None:
-            return
-        sparkline = Sparkline()
-        sparkline.set_visible(False)
-        row.add_suffix(sparkline)
-        self._sparklines[metric] = sparkline
+    def _on_settings_clicked(self, _button: Gtk.Button) -> None:
+        if self._on_open_settings is not None:
+            self._on_open_settings()
 
     def set_graph_metrics(self, enabled: frozenset[str]) -> None:
         """Set which metrics show a sparkline; hides the rest immediately."""
-        self._graph_enabled = enabled
-        for metric, sparkline in self._sparklines.items():
-            if metric not in enabled:
-                sparkline.set_visible(False)
+        self._metrics.set_graph_metrics(enabled)
 
     def update_history(self, history: MetricHistory) -> None:
         """Refresh every enabled sparkline from the recorded history."""
-        for metric, sparkline in self._sparklines.items():
-            series = history.series(metric)
-            visible = metric in self._graph_enabled and len(series) >= 2
-            sparkline.set_visible(visible)
-            if visible:
-                sparkline.set_values(series)
+        self._metrics.update_history(history)
 
     def update_snapshot(self, snapshot: SystemSnapshot) -> None:
         """Refresh all metric rows; rows without data are hidden."""
-        self._set("cpu", _percent(snapshot.cpu_percent))
-        self._set("cpu_temp", self._temp(snapshot.cpu_temp_celsius))
-        self._set("gpu", _percent(snapshot.gpu_percent))
-        self._set("memory", self._memory_text(snapshot))
-        self._set("uptime", _uptime(snapshot.uptime_seconds))
-        self._set("net_speed", _net_pair(snapshot.net_rx_rate, snapshot.net_tx_rate, rate=True))
-        self._set("net_total", _net_pair(snapshot.net_rx_total, snapshot.net_tx_total, rate=False))
-        self._set("battery", _battery_text(snapshot))
-        self._set(
-            "power", f"{snapshot.power_watts:.0f} W" if snapshot.power_watts is not None else None
-        )
+        self._metrics.update_snapshot(snapshot)
         self._update_fans(snapshot.fans)
-
-    def _temp(self, celsius: float | None) -> str | None:
-        return (
-            mf.format_temperature(celsius, self._temperature_unit) if celsius is not None else None
-        )
-
-    @staticmethod
-    def _memory_text(snapshot: SystemSnapshot) -> str | None:
-        if snapshot.memory_percent is None:
-            return None
-        percent = mf.format_percent(snapshot.memory_percent)
-        return f"{percent} ({snapshot.memory_pressure})" if snapshot.memory_pressure else percent
 
     def _update_fans(self, fans: dict[str, float]) -> None:
         for row in self._fan_rows:
@@ -250,37 +198,3 @@ class PanelWindow(Adw.Window):
             row = Adw.ActionRow(title=rate.name or _("Unknown"), subtitle=subtitle)
             self._net_group.add(row)
             self._net_rows.append(row)
-
-    def _set(self, key: str, value: str | None) -> None:
-        row = self._rows[key]
-        if value is None:
-            row.set_visible(False)
-            return
-        row.set_visible(True)
-        row.set_subtitle(value)
-
-
-def _percent(value: float | None) -> str | None:
-    return mf.format_percent(value) if value is not None else None
-
-
-def _uptime(seconds: float | None) -> str | None:
-    return mf.format_uptime(seconds) if seconds is not None else None
-
-
-def _battery_text(snapshot: SystemSnapshot) -> str | None:
-    if snapshot.battery_percent is None:
-        return None
-    percent = mf.format_percent(snapshot.battery_percent)
-    if snapshot.battery_charging:
-        return f"{percent} (charging)"
-    if snapshot.on_battery:
-        return f"{percent} (on battery)"
-    return percent
-
-
-def _net_pair(rx: float | None, tx: float | None, rate: bool) -> str | None:
-    if rx is None or tx is None:
-        return None
-    fmt = mf.format_rate if rate else mf.format_bytes
-    return f"↓{fmt(rx)} ↑{fmt(tx)}"

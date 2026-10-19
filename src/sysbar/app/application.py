@@ -50,7 +50,7 @@ from .features.keep_awake import KeepAwakeFeature  # noqa: E402
 from .features.monitor import MonitorFeature  # noqa: E402
 from .features.onboarding import OnboardingFeature  # noqa: E402
 from .features.palette import PaletteFeature  # noqa: E402
-from .features.panel import PanelFeature  # noqa: E402
+from .features.panel import PanelFeature, PanelLinks  # noqa: E402
 from .features.scenes import SceneDrivers, ScenesFeature  # noqa: E402
 from .features.shelf import ShelfFeature  # noqa: E402
 from .features.toggles import TogglesFeature  # noqa: E402
@@ -117,7 +117,9 @@ class SysbarApplication(Adw.Application):
             monitor=monitor,
             keep_awake=keep_awake,
             audio=audio,
-            panel=PanelFeature(context, monitor, audio),
+            panel=PanelFeature(
+                context, monitor, audio, PanelLinks(keep_awake, toggles, self._open_settings)
+            ),
             palette=PaletteFeature(self._palette_entries),
             toggles=toggles,
             scenes=ScenesFeature(

@@ -723,3 +723,70 @@ msgstr "Puoi cambiarle in seguito dalle Preferenze"
 
 msgid "Your desktop does not offer them to apps."
 msgstr "Il tuo desktop non le mette a disposizione delle app."
+
+msgid "CPU load"
+msgstr "Carico CPU"
+
+msgid "CPU temperature"
+msgstr "Temperatura CPU"
+
+msgid "Power draw"
+msgstr "Consumo"
+
+msgid "Preferences"
+msgstr "Preferenze"
+
+msgid "Speed"
+msgstr "Velocità"
+
+msgid "Total"
+msgstr "Totale"
+
+msgid "Uptime"
+msgstr "Tempo di attività"
+
+msgid "Busiest app: {name}, {cpu} CPU"
+msgstr "App più attiva: {name}, {cpu} di CPU"
+
+msgid "All normal"
+msgstr "Tutto regolare"
+
+msgid "CPU busy: {value}"
+msgstr "CPU molto impegnata: {value}"
+
+msgid "Memory almost full: {value}"
+msgstr "Memoria quasi piena: {value}"
+
+msgid "Running hot: {value}"
+msgstr "Temperatura alta: {value}"
+
+msgid "Battery low: {value}"
+msgstr "Batteria scarica: {value}"
+
+
+
+msgid "Dark style"
+msgstr "Stile scuro"
+
+
+
+
+
+
+msgid "Microphone"
+msgstr "Microfono"
+
+msgid "Memory under pressure"
+msgstr "Memoria sotto pressione"
+
+msgid "high pressure"
+msgstr "pressione alta"
+
+msgid "critical pressure"
+msgstr "pressione critica"
+
+msgid "charging"
+msgstr "in carica"
+
+msgid "on battery"
+msgstr "a batteria"

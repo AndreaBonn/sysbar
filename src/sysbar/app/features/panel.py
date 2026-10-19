@@ -8,6 +8,8 @@ receives rather than builds.
 
 from __future__ import annotations
 
+from collections.abc import Callable
+from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
 import gi
@@ -20,9 +22,19 @@ from ...core.i18n import _  # noqa: E402
 from ...services.system_monitor.snapshot import SystemSnapshot  # noqa: E402
 from .. import tray_state  # noqa: E402
 from ..context import AppContext  # noqa: E402
+from ..panel_summary import (  # noqa: E402
+    TILE_DARK,
+    TILE_DND,
+    TILE_KEEP_AWAKE,
+    TILE_MICROPHONE,
+    quick_tiles,
+    summarize,
+)
 from ..windows import WindowSlot  # noqa: E402
 from .audio import AudioFeature  # noqa: E402
+from .keep_awake import KeepAwakeFeature  # noqa: E402
 from .monitor import MonitorFeature  # noqa: E402
+from .toggles import TogglesFeature  # noqa: E402
 
 if TYPE_CHECKING:
     from ...ui.panel.panel_window import PanelWindow
@@ -32,13 +44,25 @@ _KILL_CONFIRM = "end"
 _FAN_CONTROL_KEY = "monitor-show-fan-control-beta"
 
 
+@dataclass(frozen=True)
+class PanelLinks:
+    """What the panel can act on besides showing data: quick toggles and Preferences."""
+
+    keep_awake: KeepAwakeFeature
+    toggles: TogglesFeature
+    open_settings: Callable[[], None]
+
+
 class PanelFeature:
     """Owns the panel window and the flow of samples into it."""
 
-    def __init__(self, context: AppContext, monitor: MonitorFeature, audio: AudioFeature) -> None:
+    def __init__(
+        self, context: AppContext, monitor: MonitorFeature, audio: AudioFeature, links: PanelLinks
+    ) -> None:
         self._context = context
         self._monitor = monitor
         self._audio = audio
+        self._links = links
         self._window: WindowSlot[PanelWindow] = WindowSlot(self._build, self._on_closed)
 
     def open(self) -> None:
@@ -66,6 +90,7 @@ class PanelFeature:
 
         panel = PanelWindow()
         panel.bind_process_actions(self._confirm_kill)
+        panel.bind_overview(self._on_tile, self._links.open_settings)
         self._audio.bind_panel(panel)
         return panel
 
@@ -73,10 +98,33 @@ class PanelFeature:
         self._monitor.set_panel_open(False)
 
     def _push(self, panel: PanelWindow, snapshot: SystemSnapshot) -> None:
+        processes = self._monitor.top_cpu(PANEL_PROCESS_COUNT)
+        unit = self._context.config.temperature_unit
+        busiest = processes[0] if processes else None
+        panel.set_summary(summarize(snapshot, busiest, temperature_unit=unit))
+        self._refresh_tiles(panel)
         panel.update_snapshot(snapshot)
         panel.update_history(self._monitor.history)
-        panel.update_processes(self._monitor.top_cpu(PANEL_PROCESS_COUNT))
+        panel.update_processes(processes)
         panel.update_net_processes(self._monitor.net_processes())
+
+    def _refresh_tiles(self, panel: PanelWindow) -> None:
+        links = self._links
+        panel.set_tiles(
+            list(quick_tiles(links.toggles.state(), keep_awake_on=links.keep_awake.is_active))
+        )
+
+    def _on_tile(self, tile_id: str) -> None:
+        """Run the toggle behind a tile, then redraw the tiles from the new state."""
+        links = self._links
+        actions = {
+            TILE_KEEP_AWAKE: links.keep_awake.toggle,
+            TILE_MICROPHONE: links.toggles.toggle_microphone,
+            TILE_DND: links.toggles.toggle_do_not_disturb,
+            TILE_DARK: links.toggles.toggle_dark_mode,
+        }
+        actions[tile_id]()
+        self._window.if_open(self._refresh_tiles)
 
     def _refresh_graphs(self, panel: PanelWindow) -> None:
         panel.set_graph_metrics(tray_state.graph_metrics(self._context.config))

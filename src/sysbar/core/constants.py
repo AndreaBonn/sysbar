@@ -188,6 +188,12 @@ TOP_PROCESS_COUNT = 5
 # Top-N processes listed in the panel, with a kill action.
 PANEL_PROCESS_COUNT = 5
 
+# Panel summary line: the first value past one of these is named as a problem.
+SUMMARY_CPU_BUSY_PERCENT = 90.0
+SUMMARY_MEMORY_FULL_PERCENT = 90.0
+SUMMARY_HOT_CELSIUS = 90.0
+SUMMARY_BATTERY_LOW_PERCENT = 15.0
+
 # Top-N network-heavy processes shown in the panel "Network by process" section.
 NET_PROCESS_COUNT = 5
 # Command used to read per-socket byte counters with their owning process.
