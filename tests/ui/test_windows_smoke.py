@@ -299,3 +299,16 @@ def test_uninstaller_scans_nothing_until_an_app_is_chosen(gtk: object) -> None:
     assert window._target is None
     assert window._remove_button.get_sensitive() is False
     window.destroy()
+
+
+def test_closing_the_whats_new_window_marks_the_notes_as_seen(gtk: object) -> None:
+    from sysbar.app.whats_new import NOTES
+    from sysbar.ui.onboarding.whats_new_window import WhatsNewWindow
+
+    seen: list[bool] = []
+    window = WhatsNewWindow(NOTES, on_seen=lambda: seen.append(True))
+    # close-request only fires for a window that was actually shown.
+    window.present()
+    window.close()
+
+    assert seen == [True]

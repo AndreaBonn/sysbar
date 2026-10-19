@@ -24,7 +24,7 @@ gi.require_version("Adw", "1")
 from gi.repository import Adw, Gdk, Gio, GLib  # noqa: E402
 
 from ..core.branding import register_app_icons  # noqa: E402
-from ..core.capabilities import Capabilities  # noqa: E402
+from ..core.capabilities import GLOBAL_SHORTCUTS, Capabilities  # noqa: E402
 from ..core.config import Config  # noqa: E402
 from ..core.constants import (  # noqa: E402
     APP_ID,
@@ -286,6 +286,7 @@ class SysbarApplication(Adw.Application):
             tray_state.unavailable_metrics(self.features.monitor.latest),
             on_show_onboarding=self.features.onboarding.show,
             tray_preview=lambda: self._tray.metric_preview() if self._tray is not None else None,
+            shortcuts_available=self._capabilities.has(GLOBAL_SHORTCUTS),
         )
 
     def _open_settings(self) -> None:

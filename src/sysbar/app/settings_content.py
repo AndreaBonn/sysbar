@@ -9,6 +9,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from ..core.i18n import _
+from .commands.models import CommandId
 
 # Where a tray metric goes. The internal names ("bar", "menu") stay in GSettings;
 # the user sees a place.
@@ -66,3 +67,29 @@ def tray_preview_text(label: str | None) -> str:
     if label is None:
         return _("Waiting for the first reading…")
     return label or _("Only the icon: nothing is placed in the top bar")
+
+
+@dataclass(frozen=True)
+class ShortcutSpec:
+    """A global shortcut: its enabling key, its label, and the command it runs.
+
+    The command line runs the same action, so a desktop without the global
+    shortcuts portal can still bind the key itself (I5).
+    """
+
+    key: str
+    title: str
+    command_id: CommandId
+
+    @property
+    def command(self) -> str:
+        return f"sysbar {self.command_id.value}"
+
+
+SHORTCUTS: tuple[ShortcutSpec, ...] = (
+    ShortcutSpec("hotkey-enabled", "Toggle keep awake", CommandId.TOGGLE_KEEP_AWAKE),
+    ShortcutSpec("hotkey-focus-scene-enabled", "Toggle Focus scene", CommandId.TOGGLE_FOCUS_SCENE),
+    ShortcutSpec("hotkey-palette-enabled", "Open command palette", CommandId.OPEN_PALETTE),
+    ShortcutSpec("hotkey-shelf-enabled", "Open shelf", CommandId.OPEN_SHELF),
+    ShortcutSpec("hotkey-clipboard-enabled", "Open clipboard", CommandId.OPEN_CLIPBOARD),
+)

@@ -12,6 +12,7 @@ gi.require_version("Adw", "1")
 from gi.repository import Adw, Gdk, Gio, GLib, Gtk  # noqa: E402
 
 from ... import __version__  # noqa: E402
+from ...app.settings_content import SHORTCUTS  # noqa: E402
 from ...core.branding import has_app_icon  # noqa: E402
 from ...core.config import Config  # noqa: E402
 from ...core.constants import APP_ICON_NAME, AUTHOR_GITHUB_URL, AUTHOR_NAME  # noqa: E402
@@ -44,6 +45,7 @@ class SettingsWindow(Adw.PreferencesWindow):
         *,
         on_show_onboarding: Callable[[], None],
         tray_preview: Callable[[], str | None] = lambda: None,
+        shortcuts_available: bool = True,
     ) -> None:
         super().__init__(title=_("Sysbar Preferences"))
         self.set_default_size(640, 560)
@@ -51,6 +53,7 @@ class SettingsWindow(Adw.PreferencesWindow):
         self._settings = config.settings
         self._autostart = autostart
         self._on_show_onboarding = on_show_onboarding
+        self._shortcuts_available = shortcuts_available
         self._combos: list[ComboBinding] = []
 
         self._monitor = MonitorPage(self._settings, unavailable_metrics, tray_preview)
@@ -65,7 +68,7 @@ class SettingsWindow(Adw.PreferencesWindow):
     def _add_pages(self) -> None:
         """I1: what Sysbar can do comes first; housekeeping pages follow."""
         for page in (
-            FeaturesPage(self._settings),
+            FeaturesPage(self._settings, shortcuts_available=self._shortcuts_available),
             self._general_page(),
             self._monitor,
             self._alerts,
@@ -98,17 +101,45 @@ class SettingsWindow(Adw.PreferencesWindow):
         return page
 
     def _shortcuts_group(self) -> Adw.PreferencesGroup:
+        if not self._shortcuts_available:
+            return self._manual_shortcuts_group()
         group = Adw.PreferencesGroup(
             title=_("Global shortcuts"),
             description=_("Assign the keys from your desktop's keyboard settings"),
         )
-        for key, title in (
-            ("hotkey-enabled", "Toggle keep awake"),
-            ("hotkey-focus-scene-enabled", "Toggle Focus scene"),
-            ("hotkey-palette-enabled", "Open command palette"),
-        ):
-            group.add(bound_switch(self._settings, key, title))
+        for shortcut in SHORTCUTS[:3]:
+            group.add(bound_switch(self._settings, shortcut.key, shortcut.title))
         return group
+
+    def _manual_shortcuts_group(self) -> Adw.PreferencesGroup:
+        """I5: without the portal, say how to bind the keys in GNOME instead."""
+        group = Adw.PreferencesGroup(
+            title=_("Global shortcuts"),
+            description=_(
+                "This desktop does not let apps register shortcuts. Add your own in "
+                "Settings > Keyboard > View and Customize Shortcuts > Custom Shortcuts, "
+                "with one of these commands."
+            ),
+        )
+        for shortcut in SHORTCUTS:
+            row = Adw.ActionRow(title=_(shortcut.title), subtitle=shortcut.command)
+            row.add_css_class("property")
+            copy = Gtk.Button(
+                icon_name="edit-copy-symbolic",
+                tooltip_text=_("Copy command"),
+                valign=Gtk.Align.CENTER,
+                css_classes=["flat"],
+            )
+            copy.connect("clicked", self._on_copy_command, shortcut.command)
+            row.add_suffix(copy)
+            group.add(row)
+        return group
+
+    def _on_copy_command(self, _button: Gtk.Button, command: str) -> None:
+        display = Gdk.Display.get_default()
+        if display is not None:
+            display.get_clipboard().set(command)
+            self.add_toast(Adw.Toast(title=_("Command copied")))
 
     def _automation_group(self) -> Adw.PreferencesGroup:
         """Triggers are not a shortcut: they act without anyone pressing a key."""

@@ -1114,3 +1114,48 @@ msgstr "Mixer"
 
 msgid "No audio playing"
 msgstr "Nessun audio in riproduzione"
+
+msgid "A panel that tells you how things are"
+msgstr "Un pannello che ti dice come vanno le cose"
+
+msgid "A quick look at what changed in this update."
+msgstr "Uno sguardo veloce a cosa è cambiato con questo aggiornamento."
+
+msgid "A summary line and quick toggles at the top of the panel."
+msgstr "Una riga di riepilogo e gli interruttori rapidi in cima al pannello."
+
+msgid "Change several things with one click: right-click the icon, then Scenes or Manage scenes…"
+msgstr "Cambia più cose con un clic: clic destro sull'icona, poi Scene o Gestisci scene…"
+
+msgid "Clearing the clipboard or the shelf can be undone for a few seconds."
+msgstr "Per qualche secondo puoi annullare lo svuotamento degli appunti o della mensola."
+
+msgid "Each feature says what it does, and alerts come with a limit already set."
+msgstr "Ogni funzione dice cosa fa, e gli avvisi hanno già una soglia impostata."
+
+msgid "Got it"
+msgstr "Ho capito"
+
+msgid "Preferences that explain themselves"
+msgstr "Preferenze che si spiegano da sole"
+
+msgid "Search every action, scene and clipboard entry. Right-click the icon, then Search commands…"
+msgstr "Cerca ogni azione, scena e voce degli appunti. Clic destro sull'icona, poi Cerca comandi…"
+
+msgid "What's new"
+msgstr "Novità"
+
+msgid "What's new in Sysbar"
+msgstr "Novità di Sysbar"
+
+msgid "Copy command"
+msgstr "Copia il comando"
+
+msgid "Command copied"
+msgstr "Comando copiato"
+
+msgid "Not offered by this desktop: see General"
+msgstr "Non disponibile su questo desktop: vedi Generale"
+
+msgid "This desktop does not let apps register shortcuts. Add your own in Settings > Keyboard > View and Customize Shortcuts > Custom Shortcuts, with one of these commands."
+msgstr "Questo desktop non permette alle app di registrare scorciatoie. Creane una tu in Impostazioni > Tastiera > Visualizza e personalizza le scorciatoie > Scorciatoie personalizzate, con uno di questi comandi."

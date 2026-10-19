@@ -13,9 +13,11 @@ gi.require_version("Gtk", "4.0")
 gi.require_version("Adw", "1")
 from gi.repository import Adw, Gio  # noqa: E402
 
+from ...app.settings_content import SHORTCUTS  # noqa: E402
 from ...core.i18n import _  # noqa: E402
 from .widgets import bound_switch  # noqa: E402
 
+_SHORTCUT_KEYS = frozenset(shortcut.key for shortcut in SHORTCUTS)
 _SIMPLE_FEATURES = (
     ("monitor-show-mixer", "Volume mixer", "Set the volume of each app from the panel"),
     (
@@ -47,7 +49,7 @@ _EXPANDABLE_FEATURES = (
 class FeaturesPage(Adw.PreferencesPage):
     """One switch per feature, options nested under the feature they belong to."""
 
-    def __init__(self, settings: Gio.Settings) -> None:
+    def __init__(self, settings: Gio.Settings, *, shortcuts_available: bool = True) -> None:
         super().__init__(title=_("Features"), icon_name="view-grid-symbolic")
         group = Adw.PreferencesGroup(
             title=_("Features"),
@@ -61,6 +63,11 @@ class FeaturesPage(Adw.PreferencesPage):
             )
             settings.bind(key, expander, "enable-expansion", Gio.SettingsBindFlags.DEFAULT)
             for option_key, option_title, option_subtitle in options:
-                expander.add_row(bound_switch(settings, option_key, option_title, option_subtitle))
+                row = bound_switch(settings, option_key, option_title, option_subtitle)
+                if option_key in _SHORTCUT_KEYS and not shortcuts_available:
+                    # I5: a switch that cannot work is shown as such, with where to look.
+                    row.set_sensitive(False)
+                    row.set_subtitle(_("Not offered by this desktop: see General"))
+                expander.add_row(row)
             group.add(expander)
         self.add(group)

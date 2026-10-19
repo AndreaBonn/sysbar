@@ -212,6 +212,7 @@ def _exercise_windows(tmp_path: Path) -> None:
     """Construct every window so wrapper/combo labels pass through ``_()``."""
     from pathlib import Path as _Path
 
+    from sysbar.app.whats_new import NOTES
     from sysbar.core.capabilities import Capabilities
     from sysbar.core.config import Config
     from sysbar.services.audio.models import AudioDevice
@@ -224,6 +225,7 @@ def _exercise_windows(tmp_path: Path) -> None:
     from sysbar.services.uninstall.models import PackageManager
     from sysbar.ui.clipboard.clipboard_window import ClipboardWindow
     from sysbar.ui.onboarding.onboarding_window import OnboardingWindow
+    from sysbar.ui.onboarding.whats_new_window import WhatsNewWindow
     from sysbar.ui.palette.palette_window import PaletteWindow
     from sysbar.ui.panel.panel_window import PanelWindow
     from sysbar.ui.scenes.scenes_window import ScenesWindow
@@ -274,11 +276,15 @@ def _exercise_windows(tmp_path: Path) -> None:
     shelf_service.add_file(str(tmp_path / "dropped.txt"))  # render a tile so its tooltip emits _()
 
     windows: list[_Destroyable] = [
+        WhatsNewWindow(NOTES, on_seen=lambda: None),
         PanelWindow(),
         PaletteWindow(lambda _query: []),
         ScenesWindow(_FakeSceneController()),
         ClipboardWindow(ClipboardService(tmp_path / "clipboard"), on_copy=lambda _text: None),
         SettingsWindow(Config(), AutostartManager(), on_show_onboarding=lambda: None),
+        SettingsWindow(
+            Config(), AutostartManager(), on_show_onboarding=lambda: None, shortcuts_available=False
+        ),
         ShelfWindow(shelf_service),
         OnboardingWindow(
             Capabilities(),

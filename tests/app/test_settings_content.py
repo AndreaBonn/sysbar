@@ -3,6 +3,7 @@ from __future__ import annotations
 from sysbar.app.settings_content import (
     ALERTS,
     PLACEMENT_OPTIONS,
+    SHORTCUTS,
     AlertSpec,
     alert_subtitle,
     tray_preview_text,
@@ -45,3 +46,20 @@ def test_tray_preview_shows_the_label_or_says_the_bar_is_empty() -> None:
 
 def test_tray_preview_says_it_is_waiting_before_the_first_reading() -> None:
     assert tray_preview_text(None) == "Waiting for the first reading…"
+
+
+def test_every_global_shortcut_has_a_working_command_line_equivalent() -> None:
+    from sysbar.app.commands.catalogue import command_ids
+
+    known = set(command_ids())
+    assert len(SHORTCUTS) == 5
+    for shortcut in SHORTCUTS:
+        assert shortcut.command.startswith("sysbar ")
+        assert shortcut.command.removeprefix("sysbar ") in known
+
+
+def test_shortcut_commands_name_the_action_they_run() -> None:
+    commands = {shortcut.key: shortcut.command for shortcut in SHORTCUTS}
+
+    assert commands["hotkey-enabled"] == "sysbar toggle-keep-awake"
+    assert commands["hotkey-palette-enabled"] == "sysbar open-palette"
