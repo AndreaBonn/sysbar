@@ -78,6 +78,29 @@ def test_panel_window_net_processes_update(gtk: object) -> None:
     window.destroy()
 
 
+def test_metrics_section_shows_rows_with_data_and_hides_the_rest(gtk: object) -> None:
+    """Every key ``metric_rows`` emits must name a row the section built.
+
+    The values are decided in ``app/panel_rows``; this drives the glue that
+    routes them to widgets, which a key drift would break with a KeyError.
+    """
+    from sysbar.services.system_monitor.snapshot import SystemSnapshot
+    from sysbar.ui.panel.metrics_section import MetricsSection
+
+    section = MetricsSection()
+
+    section.update_snapshot(SystemSnapshot(cpu_percent=42.0, power_watts=7.4))
+
+    rows = section._rows
+    assert rows["cpu"].row.get_visible() is True
+    assert rows["cpu"]._value.get_label() == "42%"
+    assert rows["cpu"]._level is not None
+    assert rows["cpu"]._level.get_value() == 42.0
+    assert rows["power"]._value.get_label() == "7 W"
+    assert rows["gpu"].row.get_visible() is False
+    assert rows["net_speed"].row.get_visible() is False
+
+
 def test_device_section_binds_and_populates(gtk: object) -> None:
     from sysbar.services.audio.device_switcher import DeviceSwitcher
     from sysbar.services.audio.models import AudioDevice, SinkInput
