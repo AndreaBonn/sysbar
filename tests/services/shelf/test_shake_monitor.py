@@ -4,7 +4,6 @@ import types
 import pytest
 from pytest_mock import MockerFixture
 
-from sysbar.services.shelf.shake_detector import ShakeDetector
 from sysbar.services.shelf.shake_monitor import ShakeMonitor
 
 
@@ -105,14 +104,32 @@ def test_stop_resets_state_and_removes_timer(mocker: MockerFixture) -> None:
     assert monitor._last is None
 
 
-def test_stop_resets_detector(mocker: MockerFixture) -> None:
-    mocker.patch("sysbar.services.shelf.shake_monitor.GLib.source_remove")
-    monitor = _monitor([(0, 0)])
-    reset = mocker.spy(monitor._detector, "reset")
+# Three reversals, then the two samples that would close a fourth one.
+_ALMOST_SHAKING = [(0, 0), (40, 0), (0, 0), (40, 0), (0, 0)]
+_CLOSING_SAMPLES = [(0, 0), (40, 0)]
+
+
+def test_continuing_after_three_reversals_completes_the_shake(mocker: MockerFixture) -> None:
+    monitor = _monitor(_ALMOST_SHAKING + _CLOSING_SAMPLES)
+    idle_add = mocker.patch("sysbar.services.shelf.shake_monitor.GLib.idle_add")
+
+    for _ in _ALMOST_SHAKING + _CLOSING_SAMPLES:
+        monitor._tick()
+
+    idle_add.assert_called_once_with(monitor._fire)
+
+
+def test_stop_forgets_the_reversals_seen_so_far(mocker: MockerFixture) -> None:
+    monitor = _monitor(_ALMOST_SHAKING + _CLOSING_SAMPLES)
+    idle_add = mocker.patch("sysbar.services.shelf.shake_monitor.GLib.idle_add")
+    for _ in _ALMOST_SHAKING:
+        monitor._tick()
 
     monitor.stop()
+    for _ in _CLOSING_SAMPLES:
+        monitor._tick()
 
-    reset.assert_called_once()
+    idle_add.assert_not_called()
 
 
 def test_stop_without_active_timer_does_not_call_source_remove(mocker: MockerFixture) -> None:
@@ -132,11 +149,6 @@ def test_fire_invokes_callback_and_returns_false() -> None:
 
     assert calls == ["shaken"]
     assert result is False
-
-
-def test_detector_is_real_shake_detector() -> None:
-    monitor = ShakeMonitor(on_shake=lambda: None)
-    assert isinstance(monitor._detector, ShakeDetector)
 
 
 def test_start_returns_false_when_xlib_import_fails(
