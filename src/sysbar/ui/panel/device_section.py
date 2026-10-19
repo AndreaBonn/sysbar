@@ -13,6 +13,7 @@ gi.require_version("Gtk", "4.0")
 gi.require_version("Adw", "1")
 from gi.repository import Adw, Gtk  # noqa: E402
 
+from ...app.device_choices import DeviceChoices, default_choices, name_at  # noqa: E402
 from ...core.i18n import _  # noqa: E402
 from ...services.audio.device_switcher import DeviceSwitcher  # noqa: E402
 from ...services.audio.models import AudioDevice  # noqa: E402
@@ -24,8 +25,8 @@ class DeviceSection(Adw.PreferencesGroup):
     def __init__(self) -> None:
         super().__init__(title=_("Audio devices"), visible=False)
         self._switcher: DeviceSwitcher | None = None
-        self._output_names: list[str] = []
-        self._input_names: list[str] = []
+        self._output_choices = default_choices(devices=[])
+        self._input_choices = default_choices(devices=[])
         self._updating = False
         self._output_row = Adw.ComboRow(title=_("Output"))
         self._input_row = Adw.ComboRow(title=_("Input"))
@@ -43,37 +44,31 @@ class DeviceSection(Adw.PreferencesGroup):
         if self._switcher is None:
             return
         self._updating = True
-        self._output_names = self._fill(self._output_row, self._switcher.outputs)
-        self._input_names = self._fill(self._input_row, self._switcher.inputs)
+        self._output_choices = self._fill(row=self._output_row, devices=self._switcher.outputs)
+        self._input_choices = self._fill(row=self._input_row, devices=self._switcher.inputs)
         self._updating = False
-        self.set_visible(bool(self._output_names or self._input_names))
+        self.set_visible(bool(self._output_choices.names or self._input_choices.names))
 
     @staticmethod
-    def _fill(row: Adw.ComboRow, devices: list[AudioDevice]) -> list[str]:
-        model = Gtk.StringList()
-        names: list[str] = []
-        default_index = 0
-        for index, device in enumerate(devices):
-            model.append(device.description)
-            names.append(device.name)
-            if device.is_default:
-                default_index = index
+    def _fill(row: Adw.ComboRow, devices: list[AudioDevice]) -> DeviceChoices:
+        choices = default_choices(devices=devices)
+        model = Gtk.StringList.new(strings=choices.labels)
         row.set_model(model)
-        row.set_visible(bool(devices))
-        if devices:
-            row.set_selected(default_index)
-        return names
+        row.set_visible(bool(choices.names))
+        if choices.selected is not None:
+            row.set_selected(choices.selected)
+        return choices
 
     def _on_output_selected(self, row: Adw.ComboRow, _param: object) -> None:
         if self._updating or self._switcher is None:
             return
-        index = row.get_selected()
-        if 0 <= index < len(self._output_names):
-            self._switcher.set_default_output(self._output_names[index])
+        name = name_at(choices=self._output_choices, index=row.get_selected())
+        if name is not None:
+            self._switcher.set_default_output(name=name)
 
     def _on_input_selected(self, row: Adw.ComboRow, _param: object) -> None:
         if self._updating or self._switcher is None:
             return
-        index = row.get_selected()
-        if 0 <= index < len(self._input_names):
-            self._switcher.set_default_input(self._input_names[index])
+        name = name_at(choices=self._input_choices, index=row.get_selected())
+        if name is not None:
+            self._switcher.set_default_input(name=name)
