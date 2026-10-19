@@ -37,10 +37,21 @@ def test_reversals_outside_window_do_not_trigger() -> None:
     assert True not in results
 
 
-def test_reset_clears_state() -> None:
+def _feed_three_reversals(detector: ShakeDetector) -> None:
+    """Leave the detector one reversal short of a shake (last direction: left)."""
+    for i, dx in enumerate([30.0, -30.0, 30.0, -30.0]):
+        assert detector.feed(dx, i * 0.05) is False
+
+
+def test_the_fourth_reversal_triggers_the_shake() -> None:
     detector = _detector()
-    detector.feed(30.0, 0.0)
-    detector.feed(-30.0, 0.05)
+    _feed_three_reversals(detector)
+    assert detector.feed(30.0, 0.2) is True
+
+
+def test_reset_forgets_the_accumulated_reversals() -> None:
+    detector = _detector()
+    _feed_three_reversals(detector)
     detector.reset()
-    # After reset, a single sample cannot have accumulated reversals.
-    assert detector.feed(30.0, 0.1) is False
+    # Same sample that closes the fourth reversal above: after reset it is the first one.
+    assert detector.feed(30.0, 0.2) is False
