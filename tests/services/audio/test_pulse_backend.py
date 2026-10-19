@@ -1,10 +1,11 @@
 from __future__ import annotations
 
+import contextlib
+import sys
 from dataclasses import dataclass, field
 from typing import Any
 
 import pytest
-from pytest_mock import MockerFixture
 
 from sysbar.services.audio.models import SinkInput
 from sysbar.services.audio.pulse_backend import PulseAudioBackend
@@ -164,30 +165,94 @@ def _subscribable_backend() -> PulseAudioBackend:
     return backend
 
 
-def test_subscribe_starts_listener_thread_once(mocker: MockerFixture) -> None:
-    thread = mocker.patch(
-        "sysbar.services.audio.pulse_backend.threading.Thread", return_value=mocker.Mock()
-    )
-    backend = _subscribable_backend()
-
-    backend.subscribe(lambda: None)
-    backend.subscribe(lambda: None)
-
-    thread.assert_called_once()
-    thread.return_value.start.assert_called_once_with()
-    assert backend._running is True
+class _EndOfScriptError(Exception):
+    """Raised by the fake event loop to leave ``_listen`` once the script is played."""
 
 
-def test_subscribe_stores_callback(mocker: MockerFixture) -> None:
-    mocker.patch("sysbar.services.audio.pulse_backend.threading.Thread")
-    backend = _subscribable_backend()
+class _InlineThread:
+    """Runs the listener target synchronously instead of on a real thread."""
 
-    def cb() -> None:
+    def __init__(self, target: Any, daemon: bool) -> None:
+        self._target = target
+
+    def start(self) -> None:
+        with contextlib.suppress(_EndOfScriptError):
+            self._target()
+
+
+class _FakeEventConnection:
+    """One ``pulsectl.Pulse`` events connection delivering a single sink-input event."""
+
+    def __init__(self, masks: list[str]) -> None:
+        self._masks = masks
+        self._callback: Any = None
+        self._delivered = False
+
+    def __enter__(self) -> _FakeEventConnection:
+        return self
+
+    def __exit__(self, *_exc: object) -> None:
         return None
 
-    backend.subscribe(cb)
+    def event_mask_set(self, mask: str) -> None:
+        self._masks.append(mask)
 
-    assert backend._callback is cb
+    def event_callback_set(self, callback: Any) -> None:
+        self._callback = callback
+
+    def event_listen(self, timeout: float) -> None:
+        if self._delivered:
+            raise _EndOfScriptError
+        self._delivered = True
+        try:
+            self._callback(object())
+        except PulseLoopStopError:
+            return
+        raise AssertionError("the event handler must break the listen loop")
+
+
+class _FakePulsectl:
+    PulseLoopStop = PulseLoopStopError
+
+    def __init__(self) -> None:
+        self.event_masks: list[str] = []
+        self.event_connections = 0
+
+    def Pulse(self, client_name: str) -> Any:  # noqa: N802 - mirrors the pulsectl API
+        if client_name == "sysbar-mixer-events":
+            self.event_connections += 1
+            return _FakeEventConnection(self.event_masks)
+        return FakePulse([])
+
+
+@pytest.fixture
+def pulsectl_fake(monkeypatch: pytest.MonkeyPatch) -> _FakePulsectl:
+    fake = _FakePulsectl()
+    monkeypatch.setitem(sys.modules, "pulsectl", fake)
+    monkeypatch.setattr("sysbar.services.audio.pulse_backend.threading.Thread", _InlineThread)
+    return fake
+
+
+def test_subscribe_delivers_a_sink_input_event_to_the_callback(
+    pulsectl_fake: _FakePulsectl,
+) -> None:
+    calls: list[str] = []
+
+    PulseAudioBackend().subscribe(lambda: calls.append("changed"))
+
+    assert calls == ["changed"]
+    assert pulsectl_fake.event_masks == ["sink_input"]
+
+
+def test_subscribing_twice_opens_a_single_event_connection(
+    pulsectl_fake: _FakePulsectl,
+) -> None:
+    backend = PulseAudioBackend()
+
+    backend.subscribe(lambda: None)
+    backend.subscribe(lambda: None)
+
+    assert pulsectl_fake.event_connections == 1
 
 
 # --------------------------------------------------------------------------- #
