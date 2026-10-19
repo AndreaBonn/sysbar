@@ -13,16 +13,14 @@ gi.require_version("Gtk", "4.0")
 gi.require_version("Adw", "1")
 from gi.repository import Adw, Gtk  # noqa: E402
 
-from ...app.panel_summary import battery_text, memory_text  # noqa: E402
+from ...app.panel_rows import PERCENT_MAX, clamp_level, metric_rows  # noqa: E402
 from ...core.constants import DEFAULT_TEMPERATURE_UNIT  # noqa: E402
 from ...core.i18n import _  # noqa: E402
-from ...services.metrics import metric_format as mf  # noqa: E402
 from ...services.system_monitor.history import MetricHistory  # noqa: E402
 from ...services.system_monitor.snapshot import SystemSnapshot  # noqa: E402
 from .sparkline import Sparkline  # noqa: E402
 
 _LEVEL_BAR_WIDTH = 72
-_PERCENT_MAX = 100.0
 
 # Maps a metric row key to the graphable metric whose sparkline it carries.
 _ROW_SPARKLINE_METRIC = {
@@ -61,7 +59,7 @@ class _MetricRow:
         column = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=4, valign=Gtk.Align.CENTER)
         column.append(self._value)
         if key in _LEVEL_ROWS:
-            self._level = Gtk.LevelBar(max_value=_PERCENT_MAX, width_request=_LEVEL_BAR_WIDTH)
+            self._level = Gtk.LevelBar(max_value=PERCENT_MAX, width_request=_LEVEL_BAR_WIDTH)
             # The default offsets colour a low value as a warning, which is wrong
             # for load (low is good) and right only for battery; stay neutral.
             for offset in ("low", "high", "full"):
@@ -75,7 +73,7 @@ class _MetricRow:
             return
         self._value.set_label(text)
         if self._level is not None and level is not None:
-            self._level.set_value(min(max(level, 0.0), _PERCENT_MAX))
+            self._level.set_value(clamp_level(level))
 
 
 class MetricsSection(Gtk.Box):
@@ -123,38 +121,5 @@ class MetricsSection(Gtk.Box):
 
     def update_snapshot(self, snapshot: SystemSnapshot) -> None:
         """Refresh all metric rows; rows without data are hidden."""
-        rows = self._rows
-        rows["cpu"].show(_percent(snapshot.cpu_percent), snapshot.cpu_percent)
-        rows["cpu_temp"].show(self._temp(snapshot.cpu_temp_celsius), None)
-        rows["gpu"].show(_percent(snapshot.gpu_percent), snapshot.gpu_percent)
-        rows["memory"].show(memory_text(snapshot), snapshot.memory_percent)
-        rows["uptime"].show(_uptime(snapshot.uptime_seconds), None)
-        rows["net_speed"].show(
-            _net_pair(snapshot.net_rx_rate, snapshot.net_tx_rate, rate=True), None
-        )
-        rows["net_total"].show(
-            _net_pair(snapshot.net_rx_total, snapshot.net_tx_total, rate=False), None
-        )
-        rows["battery"].show(battery_text(snapshot), snapshot.battery_percent)
-        power = snapshot.power_watts
-        rows["power"].show(f"{power:.0f} W" if power is not None else None, None)
-
-    def _temp(self, celsius: float | None) -> str | None:
-        if celsius is None:
-            return None
-        return mf.format_temperature(celsius, self.temperature_unit)
-
-
-def _percent(value: float | None) -> str | None:
-    return mf.format_percent(value) if value is not None else None
-
-
-def _uptime(seconds: float | None) -> str | None:
-    return mf.format_uptime(seconds) if seconds is not None else None
-
-
-def _net_pair(rx: float | None, tx: float | None, *, rate: bool) -> str | None:
-    if rx is None or tx is None:
-        return None
-    fmt = mf.format_rate if rate else mf.format_bytes
-    return f"↓{fmt(rx)} ↑{fmt(tx)}"
+        for key, value in metric_rows(snapshot, self.temperature_unit).items():
+            self._rows[key].show(value.text, value.level)

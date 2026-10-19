@@ -15,13 +15,13 @@ gi.require_version("Gtk", "4.0")
 gi.require_version("Adw", "1")
 from gi.repository import Adw, Gdk, Gtk  # noqa: E402
 
+from ...app.panel_rows import fan_subtitle, net_pair, process_row_text  # noqa: E402
 from ...app.panel_summary import PanelSummary, QuickTile  # noqa: E402
 from ...core.branding import has_app_icon  # noqa: E402
 from ...core.constants import APP_ICON_NAME  # noqa: E402
 from ...core.i18n import _  # noqa: E402
 from ...services.audio.app_volume_mixer import AppVolumeMixer  # noqa: E402
 from ...services.audio.device_switcher import DeviceSwitcher  # noqa: E402
-from ...services.metrics import metric_format as mf  # noqa: E402
 from ...services.system_monitor.history import MetricHistory  # noqa: E402
 from ...services.system_monitor.net_per_process import ProcNetRate  # noqa: E402
 from ...services.system_monitor.processes import ProcessUsage  # noqa: E402
@@ -155,7 +155,7 @@ class PanelWindow(Adw.Window):
             self._fan_group.remove(row)
         self._fan_rows.clear()
         for name, rpm in fans.items():
-            row = Adw.ActionRow(title=name, subtitle=f"{rpm:.0f} RPM")
+            row = Adw.ActionRow(title=name, subtitle=fan_subtitle(rpm))
             self._fan_group.add(row)
             self._fan_rows.append(row)
 
@@ -169,9 +169,8 @@ class PanelWindow(Adw.Window):
             self._process_group.add(self._process_row(process))
 
     def _process_row(self, process: ProcessUsage) -> Adw.ActionRow:
-        cpu = mf.format_percent(process.cpu_percent)
-        memory = mf.format_bytes(process.memory_bytes)
-        row = Adw.ActionRow(title=process.name or _("Unknown"), subtitle=f"{cpu} CPU · {memory}")
+        title, subtitle = process_row_text(process)
+        row = Adw.ActionRow(title=title, subtitle=subtitle)
         button = Gtk.Button(
             icon_name="process-stop-symbolic",
             tooltip_text=_("End process"),
@@ -194,7 +193,7 @@ class PanelWindow(Adw.Window):
         self._net_rows.clear()
         self._net_group.set_visible(bool(rates))
         for rate in rates:
-            subtitle = f"↓{mf.format_rate(rate.rx_rate)} ↑{mf.format_rate(rate.tx_rate)}"
+            subtitle = net_pair(rate.rx_rate, rate.tx_rate, rate=True)
             row = Adw.ActionRow(title=rate.name or _("Unknown"), subtitle=subtitle)
             self._net_group.add(row)
             self._net_rows.append(row)
