@@ -129,6 +129,11 @@ def test_removal_presentations_each_kind_has_expected_icon_and_tooltip(
     assert REMOVAL_PRESENTATIONS[kind] == expected
 
 
+def test_removal_presentations_cover_every_removal_kind() -> None:
+    """A kind added to the enum without a row here would raise KeyError in the list."""
+    assert set(REMOVAL_PRESENTATIONS) == set(RemovalKind)
+
+
 def test_device_descriptions_excludes_empty_and_keeps_described_output() -> None:
     outputs = [
         AudioDevice(index=1, name="hdmi", description="Monitor", kind="sink", is_default=True),

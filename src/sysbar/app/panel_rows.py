@@ -25,6 +25,9 @@ class MetricRow:
 
     ``text`` is ``None`` when the row has no data and should be hidden.
     ``level`` is the raw 0..100 value for rows with a level bar, else ``None``.
+    A hidden row ignores its level: memory can report a percentage while its
+    text is unavailable, and the row then stays hidden rather than showing a
+    bare bar.
     """
 
     text: str | None
