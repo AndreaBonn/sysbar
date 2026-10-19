@@ -306,12 +306,121 @@ def _exercise_windows(tmp_path: Path) -> None:
         window.destroy()
 
 
+def _exercise_panel_and_palette_content() -> None:
+    """Call every string-emitting branch of the panel, palette and clipboard modules."""
+    from sysbar.app.clipboard_content import empty_state as clipboard_empty
+    from sysbar.app.clipboard_content import pin_presentation
+    from sysbar.app.palette_content import empty_state as palette_empty
+    from sysbar.app.palette_content import section_title
+    from sysbar.app.panel_rows import process_row_text
+    from sysbar.services.palette.models import EntryKind
+    from sysbar.services.system_monitor.processes import ProcessUsage
+
+    for name in ("", "firefox"):
+        process_row_text(ProcessUsage(pid=1, name=name, cpu_percent=1.0, memory_bytes=1024))
+    previous: str | None = None
+    for kind in EntryKind:
+        section_title(kind.value, previous)
+    for query in ("", "mic"):
+        palette_empty(query)
+        clipboard_empty(query)
+    for pinned in (False, True):
+        pin_presentation(pinned)
+
+
+def _exercise_scene_content() -> None:
+    """Translate the scene tables the way the editor does, and every summary phrase."""
+    from sysbar.app.scenes_content import REMOVAL_PRESENTATIONS, TOGGLE_CHOICES, TRIGGER_CHOICES
+    from sysbar.core.i18n import _
+    from sysbar.services.scenes.actions import (
+        SetOutputDevice,
+        SetSetting,
+        SetToggle,
+        SystemToggle,
+    )
+    from sysbar.services.scenes.apply import ActionOutcome, Status
+    from sysbar.services.scenes.constants import SCENE_WRITABLE_KEYS
+    from sysbar.services.scenes.models import Scene
+    from sysbar.services.scenes.summary import describe_scene, partial_note, trigger_announcement
+
+    for _choice, label in (*TRIGGER_CHOICES, *TOGGLE_CHOICES):
+        _(label)
+    for _icon, tooltip in REMOVAL_PRESENTATIONS.values():
+        _(tooltip)
+
+    toggles = tuple(SetToggle(toggle, value) for toggle in SystemToggle for value in (True, False))
+    setting = SetSetting(key=sorted(SCENE_WRITABLE_KEYS)[0], value=True)
+    full = Scene(id="x", name="X", actions=(*toggles, SetOutputDevice("sink"), setting))
+    describe_scene(full)
+    describe_scene(full, device_name=lambda _name: "Speakers")
+    describe_scene(Scene(id="y", name="Y"))
+
+    applied = ActionOutcome(action=toggles[0], status=Status.APPLIED)
+    failed = ActionOutcome(action=toggles[1], status=Status.FAILED)
+    partial_note([applied, failed], "X")
+    trigger_announcement("X", [applied, failed])
+    trigger_announcement("X", [applied])
+
+
+def _exercise_uninstall_and_settings_content() -> None:
+    """Hit each status, subtitle and message branch of the uninstaller and settings copy."""
+    from sysbar.app.settings_content import (
+        ALERTS,
+        PLACEMENT_OPTIONS,
+        SHORTCUTS,
+        alert_subtitle,
+        tray_preview_text,
+    )
+    from sysbar.app.uninstall_content import (
+        category_label,
+        package_subtitle,
+        removal_message,
+        removal_summary,
+    )
+    from sysbar.core.i18n import _
+    from sysbar.services.uninstall.models import LeftoverCategory, PackageManager, RemovalResult
+
+    for category in LeftoverCategory:
+        category_label(category)
+    removal_summary(chosen=False, count=0, size_bytes=0)
+    removal_summary(chosen=True, count=0, size_bytes=0)
+    removal_summary(chosen=True, count=3, size_bytes=2048)
+    package_subtitle(PackageManager.APT, "gimp", removable=True)
+    package_subtitle(PackageManager.MANUAL, None, removable=False)
+    removal_message(RemovalResult(freed_bytes=2048, failed=[]))
+    removal_message(RemovalResult(freed_bytes=2048, failed=["a"]))
+
+    for _key, label in PLACEMENT_OPTIONS:
+        _(label)
+    for spec in ALERTS:
+        _(spec.title)
+        for value in (0, 50):
+            alert_subtitle(spec, value, cpu_seconds=30)
+    for shortcut in SHORTCUTS:
+        _(shortcut.title)
+    for preview in (None, "", "CPU 3%"):
+        tray_preview_text(preview)
+
+
+def _exercise_content() -> None:
+    """Exercise the pure modules that now own the user-facing strings.
+
+    These strings no longer pass through a window the gate builds, so every branch
+    that emits one is called here directly, with the same ``_()`` wrapping the UI
+    applies to the label tables.
+    """
+    _exercise_panel_and_palette_content()
+    _exercise_scene_content()
+    _exercise_uninstall_and_settings_content()
+
+
 def test_every_used_string_has_an_italian_catalog_entry(
     gtk: object, compiled_schema: str, recorder: _RecordingTranslation, tmp_path: Path
 ) -> None:
     _exercise_tray_menu()
     _exercise_device_rows()
     _exercise_alerts()
+    _exercise_content()
     _exercise_windows(tmp_path)
 
     catalog = _catalog_msgids(_CATALOG)
