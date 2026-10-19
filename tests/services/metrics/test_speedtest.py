@@ -57,7 +57,7 @@ def test_download_mbps_measures_throughput(monkeypatch: pytest.MonkeyPatch) -> N
         requests, "get", lambda _url, stream, timeout: _FakeResponse([b"x" * 600, b"y" * 400])
     )
     # 1000 bytes over 2 s = (1000 * 8) / (2 * 1_000_000) Mbit/s
-    assert SpeedTestService().download_mbps("http://host/file") == 0.004
+    assert SpeedTestService().download_mbps("http://host/file") == pytest.approx(0.004)
 
 
 def test_download_mbps_returns_none_on_request_error(monkeypatch: pytest.MonkeyPatch) -> None:
