@@ -7,6 +7,7 @@ service-level tests.
 
 from __future__ import annotations
 
+from dataclasses import replace
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -25,8 +26,6 @@ from sysbar.services.uninstall.models import PackageManager
 
 if TYPE_CHECKING:
     from gi.repository import Gtk
-
-    from sysbar.services.audio.device_switcher import DeviceSwitcher
 
 pytestmark = pytest.mark.ui
 
@@ -131,7 +130,17 @@ def test_device_section_binds_and_populates(gtk: object) -> None:
     switcher = DeviceSwitcher(_Backend())
     section.bind(switcher)
     switcher.refresh()
+    _drain_main_loop()
     assert section.get_visible()
+
+
+def _drain_main_loop() -> None:
+    """Run the idle callbacks a refresh schedules (DeviceSection repopulates on idle)."""
+    from gi.repository import GLib
+
+    context = GLib.MainContext.default()
+    while context.iteration(False):
+        pass
 
 
 class _DeviceBackend:
@@ -157,40 +166,25 @@ class _DeviceBackend:
 
     def set_default_sink(self, name: str) -> None:
         self.switched.append(name)
+        self.outputs = [replace(d, is_default=d.name == name) for d in self.outputs]
 
     def set_default_source(self, name: str) -> None:
         self.switched.append(name)
+        self.inputs = [replace(d, is_default=d.name == name) for d in self.inputs]
 
     def move_sink_input(self, input_index: int, sink_index: int) -> None: ...
 
 
-def _recording_switcher(backend: _DeviceBackend) -> DeviceSwitcher:
-    """Switcher that records choices without refreshing from inside the handler.
-
-    A real switch refreshes synchronously, which repopulates the combo while its
-    own notify::selected handler is still running and blocks under GTK; that
-    re-entrancy is not what these smokes are about.
-    """
-    from sysbar.services.audio.device_switcher import DeviceSwitcher
-
-    class _Recording(DeviceSwitcher):
-        def set_default_output(self, name: str) -> None:
-            backend.switched.append(name)
-
-        def set_default_input(self, name: str) -> None:
-            backend.switched.append(name)
-
-    return _Recording(backend=backend)
-
-
 def test_device_section_fill_shows_labels_defaults_and_hides_empty_rows(gtk: object) -> None:
+    from sysbar.services.audio.device_switcher import DeviceSwitcher
     from sysbar.ui.panel.device_section import DeviceSection
 
     backend = _DeviceBackend()
-    switcher = _recording_switcher(backend)
+    switcher = DeviceSwitcher(backend=backend)
     section = DeviceSection()
     section.bind(switcher=switcher)
     switcher.refresh()
+    _drain_main_loop()
 
     assert section.get_visible() is True
     assert section._output_row.get_visible() is True
@@ -200,10 +194,13 @@ def test_device_section_fill_shows_labels_defaults_and_hides_empty_rows(gtk: obj
     assert section._input_row.get_selected_item().get_string() == "Mic"
     assert backend.switched == []
     section._output_row.set_selected(1)
+    _drain_main_loop()
     assert backend.switched == ["hdmi"]
+    assert section._output_row.get_selected_item().get_string() == "HDMI"
     backend.outputs = []
     backend.inputs = []
     switcher.refresh()
+    _drain_main_loop()
     assert section.get_visible() is False
     assert section._output_row.get_visible() is False
     assert section._input_row.get_visible() is False
@@ -211,17 +208,20 @@ def test_device_section_fill_shows_labels_defaults_and_hides_empty_rows(gtk: obj
 
 
 def test_device_section_input_selection_switches_the_named_device(gtk: object) -> None:
+    from sysbar.services.audio.device_switcher import DeviceSwitcher
     from sysbar.ui.panel.device_section import DeviceSection
 
     backend = _DeviceBackend()
-    switcher = _recording_switcher(backend)
+    switcher = DeviceSwitcher(backend=backend)
     section = DeviceSection()
     section.bind(switcher=switcher)
     switcher.refresh()
+    _drain_main_loop()
 
     assert section._input_row.get_model().get_string(1) == "USB"
     assert backend.switched == []
     section._input_row.set_selected(1)
+    _drain_main_loop()
     assert backend.switched == ["usb"]
     assert section._input_row.get_selected_item().get_string() == "USB"
 

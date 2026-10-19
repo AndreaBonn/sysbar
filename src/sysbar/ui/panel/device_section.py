@@ -2,7 +2,10 @@
 
 Two combo rows bound to a :class:`DeviceSwitcher`. Selecting a row applies the
 choice immediately. Programmatic repopulation is guarded so refreshing the lists
-never looks like a user selection (which would re-trigger a switch).
+never looks like a user selection (which would re-trigger a switch), and it is
+deferred to idle: a switch emits ``devices-changed`` from inside the combo's own
+``notify::selected`` handler, and replacing that combo's model there never
+returns under GTK 4.
 """
 
 from __future__ import annotations
@@ -11,7 +14,7 @@ import gi
 
 gi.require_version("Gtk", "4.0")
 gi.require_version("Adw", "1")
-from gi.repository import Adw, Gtk  # noqa: E402
+from gi.repository import Adw, GLib, Gtk  # noqa: E402
 
 from ...app.device_choices import DeviceChoices, default_choices, name_at  # noqa: E402
 from ...core.i18n import _  # noqa: E402
@@ -28,6 +31,7 @@ class DeviceSection(Adw.PreferencesGroup):
         self._output_choices = default_choices(devices=[])
         self._input_choices = default_choices(devices=[])
         self._updating = False
+        self._repopulate_pending = False
         self._output_row = Adw.ComboRow(title=_("Output"))
         self._input_row = Adw.ComboRow(title=_("Input"))
         self.add(self._output_row)
@@ -37,8 +41,19 @@ class DeviceSection(Adw.PreferencesGroup):
 
     def bind(self, switcher: DeviceSwitcher) -> None:
         self._switcher = switcher
-        switcher.connect("devices-changed", lambda _src: self._repopulate())
+        switcher.connect("devices-changed", self._on_devices_changed)
         self._repopulate()
+
+    def _on_devices_changed(self, _switcher: DeviceSwitcher) -> None:
+        if self._repopulate_pending:
+            return
+        self._repopulate_pending = True
+        GLib.idle_add(self._repopulate_when_idle)
+
+    def _repopulate_when_idle(self) -> bool:
+        self._repopulate_pending = False
+        self._repopulate()
+        return False
 
     def _repopulate(self) -> None:
         if self._switcher is None:
