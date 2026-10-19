@@ -234,6 +234,10 @@ def _exercise_windows(tmp_path: Path) -> None:
     class _FakeSceneController:
         def __init__(self) -> None:
             self.scenes = list(PRESET_SCENES)
+            self.active_id = PRESET_SCENES[0].id
+
+        def activate(self, scene_id: str) -> None:
+            self.active_id = scene_id
 
         def save(self, scene: Scene) -> None: ...
 

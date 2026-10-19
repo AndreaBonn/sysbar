@@ -23,11 +23,11 @@ import gi
 gi.require_version("Gtk", "4.0")
 gi.require_version("Gdk", "4.0")
 gi.require_version("Adw", "1")
-from gi.repository import Adw, Gdk, Gtk  # noqa: E402
+from gi.repository import Adw, Gdk, GLib, Gtk  # noqa: E402
 
 from ...core.i18n import _  # noqa: E402
 from ...services.palette.matcher import next_index  # noqa: E402
-from ...services.palette.models import PaletteEntry  # noqa: E402
+from ...services.palette.models import EntryKind, PaletteEntry  # noqa: E402
 
 SearchCallback = Callable[[str], Sequence[PaletteEntry]]
 
@@ -36,6 +36,24 @@ _WINDOW_HEIGHT = 460
 _REVEAL_ICON = "view-reveal-symbolic"
 _MOVE_DOWN = 1
 _MOVE_UP = -1
+# K2: an icon and a section title per kind, so a masked clip never passes for a command.
+_KIND_ICONS = {
+    EntryKind.COMMAND: "system-run-symbolic",
+    EntryKind.TOGGLE: "emblem-ok-symbolic",
+    EntryKind.SCENE: "starred-symbolic",
+    EntryKind.CLIPBOARD: "edit-paste-symbolic",
+    EntryKind.SHELF: "folder-symbolic",
+    EntryKind.DEVICE: "audio-speakers-symbolic",
+}
+_KIND_VALUES = frozenset(kind.value for kind in EntryKind)
+_KIND_TITLES = {
+    EntryKind.COMMAND: "Actions",
+    EntryKind.TOGGLE: "Quick toggles",
+    EntryKind.SCENE: "Scenes",
+    EntryKind.CLIPBOARD: "Clipboard",
+    EntryKind.SHELF: "Shelf",
+    EntryKind.DEVICE: "Audio devices",
+}
 
 
 class PaletteWindow(Adw.Window):
@@ -51,17 +69,14 @@ class PaletteWindow(Adw.Window):
         self._closing = False
         self._entry = Gtk.SearchEntry(placeholder_text=_("Search actions, scenes, clips…"))
         self._list = Gtk.ListBox(selection_mode=Gtk.SelectionMode.BROWSE)
-        self._empty = Adw.StatusPage(
-            title=_("No matches"),
-            description=_("Try a shorter query."),
-            icon_name="system-search-symbolic",
-        )
+        self._empty = Adw.StatusPage(icon_name="system-search-symbolic")
         self._stack = Gtk.Stack()
         self._rows: list[PaletteEntry] = []
         self._build_content()
         self._install_key_handling()
         self._entry.connect("search-changed", lambda _entry: self._refresh())
         self._list.connect("row-activated", self._on_row_activated)
+        self._list.set_header_func(self._section_header)
         self.connect("notify::is-active", self._on_active_changed)
         self._refresh()
 
@@ -78,6 +93,7 @@ class PaletteWindow(Adw.Window):
             getattr(content, f"set_margin_{margin}")(12)
         content.append(self._entry)
         content.append(self._stack)
+        content.append(_key_hint())
 
         toolbar = Adw.ToolbarView()
         toolbar.add_top_bar(Adw.HeaderBar(show_end_title_buttons=False))
@@ -141,8 +157,12 @@ class PaletteWindow(Adw.Window):
         """Invoke the entry at ``index`` and close, unless it cannot be run."""
         if not 0 <= index < len(self._rows):
             return
-        if self._rows[index].activate():
+        entry = self._rows[index]
+        if entry.activate():
             self._dismiss()
+        elif entry.fix_label:
+            # Enter on a row that can be fixed applies the fix, as its button would.
+            self._apply_fix(entry)
 
     def _on_active_changed(self, *_args: object) -> None:
         if not self.get_property("is-active"):
@@ -165,27 +185,87 @@ class PaletteWindow(Adw.Window):
     # --- results ----------------------------------------------------------
 
     def _refresh(self) -> None:
-        entries = list(self._search(self._entry.get_text()))
+        query = self._entry.get_text()
+        entries = list(self._search(query))
         self._rows = entries
         self._list.remove_all()
         for entry in entries:
-            self._list.append(_build_row(entry))
+            self._list.append(_build_row(entry, self._apply_fix))
+        self._show_empty(query)
         self._stack.set_visible_child_name("results" if entries else "empty")
         first = self._list.get_row_at_index(0)
         if first is not None:
             self._list.select_row(first)
 
+    def _show_empty(self, query: str) -> None:
+        """K5: name the query, and say what the palette can find."""
+        self._empty.set_title(
+            _("Nothing matches “{query}”").format(query=query) if query else _("No matches")
+        )
+        self._empty.set_description(
+            _(
+                "The palette finds Sysbar's own actions, scenes, clipboard "
+                "entries and audio devices. Try “mic”, “dark” or “focus”."
+            )
+        )
 
-def _build_row(entry: PaletteEntry) -> Adw.ActionRow:
-    """One result row: title, context, and a reveal button when masked."""
+    def _apply_fix(self, entry: PaletteEntry) -> None:
+        """K4: turn the missing feature on, then list it again as runnable."""
+        if entry.apply_fix():
+            # Deferred: the click comes from a button inside a row _refresh removes.
+            GLib.idle_add(self._refresh_once)
+
+    def _refresh_once(self) -> bool:
+        self._refresh()
+        return False
+
+    @staticmethod
+    def _section_header(row: Gtk.ListBoxRow, before: Gtk.ListBoxRow | None) -> None:
+        # The kind travels on the row (its widget name): GTK also calls this while
+        # remove_all() tears the old rows down, when self._rows already holds the
+        # new results and an index into it would be wrong or out of range.
+        kind = row.get_name()
+        if before is not None and before.get_name() == kind:
+            row.set_header(None)
+            return
+        title = _KIND_TITLES.get(EntryKind(kind)) if kind in _KIND_VALUES else None
+        if title is None:
+            row.set_header(None)
+            return
+        label = Gtk.Label(label=_(title), xalign=0.0, css_classes=["heading", "dim-label"])
+        label.set_margin_top(8)
+        label.set_margin_start(12)
+        row.set_header(label)
+
+
+def _key_hint() -> Gtk.Widget:
+    """K3: the keys work from the first second, so say which ones."""
+    return Gtk.Label(
+        label=_("↑ ↓ to choose · Enter to run · Esc to close"),
+        css_classes=["dim-label", "caption"],
+        xalign=0.0,
+    )
+
+
+def _build_row(entry: PaletteEntry, on_fix: Callable[[PaletteEntry], None]) -> Adw.ActionRow:
+    """One result row: kind icon, title, context, and a reveal or fix button."""
     row = Adw.ActionRow(
         title=entry.title,
         subtitle=entry.unavailable_reason or entry.subtitle,
         activatable=entry.is_runnable,
-        sensitive=entry.is_runnable,
     )
+    row.set_name(entry.kind.value)
+    row.add_prefix(Gtk.Image(icon_name=_KIND_ICONS[entry.kind]))
+    if not entry.is_runnable and not entry.fix_label:
+        # A dead end reads dimmed; a row with a fix stays at full strength so its
+        # button does not look disabled too.
+        row.add_css_class("dim-label")
     if entry.masked:
         row.add_suffix(_reveal_button(row, entry))
+    if entry.fix_label:
+        fix = Gtk.Button(label=entry.fix_label, valign=Gtk.Align.CENTER)
+        fix.connect("clicked", lambda _button: on_fix(entry))
+        row.add_suffix(fix)
     return row
 
 

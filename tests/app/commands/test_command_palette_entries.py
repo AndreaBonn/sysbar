@@ -9,6 +9,7 @@ import pytest
 from sysbar.app.commands import CommandId, CommandState
 from sysbar.app.commands.actions import CommandHandlers
 from sysbar.app.commands.catalogue import CATALOGUE
+from sysbar.app.commands.models import Requirement
 from sysbar.app.commands.palette import command_entries
 from sysbar.services.palette.models import EntryKind
 
@@ -109,8 +110,43 @@ def test_a_command_with_no_handler_is_unavailable(record: list[str]) -> None:
     assert entry.is_runnable is False
 
 
-def test_the_subtitle_carries_the_scriptable_name(record: list[str]) -> None:
+def test_the_subtitle_names_the_kind_of_command_not_its_internal_id(
+    record: list[str],
+) -> None:
+    entries = command_entries(_handlers(record), CommandState())
+    panel = next(e for e in entries if e.id == "command:open-panel")
+    keep_awake = next(e for e in entries if e.id == "command:toggle-keep-awake")
+
+    assert panel.subtitle == "Opens a window"
+    assert keep_awake.subtitle == "Quick toggle"
+
+
+def test_the_scriptable_name_stays_searchable(record: list[str]) -> None:
     entries = command_entries(_handlers(record), CommandState())
     entry = next(e for e in entries if e.id == "command:open-panel")
 
-    assert entry.subtitle == "open-panel"
+    assert "open-panel" in entry.haystack
+    assert "Open the metrics panel" in entry.haystack
+
+
+def test_a_turned_off_feature_offers_to_turn_it_on(record: list[str]) -> None:
+    enabled: list[str] = []
+    entries = command_entries(
+        _handlers(record),
+        CommandState(shelf_enabled=False),
+        enablers={Requirement.SHELF_ENABLED: lambda: enabled.append("shelf")},
+    )
+    shelf = next(e for e in entries if e.id == "command:open-shelf")
+
+    assert shelf.is_runnable is False
+    assert shelf.fix_label == "Turn on"
+    assert shelf.apply_fix() is True
+    assert enabled == ["shelf"]
+
+
+def test_an_unavailable_command_without_an_enabler_offers_no_fix(record: list[str]) -> None:
+    entries = command_entries(_handlers(record), CommandState(shelf_enabled=False))
+    shelf = next(e for e in entries if e.id == "command:open-shelf")
+
+    assert shelf.fix_label == ""
+    assert shelf.apply_fix() is False

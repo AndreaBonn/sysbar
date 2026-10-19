@@ -52,6 +52,9 @@ class _FakeClipboard:
     def copy(self, text: str) -> None:
         self.copied.append(text)
 
+    def enable(self) -> None:
+        self.is_enabled = True
+
 
 @dataclass
 class _FakeShelf:
@@ -64,6 +67,9 @@ class _FakeShelf:
 
     def open_uri(self, uri: str) -> None:
         self.opened.append(uri)
+
+    def enable(self) -> None:
+        self.is_enabled = True
 
 
 @dataclass
@@ -266,3 +272,13 @@ def test_a_disabled_clipboard_contributes_nothing(record: list[str]) -> None:
     entries = collect(cast(Any, features), _handlers(record))
 
     assert EntryKind.CLIPBOARD not in _kinds(entries)
+
+
+def test_a_turned_off_shelf_can_be_turned_on_from_its_command_row(record: list[str]) -> None:
+    shelf = _FakeShelf(is_enabled=False)
+    entries = collect(cast(Any, _features(shelf=shelf)), _handlers(record))
+    row = next(entry for entry in entries if entry.id == "command:open-shelf")
+
+    assert row.is_runnable is False
+    assert row.apply_fix() is True
+    assert shelf.is_enabled is True

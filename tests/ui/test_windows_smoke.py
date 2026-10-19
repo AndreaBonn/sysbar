@@ -197,9 +197,13 @@ class _FakeSceneController:
         from sysbar.services.scenes.models import PRESET_SCENES
 
         self.scenes = list(PRESET_SCENES)
+        self.active_id = PRESET_SCENES[0].id
         self.saved: list[Scene] = []
         self.deleted: list[str] = []
         self.saved_triggers: list[TriggerRule | None] = []
+
+    def activate(self, scene_id: str) -> None:
+        self.active_id = scene_id
 
     def save(self, scene: Scene) -> None:
         self.saved.append(scene)
@@ -261,4 +265,18 @@ def test_editing_a_preset_saves_it_without_losing_actions(gtk: object) -> None:
 
     saved = controller.saved[0]
     assert set(saved.actions) == set(preset.actions)
+    window.destroy()
+
+
+def test_activating_a_scene_from_the_list_marks_it_active(gtk: object) -> None:
+    from sysbar.services.scenes.models import PRESET_SCENES
+    from sysbar.ui.scenes.scenes_window import ScenesWindow
+
+    controller = _FakeSceneController()
+    window = ScenesWindow(controller)
+    target = PRESET_SCENES[1]
+
+    window._activate(target.id)
+
+    assert controller.active_id == target.id
     window.destroy()

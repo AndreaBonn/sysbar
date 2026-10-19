@@ -38,9 +38,16 @@ class Runnable:
 
 @dataclass(frozen=True)
 class Unavailable:
-    """The entry is shown but cannot be invoked, and says why."""
+    """The entry is shown but cannot be invoked, and says why.
+
+    When the cause is a setting the user can flip from here, ``fix`` does it and
+    ``fix_label`` names the button, so the palette offers the way out instead of
+    a dead end.
+    """
 
     reason: str
+    fix: Callable[[], None] | None = None
+    fix_label: str = ""
 
 
 Activation = Runnable | Unavailable
@@ -77,6 +84,22 @@ class PaletteEntry:
     def unavailable_reason(self) -> str:
         """Why this entry cannot be run, empty when it can."""
         return self.activation.reason if isinstance(self.activation, Unavailable) else ""
+
+    @property
+    def fix_label(self) -> str:
+        """Label of the action that would make this entry runnable, empty if none."""
+        activation = self.activation
+        if isinstance(activation, Unavailable) and activation.fix is not None:
+            return activation.fix_label
+        return ""
+
+    def apply_fix(self) -> bool:
+        """Run the fix of an unavailable entry. Returns whether there was one."""
+        activation = self.activation
+        if not isinstance(activation, Unavailable) or activation.fix is None:
+            return False
+        activation.fix()
+        return True
 
     def activate(self) -> bool:
         """Run the entry. Returns whether anything was invoked."""

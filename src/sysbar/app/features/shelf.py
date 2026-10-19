@@ -43,6 +43,10 @@ class ShelfFeature:
         self._shake: ShakeMonitor | None = None
         self._window: WindowSlot[ShelfWindow] = WindowSlot(self._build_window)
 
+    def enable(self) -> None:
+        """Turn the feature on; the settings route starts it like a manual switch."""
+        self._context.config.set_bool(_ENABLED_KEY, True)
+
     @property
     def is_enabled(self) -> bool:
         return self._context.config.get_bool(_ENABLED_KEY)

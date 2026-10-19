@@ -868,3 +868,138 @@ msgstr "Non attivo"
 
 msgid "Waiting for the first reading…"
 msgstr "In attesa della prima lettura…"
+
+msgid "The palette finds Sysbar's own actions, scenes, clipboard entries and audio devices. Try “mic”, “dark” or “focus”."
+msgstr "La palette trova le azioni di Sysbar, le scene, gli appunti e i dispositivi audio. Prova con “micro”, “scuro” o “focus”."
+
+msgid "↑ ↓ to choose · Enter to run · Esc to close"
+msgstr "↑ ↓ per scegliere · Invio per eseguire · Esc per chiudere"
+
+msgid "Nothing matches “{query}”"
+msgstr "Nessun risultato per “{query}”"
+
+msgid "Actions"
+msgstr "Azioni"
+
+msgid "Quick toggles"
+msgstr "Interruttori rapidi"
+
+msgid "Opens a window"
+msgstr "Apre una finestra"
+
+msgid "Quick toggle"
+msgstr "Interruttore rapido"
+
+msgid "Not available in this session"
+msgstr "Non disponibile in questa sessione"
+
+msgid "No microphone available"
+msgstr "Nessun microfono disponibile"
+
+msgid "Not available outside a GNOME session"
+msgstr "Non disponibile fuori da una sessione GNOME"
+
+msgid "The shelf is turned off in settings"
+msgstr "La mensola è disattivata nelle impostazioni"
+
+msgid "Clipboard history is turned off in settings"
+msgstr "La cronologia degli appunti è disattivata nelle impostazioni"
+
+msgid "Copy to clipboard"
+msgstr "Copia negli appunti"
+
+msgid "This item has nothing to open"
+msgstr "Questo elemento non ha nulla da aprire"
+
+msgid "Open from the shelf"
+msgstr "Apri dalla mensola"
+
+msgid "Active scene"
+msgstr "Scena attiva"
+
+msgid "Activate scene"
+msgstr "Attiva la scena"
+
+msgid "Already the default device"
+msgstr "È già il dispositivo predefinito"
+
+msgid "Set as audio output"
+msgstr "Usa come uscita audio"
+
+msgid "Set as audio input"
+msgstr "Usa come ingresso audio"
+
+msgid "Open the metrics panel"
+msgstr "Apri il pannello delle metriche"
+
+msgid "Open the command palette"
+msgstr "Apri la palette dei comandi"
+
+msgid "Manage scenes"
+msgstr "Gestisci le scene"
+
+msgid "Open settings"
+msgstr "Apri le impostazioni"
+
+msgid "Open the shelf"
+msgstr "Apri la mensola"
+
+msgid "Open clipboard history"
+msgstr "Apri la cronologia degli appunti"
+
+msgid "Open the application uninstaller"
+msgstr "Apri il disinstallatore di app"
+
+msgid "Mute or unmute the microphone"
+msgstr "Disattiva o riattiva il microfono"
+
+msgid "Turn Do Not Disturb on or off"
+msgstr "Attiva o disattiva Non disturbare"
+
+msgid "Switch between light and dark"
+msgstr "Passa dal tema chiaro a quello scuro"
+
+msgid "Toggle the Focus scene"
+msgstr "Attiva o disattiva la scena Focus"
+
+msgid "Clear the active scene"
+msgstr "Disattiva la scena attiva"
+
+msgid "Quit Sysbar"
+msgstr "Esci da Sysbar"
+
+msgid "+{count} more"
+msgstr "+{count} altre"
+
+msgid "A scene changes several things with one click. It stays active until you pick another, or choose None in the tray menu."
+msgstr "Una scena cambia più cose con un clic. Resta attiva finché non ne scegli un'altra, o finché non scegli Nessuna nel menu della barra."
+
+msgid "Activate"
+msgstr "Attiva"
+
+msgid "Active"
+msgstr "In uso"
+
+msgid "Do Not Disturb off"
+msgstr "Non disturbare spento"
+
+msgid "Do Not Disturb on"
+msgstr "Non disturbare acceso"
+
+msgid "Keep awake off"
+msgstr "Tieni sveglio spento"
+
+msgid "Keep awake on"
+msgstr "Tieni sveglio acceso"
+
+msgid "Microphone muted"
+msgstr "Microfono silenziato"
+
+msgid "Microphone on"
+msgstr "Microfono acceso"
+
+msgid "Audio to {device}"
+msgstr "Audio su {device}"
+
+msgid "Changes nothing yet"
+msgstr "Per ora non cambia nulla"

@@ -15,6 +15,7 @@ from __future__ import annotations
 
 from collections.abc import Callable, Iterable, Sequence
 
+from ...core.i18n import _
 from ..audio.models import AudioDevice
 from ..clipboard.models import ClipEntry
 from ..clipboard.sensitive_text import looks_like_secret, mask
@@ -39,7 +40,7 @@ def _clip_entry(clip: ClipEntry, on_copy: Callable[[str], None]) -> PaletteEntry
     return PaletteEntry(
         id=f"clip:{clip.id}",
         title=mask(clip.text) if secret else clip.label,
-        subtitle="Copy to clipboard",
+        subtitle=_("Copy to clipboard"),
         kind=EntryKind.CLIPBOARD,
         activation=Runnable(invoke=lambda: on_copy(clip.text)),
         # Matched against the real text either way, so a masked entry stays
@@ -60,12 +61,12 @@ def _shelf_entry(item: ShelfItem, on_open: Callable[[str], None]) -> PaletteEntr
     activation = (
         Runnable(invoke=lambda: on_open(uri))
         if uri is not None
-        else Unavailable(reason="This item has nothing to open")
+        else Unavailable(reason=_("This item has nothing to open"))
     )
     return PaletteEntry(
         id=f"shelf:{item.id}",
         title=item.label,
-        subtitle="Open from the shelf",
+        subtitle=_("Open from the shelf"),
         kind=EntryKind.SHELF,
         activation=activation,
     )
@@ -82,7 +83,7 @@ def scene_entries(
         PaletteEntry(
             id=f"scene:{scene.id}",
             title=display_name(scene),
-            subtitle="Active scene" if scene.id == active_id else "Activate scene",
+            subtitle=_("Active scene") if scene.id == active_id else _("Activate scene"),
             kind=EntryKind.SCENE,
             activation=Runnable(invoke=_activator(scene.id, on_activate)),
             weight=_WEIGHT_ACTIVE if scene.id == active_id else 0,
@@ -107,7 +108,7 @@ def _device_entry(
     device: AudioDevice, on_select: Callable[[str], None], subtitle: str
 ) -> PaletteEntry:
     activation = (
-        Unavailable(reason="Already the default device")
+        Unavailable(reason=_("Already the default device"))
         if device.is_default
         else Runnable(invoke=lambda: on_select(device.name))
     )

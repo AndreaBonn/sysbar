@@ -25,7 +25,7 @@ from ...services.scenes.models import (  # noqa: E402
     Scene,
     scene_display_name,
 )
-from ..footer import build_footer  # noqa: E402
+from ...services.scenes.summary import describe_scene  # noqa: E402
 from .ports import SceneController  # noqa: E402
 from .scene_editor import SceneEditor  # noqa: E402
 
@@ -43,11 +43,19 @@ class ScenesWindow(Adw.Window):
         self.set_default_size(_WINDOW_WIDTH, _WINDOW_HEIGHT)
         self._controller = controller
         self._stack = Gtk.Stack()
-        self._group = Adw.PreferencesGroup()
+        self._group = Adw.PreferencesGroup(
+            description=_(
+                "A scene changes several things with one click. It stays active "
+                "until you pick another, or choose None in the tray menu."
+            )
+        )
         self._rows: list[Adw.ActionRow] = []
         self._editor = SceneEditor(controller, self._on_saved)
         self._build_content()
         self._reload()
+        # The active scene can change from the tray, a shortcut or a trigger
+        # while this window sits in the background; re-read it on return.
+        self.connect("notify::is-active", self._on_focus_changed)
 
     # --- construction -----------------------------------------------------
 
@@ -57,7 +65,6 @@ class ScenesWindow(Adw.Window):
         toolbar = Adw.ToolbarView()
         toolbar.add_top_bar(self._build_header())
         toolbar.set_content(self._stack)
-        toolbar.add_bottom_bar(build_footer())
         self.set_content(toolbar)
         self._show_list()
 
@@ -85,13 +92,20 @@ class ScenesWindow(Adw.Window):
         for row in self._rows:
             self._group.remove(row)
         self._rows.clear()
+        # Read the devices once per reload, not once per row: each read asks the
+        # audio server.
+        descriptions = {d.name: d.description for d in self._controller.outputs() if d.description}
         for scene in self._controller.scenes:
-            row = self._build_scene_row(scene)
+            row = self._build_scene_row(scene, descriptions)
             self._group.add(row)
             self._rows.append(row)
 
-    def _build_scene_row(self, scene: Scene) -> Adw.ActionRow:
-        row = Adw.ActionRow(title=scene_display_name(scene), subtitle=_describe(scene))
+    def _build_scene_row(self, scene: Scene, descriptions: dict[str, str]) -> Adw.ActionRow:
+        row = Adw.ActionRow(
+            title=scene_display_name(scene),
+            subtitle=describe_scene(scene, device_name=descriptions.get),
+        )
+        row.add_suffix(self._build_state_widget(scene))
         edit = Gtk.Button(
             icon_name="document-edit-symbolic",
             tooltip_text=_("Edit"),
@@ -104,6 +118,26 @@ class ScenesWindow(Adw.Window):
         if removal is not None:
             row.add_suffix(removal)
         return row
+
+    def _build_state_widget(self, scene: Scene) -> Gtk.Widget:
+        """E2: the active scene is marked; any other can be activated from here."""
+        if scene.id == self._controller.active_id:
+            return Gtk.Label(
+                label=_("Active"),
+                css_classes=["accent", "caption-heading"],
+                valign=Gtk.Align.CENTER,
+            )
+        button = Gtk.Button(label=_("Activate"), valign=Gtk.Align.CENTER)
+        button.connect("clicked", lambda _button, target=scene.id: self._activate(target))
+        return button
+
+    def _on_focus_changed(self, *_args: object) -> None:
+        if self.get_property("is-active") and self._stack.get_visible_child_name() == _PAGE_LIST:
+            self._reload()
+
+    def _activate(self, scene_id: str) -> None:
+        self._controller.activate(scene_id)
+        self._reload()
 
     def _build_removal_button(self, scene: Scene) -> Gtk.Button | None:
         """Delete for a user scene, restore for a customised built-in, else none."""
@@ -144,10 +178,3 @@ class ScenesWindow(Adw.Window):
         self._stack.set_visible_child_name(_PAGE_EDIT)
         self._back_button.set_visible(True)
         self._new_button.set_visible(False)
-
-
-def _describe(scene: Scene) -> str:
-    count = len(scene.actions)
-    if scene.is_built_in:
-        return _("Built in, {count} actions").format(count=count)
-    return _("Custom, {count} actions").format(count=count)

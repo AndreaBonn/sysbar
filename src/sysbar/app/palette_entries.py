@@ -13,6 +13,7 @@ meantime is not.
 
 from __future__ import annotations
 
+from ..core.i18n import _
 from ..services.palette.models import PaletteEntry
 from ..services.palette.sources import (
     clipboard_entries,
@@ -22,6 +23,7 @@ from ..services.palette.sources import (
 )
 from ..services.scenes.models import scene_display_name
 from .commands.actions import CommandHandlers
+from .commands.models import Requirement
 from .commands.palette import command_entries
 from .commands.wiring import current_state
 from .features import Features
@@ -32,7 +34,11 @@ _INPUT_SUBTITLE = "Set as audio input"
 
 def collect(features: Features, handlers: CommandHandlers) -> list[PaletteEntry]:
     """Every row the palette could show right now, unranked."""
-    entries = command_entries(handlers, current_state(features))
+    enablers = {
+        Requirement.SHELF_ENABLED: features.shelf.enable,
+        Requirement.CLIPBOARD_ENABLED: features.clipboard.enable,
+    }
+    entries = command_entries(handlers, current_state(features), enablers=enablers)
     entries += scene_entries(
         features.scenes.scenes,
         features.scenes.active_id,
@@ -41,6 +47,8 @@ def collect(features: Features, handlers: CommandHandlers) -> list[PaletteEntry]
     )
     entries += clipboard_entries(features.clipboard.entries(), features.clipboard.copy)
     entries += shelf_entries(features.shelf.items(), features.shelf.open_uri)
-    entries += device_entries(features.audio.outputs(), features.audio.set_output, _OUTPUT_SUBTITLE)
-    entries += device_entries(features.audio.inputs(), features.audio.set_input, _INPUT_SUBTITLE)
+    entries += device_entries(
+        features.audio.outputs(), features.audio.set_output, _(_OUTPUT_SUBTITLE)
+    )
+    entries += device_entries(features.audio.inputs(), features.audio.set_input, _(_INPUT_SUBTITLE))
     return entries
