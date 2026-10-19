@@ -40,6 +40,8 @@ from .tray_renderer import (
 # Prefix shown in the tray label while keep awake holds the session.
 KEEP_AWAKE_PLAY = "▶"
 
+_LABEL_SEPARATOR = " · "
+
 
 def tray_options(config: Config) -> TrayOptions:
     """Rendering options for the tray label and menu, read from settings."""
@@ -71,6 +73,20 @@ def wants_tray_sampling(config: Config) -> bool:
     """
     placed = any(config.metric_placement(metric) != PLACEMENT_OFF for metric in TRAY_METRICS)
     return placed or config.show_device_batteries
+
+
+def menu_has_live_content(config: Config, *, toggles_available: bool) -> bool:
+    """Whether the dropdown carries content that changes between samples.
+
+    Only then should the host re-read the layout on demand; otherwise it
+    churns D-Bus for a menu that is the same as the last one.
+    """
+    return has_menu_metrics(config) or toggles_available or config.show_device_batteries
+
+
+def tray_label(segments: Iterable[str]) -> str:
+    """The bar label: the non-empty segments joined by a middle dot."""
+    return _LABEL_SEPARATOR.join(segment for segment in segments if segment)
 
 
 def menu_metrics(snapshot: SystemSnapshot | None, options: TrayOptions) -> dict[str, str]:

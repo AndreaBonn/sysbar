@@ -24,8 +24,6 @@ from .tray.menu_model import MenuModel  # noqa: E402
 from .tray.tray import Tray  # noqa: E402
 from .tray_renderer import render_tray_label  # noqa: E402
 
-_LABEL_SEPARATOR = " · "
-
 log = logging.getLogger(__name__)
 
 
@@ -57,12 +55,9 @@ class TrayController:
     def refresh_label(self) -> None:
         if self._tray is None:
             return
-        segments = [
-            segment
-            for segment in (self._features.keep_awake.countdown_text(), self.metric_label())
-            if segment
-        ]
-        self._tray.set_label(_LABEL_SEPARATOR.join(segments))
+        self._tray.set_label(
+            tray_state.tray_label((self._features.keep_awake.countdown_text(), self.metric_label()))
+        )
         self._tray.set_icon(
             tray_state.tray_icon_name(keep_awake_active=self._features.keep_awake.is_active)
         )
@@ -110,11 +105,8 @@ class TrayController:
         lets the host re-read the layout on demand instead of churning it on
         every sample.
         """
-        config = self._context.config
-        if (
-            not tray_state.has_menu_metrics(config)
-            and not self._features.toggles.any_available
-            and not config.show_device_batteries
+        if not tray_state.menu_has_live_content(
+            self._context.config, toggles_available=self._features.toggles.any_available
         ):
             return False
         self.refresh_menu()

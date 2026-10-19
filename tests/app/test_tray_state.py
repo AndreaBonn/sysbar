@@ -115,6 +115,50 @@ def test_tray_sampling_runs_for_a_single_placed_metric(config: Config) -> None:
     assert tray_state.wants_tray_sampling(config) is True
 
 
+# --- menu_has_live_content and tray_label ---------------------------------
+
+
+def test_menu_has_live_content_is_false_with_nothing_to_refresh(config: Config) -> None:
+    _set_all_placements(config, PLACEMENT_BAR)
+    config.set_bool("menu-show-device-batteries", False)
+
+    assert tray_state.menu_has_live_content(config, toggles_available=False) is False
+
+
+def test_menu_has_live_content_is_true_for_a_menu_metric_alone(config: Config) -> None:
+    _set_all_placements(config, PLACEMENT_BAR)
+    config.set_bool("menu-show-device-batteries", False)
+    config.set_string("menu-bar-cpu-placement", PLACEMENT_MENU)
+
+    assert tray_state.menu_has_live_content(config, toggles_available=False) is True
+
+
+def test_menu_has_live_content_is_true_for_an_available_toggle_alone(config: Config) -> None:
+    _set_all_placements(config, PLACEMENT_BAR)
+    config.set_bool("menu-show-device-batteries", False)
+
+    assert tray_state.menu_has_live_content(config, toggles_available=True) is True
+
+
+def test_menu_has_live_content_is_true_for_device_batteries_alone(config: Config) -> None:
+    _set_all_placements(config, PLACEMENT_BAR)
+    config.set_bool("menu-show-device-batteries", True)
+
+    assert tray_state.menu_has_live_content(config, toggles_available=False) is True
+
+
+def test_tray_label_drops_empty_segments() -> None:
+    assert tray_state.tray_label(("", "CPU 5%")) == "CPU 5%"
+
+
+def test_tray_label_joins_segments_with_a_middle_dot() -> None:
+    assert tray_state.tray_label(("▶ 4:59", "CPU 5%")) == "▶ 4:59 · CPU 5%"
+
+
+def test_tray_label_of_only_empty_segments_is_empty() -> None:
+    assert tray_state.tray_label(("", "")) == ""
+
+
 # --- menu_metrics and menu_device_rows ------------------------------------
 
 
