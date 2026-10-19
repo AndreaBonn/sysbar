@@ -5,15 +5,20 @@ from dataclasses import FrozenInstanceError
 import pytest
 
 from sysbar.app.scenes_content import (
+    REMOVAL_PRESENTATIONS,
     TOGGLE_CHOICES,
     TRIGGER_CHOICES,
     FormValues,
+    RemovalKind,
+    device_descriptions,
     form_draft,
+    removal_kind,
     trigger_rows_visibility,
 )
+from sysbar.services.audio.models import AudioDevice
 from sysbar.services.scenes.actions import SetSetting, SystemToggle
 from sysbar.services.scenes.editing import SceneDraft, TriggerChoice
-from sysbar.services.scenes.models import PRESET_SCENES
+from sysbar.services.scenes.models import PRESET_SCENES, Scene, SceneOrigin
 
 
 def test_trigger_choices_order_and_labels_match_the_form() -> None:
@@ -97,3 +102,40 @@ def test_form_values_frozen_rejects_name_changes() -> None:
     with pytest.raises(FrozenInstanceError):
         values.__setattr__("name", "Changed")
     assert values.name == "Work"
+
+
+def test_removal_kind_unmodified_preset_has_no_removal_but_override_restores() -> None:
+    preset = PRESET_SCENES[0]
+    override = preset.edited(name="My focus", actions=None)
+    assert removal_kind(scene=preset) is None
+    assert removal_kind(scene=override) is RemovalKind.RESTORE
+
+
+def test_removal_kind_user_scene_deletes() -> None:
+    scene = Scene(id="my-scene", name="My scene", origin=SceneOrigin.USER)
+    assert removal_kind(scene=scene) is RemovalKind.DELETE
+
+
+@pytest.mark.parametrize(
+    ("kind", "expected"),
+    [
+        (RemovalKind.RESTORE, ("edit-undo-symbolic", "Restore the built-in")),
+        (RemovalKind.DELETE, ("user-trash-symbolic", "Delete")),
+    ],
+)
+def test_removal_presentations_each_kind_has_expected_icon_and_tooltip(
+    kind: RemovalKind, expected: tuple[str, str]
+) -> None:
+    assert REMOVAL_PRESENTATIONS[kind] == expected
+
+
+def test_device_descriptions_excludes_empty_and_keeps_described_output() -> None:
+    outputs = [
+        AudioDevice(index=1, name="hdmi", description="Monitor", kind="sink", is_default=True),
+        AudioDevice(index=2, name="usb", description="", kind="sink", is_default=False),
+    ]
+    assert device_descriptions(outputs=outputs) == {"hdmi": "Monitor"}
+
+
+def test_device_descriptions_empty_outputs_returns_empty_mapping() -> None:
+    assert device_descriptions(outputs=[]) == {}

@@ -1,4 +1,4 @@
-"""Decide scene form choices and drafts independently of GTK widgets.
+"""Decide scene form choices, drafts and list content independently of GTK.
 
 The editor builds widgets and saves scenes; choice ordering, row visibility and
 form interpretation live here so they can be checked without a display.
@@ -6,12 +6,14 @@ form interpretation live here so they can be checked without a display.
 
 from __future__ import annotations
 
-from collections.abc import Mapping
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
+from enum import Enum, auto
 
+from ..services.audio.models import AudioDevice
 from ..services.scenes.actions import SystemToggle
 from ..services.scenes.editing import SceneDraft, TriggerChoice, draft_from
-from ..services.scenes.models import Scene
+from ..services.scenes.models import PRESET_SCENE_IDS, Scene
 
 _FIRST_DEVICE_INDEX = 0
 _UNCHANGED_DEVICE = ""
@@ -30,6 +32,55 @@ TOGGLE_CHOICES: tuple[tuple[bool | None, str], ...] = (
     (True, "Turn on"),
     (False, "Turn off"),
 )
+
+
+class RemovalKind(Enum):
+    """The action available when removing a scene from the list."""
+
+    RESTORE = auto()
+    DELETE = auto()
+
+
+REMOVAL_PRESENTATIONS: dict[RemovalKind, tuple[str, str]] = {
+    RemovalKind.RESTORE: ("edit-undo-symbolic", "Restore the built-in"),
+    RemovalKind.DELETE: ("user-trash-symbolic", "Delete"),
+}
+
+
+def removal_kind(scene: Scene) -> RemovalKind | None:
+    """Choose whether removing the scene restores a preset or deletes it.
+
+    Parameters
+    ----------
+    scene : Scene
+        Scene displayed in the list.
+
+    Returns
+    -------
+    RemovalKind or None
+        Available removal action, absent for an unmodified built-in.
+    """
+    if scene.is_built_in:
+        return None
+    # A customised built-in keeps its id, so it can be restored rather than
+    # deleted: there is a shipped version to fall back to.
+    return RemovalKind.RESTORE if scene.id in PRESET_SCENE_IDS else RemovalKind.DELETE
+
+
+def device_descriptions(outputs: Sequence[AudioDevice]) -> dict[str, str]:
+    """Map audio identifiers to their nonempty readable descriptions.
+
+    Parameters
+    ----------
+    outputs : Sequence[AudioDevice]
+        Output devices read by the window.
+
+    Returns
+    -------
+    dict[str, str]
+        Descriptions suitable for scene subtitles, keyed by device name.
+    """
+    return {device.name: device.description for device in outputs if device.description}
 
 
 @dataclass(frozen=True)

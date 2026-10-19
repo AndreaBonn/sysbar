@@ -19,9 +19,13 @@ gi.require_version("Gtk", "4.0")
 gi.require_version("Adw", "1")
 from gi.repository import Adw, Gtk  # noqa: E402
 
+from ...app.scenes_content import (  # noqa: E402
+    REMOVAL_PRESENTATIONS,
+    device_descriptions,
+    removal_kind,
+)
 from ...core.i18n import _  # noqa: E402
 from ...services.scenes.models import (  # noqa: E402
-    PRESET_SCENE_IDS,
     Scene,
     scene_display_name,
 )
@@ -94,7 +98,7 @@ class ScenesWindow(Adw.Window):
         self._rows.clear()
         # Read the devices once per reload, not once per row: each read asks the
         # audio server.
-        descriptions = {d.name: d.description for d in self._controller.outputs() if d.description}
+        descriptions = device_descriptions(outputs=self._controller.outputs())
         for scene in self._controller.scenes:
             row = self._build_scene_row(scene, descriptions)
             self._group.add(row)
@@ -141,14 +145,13 @@ class ScenesWindow(Adw.Window):
 
     def _build_removal_button(self, scene: Scene) -> Gtk.Button | None:
         """Delete for a user scene, restore for a customised built-in, else none."""
-        if scene.is_built_in:
+        kind = removal_kind(scene=scene)
+        if kind is None:
             return None
-        # A customised built-in keeps its id, so it can be restored rather than
-        # deleted: there is a shipped version to fall back to.
-        restorable = scene.id in PRESET_SCENE_IDS
+        icon_name, tooltip = REMOVAL_PRESENTATIONS[kind]
         button = Gtk.Button(
-            icon_name="edit-undo-symbolic" if restorable else "user-trash-symbolic",
-            tooltip_text=_("Restore the built-in") if restorable else _("Delete"),
+            icon_name=icon_name,
+            tooltip_text=_(tooltip),
             valign=Gtk.Align.CENTER,
         )
         button.add_css_class("flat")
