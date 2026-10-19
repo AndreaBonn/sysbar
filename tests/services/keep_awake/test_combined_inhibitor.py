@@ -2,9 +2,13 @@
 
 from __future__ import annotations
 
+import logging
 from dataclasses import dataclass, field
 
+import pytest
+
 from sysbar.services.keep_awake.combined_inhibitor import CombinedInhibitor
+from sysbar.services.keep_awake.ports import WHAT_IDLE_SLEEP
 
 
 @dataclass
@@ -100,3 +104,49 @@ def test_combined_unknown_token_does_not_release_held_parts() -> None:
     combined.release(token)
     assert sleep.released == [42]
     assert screensaver.released == [7]
+
+
+def test_idle_sleep_without_logind_warns_that_the_system_can_still_sleep(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """The token stays valid, so keep-awake reads as on: the log must say it is not whole."""
+    combined = CombinedInhibitor(FakeSleep(fd=None), FakeScreenSaver())
+
+    with caplog.at_level(logging.WARNING):
+        token = combined.acquire(WHAT_IDLE_SLEEP)
+
+    assert token is not None
+    assert [record.message for record in caplog.records] == ["partial inhibition"]
+    assert caplog.records[0].__dict__["missing"] == "sleep"
+
+
+def test_idle_sleep_without_screensaver_warns_that_the_display_can_still_blank(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    combined = CombinedInhibitor(FakeSleep(), FakeScreenSaver(cookie=None))
+
+    with caplog.at_level(logging.WARNING):
+        combined.acquire(WHAT_IDLE_SLEEP)
+
+    assert [record.message for record in caplog.records] == ["partial inhibition"]
+    assert caplog.records[0].__dict__["missing"] == "screensaver"
+
+
+def test_idle_sleep_with_both_parts_logs_nothing(caplog: pytest.LogCaptureFixture) -> None:
+    combined = CombinedInhibitor(FakeSleep(), FakeScreenSaver())
+
+    with caplog.at_level(logging.WARNING):
+        combined.acquire(WHAT_IDLE_SLEEP)
+
+    assert caplog.records == []
+
+
+def test_lid_inhibition_never_counts_the_screensaver_as_missing(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    combined = CombinedInhibitor(FakeSleep(), FakeScreenSaver(cookie=None))
+
+    with caplog.at_level(logging.WARNING):
+        combined.acquire("handle-lid-switch")
+
+    assert caplog.records == []

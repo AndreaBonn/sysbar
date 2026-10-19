@@ -35,6 +35,10 @@ class CombinedInhibitor:
         if fd is None and cookie is None:
             log.warning("no inhibitor available", extra={"what": what})
             return None
+        missing = _missing_part(what=what, fd=fd, cookie=cookie)
+        if missing is not None:
+            # The token is valid, so keep-awake reads as on although only half of it holds.
+            log.warning("partial inhibition", extra={"what": what, "missing": missing})
         return _Held(fd=fd, screensaver_cookie=cookie)
 
     def release(self, token: object) -> None:
@@ -44,3 +48,14 @@ class CombinedInhibitor:
             self._sleep.release(fd=token.fd)
         if token.screensaver_cookie is not None:
             self._screensaver.release(cookie=token.screensaver_cookie)
+
+
+def _missing_part(*, what: str, fd: int | None, cookie: int | None) -> str | None:
+    """Which half of an idle:sleep inhibition failed, if exactly one did."""
+    if what != WHAT_IDLE_SLEEP:
+        return None
+    if fd is None:
+        return "sleep"
+    if cookie is None:
+        return "screensaver"
+    return None
