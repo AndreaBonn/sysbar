@@ -127,6 +127,28 @@ def test_refresh_enabled_follows_a_settings_change(record: list[str]) -> None:
 # --- dispatch -------------------------------------------------------------
 
 
+def test_refresh_enabled_partial_mapping_updates_present_command() -> None:
+    action = Gio.SimpleAction.new(CommandId.OPEN_SHELF.value, None)
+    action.set_enabled(False)
+
+    refresh_enabled({CommandId.OPEN_SHELF: action}, CommandState(shelf_enabled=True))
+
+    assert action.get_enabled() is True
+
+
+def test_refresh_enabled_empty_mapping_allows_later_registration() -> None:
+    actions: dict[CommandId, Gio.SimpleAction] = {}
+    state = CommandState(shelf_enabled=True)
+
+    refresh_enabled(actions, state)
+    action = Gio.SimpleAction.new(CommandId.OPEN_SHELF.value, None)
+    action.set_enabled(False)
+    actions[CommandId.OPEN_SHELF] = action
+    refresh_enabled(actions, state)
+
+    assert action.get_enabled() is True
+
+
 def test_activating_a_simple_action_calls_its_handler(record: list[str]) -> None:
     actions = install_actions(_FakeTarget(), _handlers(record), CommandState())
 
