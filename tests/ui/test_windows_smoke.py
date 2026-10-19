@@ -709,22 +709,68 @@ def test_palette_window_header_only_on_the_first_row_of_a_kind(gtk: object) -> N
 
 
 def test_shelf_clear_then_undo_restores_visible_tiles(gtk: object, tmp_path: Path) -> None:
+    from gi.repository import Adw
+
     from sysbar.ui.shelf.shelf_window import ShelfWindow
 
     service = ShelfService(data_dir=tmp_path / "shelf")
     item = service.add_text(text="Keep this")
     window = ShelfWindow(service=service)
+    toasts: list[Adw.Toast] = []
+    add_toast = window._toasts.add_toast
+
+    def record(toast: Adw.Toast) -> None:
+        toasts.append(toast)
+        add_toast(toast)
+
+    window._toasts.add_toast = record
     try:
         assert window._stack.get_visible_child_name() == "tiles"
         window._on_clear(None)
         assert service.items == []
         assert window._stack.get_visible_child_name() == "empty"
         assert window._flow.get_first_child() is None
-        window._on_undo(None)
+        toasts[0].emit("button-clicked")
         assert service.items == [item]
         assert window._stack.get_visible_child_name() == "tiles"
         assert window._flow.get_child_at_index(0).get_child().get_first_child() is not None
         assert window._flow.get_child_at_index(1) is None
+    finally:
+        window.destroy()
+
+
+def test_shelf_second_clear_can_still_be_undone(gtk: object, tmp_path: Path) -> None:
+    """A clear made while the previous toast is still up keeps its own undo.
+
+    The overlay queues the second toast behind the first. When the first one
+    times out, its dismissal used to commit whatever was pending at that
+    moment: the second batch, deleted before its own Undo was even shown.
+    """
+    from gi.repository import Adw
+
+    from sysbar.ui.shelf.shelf_window import ShelfWindow
+
+    service = ShelfService(data_dir=tmp_path / "shelf")
+    service.add_text(text="First batch")
+    window = ShelfWindow(service=service)
+    toasts: list[Adw.Toast] = []
+    add_toast = window._toasts.add_toast
+
+    def record(toast: Adw.Toast) -> None:
+        toasts.append(toast)
+        add_toast(toast)
+
+    window._toasts.add_toast = record
+    try:
+        window._on_clear(None)
+        second = service.add_text(text="Second batch")
+        window._on_clear(None)
+
+        toasts[0].dismiss()  # the first toast times out
+        _drain_main_loop()
+        toasts[1].emit("button-clicked")
+
+        assert service.items == [second]
     finally:
         window.destroy()
 

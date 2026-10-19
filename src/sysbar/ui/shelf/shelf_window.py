@@ -77,15 +77,13 @@ class ShelfWindow(Adw.Window):
 
     def _on_clear(self, _button: Gtk.Button) -> None:
         """S2: the clear is held for a few seconds so it can be undone."""
-        if not self._pending.clear():
+        batch = self._pending.clear()
+        if batch is None:
             return
         toast = Adw.Toast(title=_("Shelf cleared"), button_label=_("Undo"), timeout=_UNDO_SECONDS)
-        toast.connect("button-clicked", self._on_undo)
-        toast.connect("dismissed", lambda _toast: self._pending.commit())
+        toast.connect("button-clicked", lambda _toast: self._pending.undo(batch=batch))
+        toast.connect("dismissed", lambda _toast: self._pending.commit(batch=batch))
         self._toasts.add_toast(toast)
-
-    def _on_undo(self, _toast: Adw.Toast) -> None:
-        self._pending.undo()
 
     def _on_close_request(self, _window: Gtk.Window) -> bool:
         self._pending.commit()
