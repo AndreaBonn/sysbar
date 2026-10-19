@@ -210,7 +210,7 @@ def _exercise_alerts() -> None:
 
 def _exercise_windows(tmp_path: Path) -> None:
     """Construct every window so wrapper/combo labels pass through ``_()``."""
-    from pathlib import Path as _Path
+    from gi.repository import Gio
 
     from sysbar.app.whats_new import NOTES
     from sysbar.core.capabilities import Capabilities
@@ -282,20 +282,27 @@ def _exercise_windows(tmp_path: Path) -> None:
         PaletteWindow(lambda _query: []),
         ScenesWindow(_FakeSceneController()),
         ClipboardWindow(ClipboardService(tmp_path / "clipboard"), on_copy=lambda _text: None),
-        SettingsWindow(Config(), AutostartManager(), on_show_onboarding=lambda: None),
         SettingsWindow(
-            Config(), AutostartManager(), on_show_onboarding=lambda: None, shortcuts_available=False
+            Config(backend=Gio.memory_settings_backend_new()),
+            AutostartManager(autostart_dir=tmp_path / "autostart"),
+            on_show_onboarding=lambda: None,
+        ),
+        SettingsWindow(
+            Config(backend=Gio.memory_settings_backend_new()),
+            AutostartManager(autostart_dir=tmp_path / "autostart"),
+            on_show_onboarding=lambda: None,
+            shortcuts_available=False,
         ),
         ShelfWindow(shelf_service),
         OnboardingWindow(
             Capabilities(),
-            config=Config(),
-            autostart=AutostartManager(),
+            config=Config(backend=Gio.memory_settings_backend_new()),
+            autostart=AutostartManager(autostart_dir=tmp_path / "autostart"),
             on_finish=lambda: None,
         ),
         UninstallerWindow(
             AppUninstaller(
-                home=_Path("/tmp"),
+                home=tmp_path,
                 trash=_FakeTrash(),
                 remover=_FakeRemover(),
                 polkit_available=False,
@@ -425,6 +432,7 @@ def test_every_used_string_has_an_italian_catalog_entry(
     _exercise_content()
     _exercise_windows(tmp_path)
 
+    assert {"Welcome to Sysbar", "Start at login"} <= recorder.seen, "the exercise recorded nothing"
     catalog = _catalog_msgids(_CATALOG)
     missing = sorted(message for message in recorder.seen if message and message not in catalog)
 

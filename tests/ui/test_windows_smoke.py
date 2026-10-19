@@ -69,9 +69,14 @@ def test_panel_window_sparklines_update(gtk: object) -> None:
     window = PanelWindow()
     window.set_graph_metrics(frozenset({"cpu"}))
     history = MetricHistory()
-    history.record(SystemSnapshot(cpu_percent=10.0))
-    history.record(SystemSnapshot(cpu_percent=20.0))
+    history.record(SystemSnapshot(cpu_percent=10.0, memory_percent=30.0))
+    history.record(SystemSnapshot(cpu_percent=20.0, memory_percent=40.0))
     window.update_history(history)
+
+    cpu = window._metrics._sparklines["cpu"]
+    assert cpu.get_visible() is True
+    assert cpu._values == (10.0, 20.0)
+    assert window._metrics._sparklines["memory"].get_visible() is False
     window.destroy()
 
 
@@ -81,6 +86,14 @@ def test_panel_window_net_processes_update(gtk: object) -> None:
 
     window = PanelWindow()
     window.update_net_processes([ProcNetRate(pid=1, name="firefox", rx_rate=2048.0, tx_rate=512.0)])
+
+    assert window._net_group.get_visible() is True
+    assert [(row.get_title(), row.get_subtitle()) for row in window._net_rows] == [
+        ("firefox", "↓2.0 KB/s ↑512 B/s")
+    ]
+    window.update_net_processes([])
+    assert window._net_group.get_visible() is False
+    assert window._net_rows == []
     window.destroy()
 
 
@@ -237,10 +250,16 @@ def test_clipboard_window_builds(gtk: object, tmp_path: Path) -> None:
     window.destroy()
 
 
-def test_settings_window_builds(gtk: object, compiled_schema: str) -> None:
+def test_settings_window_builds(gtk: object, compiled_schema: str, tmp_path: Path) -> None:
+    from gi.repository import Gio
+
     from sysbar.ui.settings.settings_window import SettingsWindow
 
-    window = SettingsWindow(Config(), AutostartManager(), on_show_onboarding=lambda: None)
+    window = SettingsWindow(
+        Config(backend=Gio.memory_settings_backend_new()),
+        AutostartManager(autostart_dir=tmp_path),
+        on_show_onboarding=lambda: None,
+    )
     assert window.get_title()
     window.destroy()
 
@@ -273,16 +292,18 @@ def test_shelf_window_builds(gtk: object, tmp_path: Path) -> None:
     window.destroy()
 
 
-def test_onboarding_window_builds(gtk: object) -> None:
+def test_onboarding_window_builds(gtk: object, compiled_schema: str, tmp_path: Path) -> None:
+    from gi.repository import Gio
+
     from sysbar.ui.onboarding.onboarding_window import OnboardingWindow
 
     window = OnboardingWindow(
         Capabilities(),
-        config=Config(),
-        autostart=AutostartManager(),
+        config=Config(backend=Gio.memory_settings_backend_new()),
+        autostart=AutostartManager(autostart_dir=tmp_path),
         on_finish=lambda: None,
     )
-    assert window.get_title() is not None
+    assert window.get_title() == "Welcome to Sysbar"
     window.destroy()
 
 
@@ -321,7 +342,9 @@ def test_palette_window_lists_the_entries_it_is_given(gtk: object) -> None:
     )
     window = PaletteWindow(lambda _query: [entry])
 
-    assert window._list.get_row_at_index(0) is not None
+    row = window._list.get_row_at_index(0)
+    assert row.get_title() == "Open the panel"
+    assert window._list.get_row_at_index(1) is None
     window.destroy()
 
 
