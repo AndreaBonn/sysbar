@@ -78,10 +78,10 @@ class TogglesFeature:
 
     def set_microphone_muted(self, muted: bool) -> None:
         """Drive the microphone to a target state; no-op if already there."""
-        if self._microphone is not None and self._microphone.is_muted() != muted:
-            self._microphone.toggle()
+        if self._microphone is not None:
+            self._microphone.set_muted(muted=muted)
 
     def set_do_not_disturb(self, active: bool) -> None:
         """Drive Do Not Disturb to a target state; no-op if already there."""
-        if self._dnd is not None and self._dnd.is_active() != active:
-            self._dnd.toggle()
+        if self._dnd is not None:
+            self._dnd.set_active(active=active)

@@ -28,6 +28,11 @@ class MicrophoneToggle:
         """Whether any application is currently capturing from a source."""
         return self._backend.is_in_use()
 
+    def set_muted(self, muted: bool) -> None:
+        """Reach the requested mute state; no-op if matched or no default source."""
+        if self.is_muted() != muted:
+            self.toggle()
+
     def toggle(self) -> None:
         """Flip the mute state; a no-op when there is no default source."""
         muted = self._backend.is_muted()

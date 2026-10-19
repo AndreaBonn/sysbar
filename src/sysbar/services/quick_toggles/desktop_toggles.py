@@ -30,6 +30,11 @@ class DoNotDisturbToggle:
     def toggle(self) -> None:
         self._store.set_boolean(SHOW_BANNERS_KEY, self.is_active())
 
+    def set_active(self, active: bool) -> None:
+        """Reach the requested DND state; no-op if already matched."""
+        if self.is_active() != active:
+            self.toggle()
+
 
 class ColorSchemeToggle:
     """Switches the desktop between the default and the dark colour scheme."""

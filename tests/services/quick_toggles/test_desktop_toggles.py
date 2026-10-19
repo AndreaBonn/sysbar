@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import pytest
+
 from sysbar.services.quick_toggles.desktop_toggles import ColorSchemeToggle, DoNotDisturbToggle
 
 
@@ -9,11 +11,13 @@ class FakeStore:
     ) -> None:
         self._booleans = booleans or {}
         self._strings = strings or {}
+        self.boolean_writes: list[tuple[str, bool]] = []
 
     def get_boolean(self, key: str) -> bool:
         return self._booleans.get(key, False)
 
     def set_boolean(self, key: str, value: bool) -> None:
+        self.boolean_writes.append((key, value))
         self._booleans[key] = value
 
     def get_string(self, key: str) -> str:
@@ -21,6 +25,24 @@ class FakeStore:
 
     def set_string(self, key: str, value: str) -> None:
         self._strings[key] = value
+
+
+@pytest.mark.parametrize("active", [True, False])
+def test_set_active_matching_state_skips_write(active: bool) -> None:
+    store = FakeStore(booleans={"show-banners": not active})
+    toggle = DoNotDisturbToggle(store=store)
+    toggle.set_active(active=active)
+    assert (toggle.is_active(), store.boolean_writes) == (active, [])
+    toggle.set_active(active=not active)
+    assert (toggle.is_active(), store.boolean_writes) == (not active, [("show-banners", active)])
+
+
+@pytest.mark.parametrize("active", [True, False])
+def test_set_active_different_state_writes_once(active: bool) -> None:
+    store = FakeStore(booleans={"show-banners": active})
+    toggle = DoNotDisturbToggle(store=store)
+    toggle.set_active(active=active)
+    assert (toggle.is_active(), store.boolean_writes) == (active, [("show-banners", not active)])
 
 
 # --------------------------------------------------------------------------- #

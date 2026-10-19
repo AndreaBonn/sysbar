@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import pytest
+
 from sysbar.services.quick_toggles.microphone import MicrophoneToggle
 
 
@@ -18,6 +20,35 @@ class FakeMicBackend:
 
     def is_in_use(self) -> bool:
         return self._in_use
+
+
+@pytest.mark.parametrize(("initial", "muted"), [(True, True), (False, False)])
+def test_set_muted_matching_state_skips_write(initial: bool, muted: bool) -> None:
+    backend = FakeMicBackend(muted=initial)
+    toggle = MicrophoneToggle(backend=backend)
+    toggle.set_muted(muted=muted)
+    assert (toggle.is_muted(), backend.set_calls) == (muted, [])
+    toggle.set_muted(muted=not muted)
+    assert (toggle.is_muted(), backend.set_calls) == (not muted, [not muted])
+
+
+@pytest.mark.parametrize(("initial", "muted"), [(False, True), (True, False)])
+def test_set_muted_different_state_writes_once(initial: bool, muted: bool) -> None:
+    backend = FakeMicBackend(muted=initial)
+    toggle = MicrophoneToggle(backend=backend)
+    toggle.set_muted(muted=muted)
+    assert (toggle.is_muted(), backend.set_calls) == (muted, [muted])
+
+
+@pytest.mark.parametrize("muted", [True, False])
+def test_set_muted_without_default_source_skips_write(muted: bool) -> None:
+    backend = FakeMicBackend(muted=None)
+    toggle = MicrophoneToggle(backend=backend)
+    toggle.set_muted(muted=muted)
+    assert (toggle.is_muted(), backend.set_calls) == (False, [])
+    available = FakeMicBackend(muted=not muted)
+    MicrophoneToggle(backend=available).set_muted(muted=muted)
+    assert available.set_calls == [muted]
 
 
 def test_is_muted_reflects_backend() -> None:
