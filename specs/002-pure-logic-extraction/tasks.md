@@ -21,9 +21,17 @@
 | T16 | CombinedInhibitor + log dell'errore ScreenSaver ingoiato | T0 | R1,R9 | ok | revert | fatto (2751599) |
 | T17 | app/clipboard_content.py (Could) | T0 | R1 | ok | revert | fatto (a8b4da1) |
 | T18 | gate traduzioni sui rami dei moduli puri | T3-T17 | R8 | seq | revert | fatto (a2c693b, 5cdf166) |
-| T19 | misura finale + checklist runtime | tutti | R4 | seq | n/a | |
+| T19 | misura finale + checklist runtime | tutti | R4 | seq | n/a | misura fatta; checklist runtime su GNOME reale NON eseguita (richiede l'utente) |
 | T20 | riscrittura test DA RISCRIVERE/DEBOLE di test-audit.md | T0 | R7 | ok | revert | fatto (63e0634..669127a parte A, 86805ae..71f3574 parte B) |
 | T21 | isolamento dconf della suite | - | R6 | ok | revert | fatto (f7f08b5) |
 | T22 | fix blocco della combo dispositivi audio (set_model rientrante in notify::selected), emerso in T5 | - | R9 | - | revert | fatto (07c9041) |
+| T23 | fix: secondo svuotamento della shelf con toast in coda non annullabile (code-reviewer CR7) | - | R9 | - | revert | fatto (67705b5) |
+| T24 | refactor: costanti condivise definite una volta, keyword arguments | - | R1 | - | revert | fatto (2b01f57) |
+| T25 | docs: commenti "perché" persi nell'estrazione (comment-analyzer) | - | R2 | - | revert | fatto (9b0e4be) |
+| T26 | test: completezza di REMOVAL_PRESENTATIONS (type-design-analyzer) | - | R1 | - | revert | fatto (f3cdfda) |
+| T27 | fix: svuotamento a vuoto faceva il commit del lotto annullabile (/analyze A1) | - | R9 | - | revert | fatto (d5a945a) |
+| T28 | fix: log di UnInhibit fallito e di inibizione parziale (/analyze A3, O3) | - | R9 | - | revert | fatto (4ef1ce0, d5c991a) |
+| T29 | refactor: rami irraggiungibili di auto_quit rimossi (/analyze A8, O6) | - | R4 | - | revert | fatto (2481c70) |
+| T30 | fix: dispositivo scollegato conservato nell'editor scene (/analyze A4, O1) | - | R9 | - | revert | fatto (1cfc45e) |
 
 Note per T18: `ui/panel/mixer_section.py` `set_unavailable` mostra "PipeWire/PulseAudio not available" senza `_()` e il msgid non è nel `.po`: stringa inglese nella UI italiana, da correggere con msgid e traduzione.
