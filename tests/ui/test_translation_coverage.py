@@ -339,6 +339,7 @@ def _exercise_panel_and_palette_content() -> None:
 
 def _exercise_scene_content() -> None:
     """Translate the scene tables the way the editor does, and every summary phrase."""
+    from sysbar.app.device_choices import scene_output_choices
     from sysbar.app.scenes_content import REMOVAL_PRESENTATIONS, TOGGLE_CHOICES, TRIGGER_CHOICES
     from sysbar.core.i18n import _
     from sysbar.services.scenes.actions import (
@@ -356,6 +357,7 @@ def _exercise_scene_content() -> None:
         _(label)
     for _icon, tooltip in REMOVAL_PRESENTATIONS.values():
         _(tooltip)
+    scene_output_choices(devices=[], selected_name="unplugged-sink")
 
     toggles = tuple(SetToggle(toggle, value) for toggle in SystemToggle for value in (True, False))
     setting = SetSetting(key=sorted(SCENE_WRITABLE_KEYS)[0], value=True)

@@ -526,6 +526,9 @@ msgstr "Ciò che resta invariato non viene toccato dalla scena"
 msgid "Leave unchanged"
 msgstr "Lascia invariato"
 
+msgid "{device} (disconnected)"
+msgstr "{device} (scollegato)"
+
 msgid "Turn on"
 msgstr "Attiva"
 

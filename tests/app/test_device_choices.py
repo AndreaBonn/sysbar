@@ -84,8 +84,8 @@ def test_scene_output_choices_connected_selects_device_after_neutral_entry() -> 
     )
 
 
-@pytest.mark.parametrize("selected_name", ["disconnected", None, ""])
-def test_scene_output_choices_missing_selection_selects_neutral(selected_name: str | None) -> None:
+@pytest.mark.parametrize("selected_name", [None, ""])
+def test_scene_output_choices_no_stored_device_selects_neutral(selected_name: str | None) -> None:
     devices = _devices(defaults=(True, False))
     assert scene_output_choices(devices=devices, selected_name="sink-1").selected == 2
     assert scene_output_choices(devices=devices, selected_name=selected_name) == DeviceChoices(
@@ -93,7 +93,20 @@ def test_scene_output_choices_missing_selection_selects_neutral(selected_name: s
     )
 
 
-def test_scene_output_choices_empty_returns_only_neutral_name() -> None:
+def test_scene_output_choices_disconnected_device_stays_listed_and_selected() -> None:
+    """Saving the scene must not quietly turn its output into "leave unchanged"."""
+    devices = _devices(defaults=(True, False))
+
+    choices = scene_output_choices(devices=devices, selected_name="usb-dac")
+
+    assert choices == DeviceChoices(
+        labels=("Speaker 0", "Speaker 1", "usb-dac (disconnected)"),
+        names=("", "sink-0", "sink-1", "usb-dac"),
+        selected=3,
+    )
+
+
+def test_scene_output_choices_empty_keeps_the_disconnected_device() -> None:
     assert scene_output_choices(devices=[], selected_name="gone") == DeviceChoices(
-        labels=(), names=("",), selected=0
+        labels=("gone (disconnected)",), names=("", "gone"), selected=1
     )

@@ -483,6 +483,26 @@ def test_editing_a_preset_saves_it_without_losing_actions(gtk: object) -> None:
     window.destroy()
 
 
+def test_scene_editor_keeps_a_disconnected_output_on_save(gtk: object) -> None:
+    """Editing a scene whose device is unplugged must not erase that device."""
+    from sysbar.ui.scenes.scenes_window import ScenesWindow
+
+    controller = _FakeSceneController()
+    controller.output_devices = [
+        AudioDevice(index=10, name="speakers", description="Speakers", kind="sink", is_default=True)
+    ]
+    scene = Scene(id="desk", name="Desk", actions=(SetOutputDevice(device="usb-dac"),))
+    window = ScenesWindow(controller=controller)
+
+    window._edit(scene)
+    editor = window._editor
+    assert editor._device_row.get_selected_item().get_string() == "usb-dac (disconnected)"
+    editor._save()
+
+    assert controller.saved[0].actions == (SetOutputDevice(device="usb-dac"),)
+    window.destroy()
+
+
 def test_scene_editor_saves_selected_output_toggle_and_battery_trigger(gtk: object) -> None:
     from sysbar.ui.scenes.scenes_window import ScenesWindow
 

@@ -8,6 +8,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
+from ..core.i18n import _
 from ..services.audio.models import AudioDevice
 
 FIRST_DEVICE_INDEX = 0
@@ -81,10 +82,16 @@ def scene_output_choices(devices: list[AudioDevice], selected_name: str | None) 
     DeviceChoices
         Device labels only; names include the neutral empty name at index zero.
         The UI prepends its translated neutral label. Selection is always set.
+        A stored output that is not connected stays listed, marked as such, and
+        selected: falling back to the neutral entry would erase it on save.
     """
     names = ("", *(device.name for device in devices))
+    labels = tuple(device.description or device.name for device in devices)
+    if selected_name and selected_name not in names:
+        names = (*names, selected_name)
+        labels = (*labels, _("{device} (disconnected)").format(device=selected_name))
     return DeviceChoices(
-        labels=tuple(device.description or device.name for device in devices),
+        labels=labels,
         names=names,
         selected=names.index(selected_name) if selected_name in names else FIRST_DEVICE_INDEX,
     )
