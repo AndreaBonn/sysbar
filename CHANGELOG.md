@@ -7,6 +7,53 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.3.0] - 2026-10-20
+
+### Added
+- What's new window: a user updated from an older feature set gets one short
+  window naming what is new and where to find it. Closing it stores the
+  current set, so it does not come back; a first run still gets the welcome.
+- Shortcuts without a portal: where the desktop has no GlobalShortcuts portal
+  (GNOME 46 and earlier), Preferences > General lists the matching
+  command-line actions with a copy button and the path in GNOME Settings to
+  bind them.
+- Undo for clearing the clipboard history and the shelf, offered for a few
+  seconds in a toast. Pinned clipboard entries are never restored.
+- Panel summary row ("All normal" with the busiest app, or the first
+  problem) and quick toggles for keep awake, microphone, Do Not Disturb and
+  dark style.
+
+### Changed
+- Tray: branded symbolic icon with an awake variant, menu split into "Quick
+  actions" and "Open", entries for the command palette and the scenes
+  window, uninstaller moved under "More tools". New installs show CPU and
+  memory in the bar; existing installs keep their placement.
+- Welcome: three steps on where Sysbar is and how to reach it, starter
+  switches, capabilities in plain words with a remedy for what is missing.
+- Preferences: Features is the first page and every switch says what it
+  does; monitor placements are named as places with a live preview; each
+  alert is one switch that fills in a suggested limit.
+- Command palette: rows say what kind of action they are, carry a kind icon
+  and a section header; a feature switched off gets a "Turn on" button; an
+  empty search suggests what to try.
+- Scenes window: each row names what the scene changes, the active scene is
+  marked and the others have an Activate button.
+- Clipboard and shelf: empty states that explain how they fill, image
+  thumbnails on the shelf, a "Copied" toast on re-copy.
+- Uninstaller: searchable app list with no preselection, leftovers named in
+  plain words with their size, a remove button that says how much it frees.
+- The Italian UI is complete, including the mixer.
+
+### Fixed
+- Picking an audio device in the panel froze the app.
+- Editing a scene whose output device was unplugged erased the device on
+  save; it now stays listed as disconnected.
+- A second shelf clear while the first toast was queued deleted the wrong
+  batch before its Undo was shown.
+- Keep awake logs which part is missing when only one of logind and
+  ScreenSaver holds the inhibition, and logs a failed ScreenSaver uninhibit.
+- The mixer's unavailable message was not translated.
+
 ## [1.2.0] - 2026-08-07
 
 ### Added
@@ -165,6 +212,7 @@ First stable release.
 - Local only: no account, no telemetry. Every feature is opt-in and degrades
   gracefully when a dependency, extension or session capability is missing.
 
+[1.3.0]: https://github.com/AndreaBonn/sysbar/releases/tag/v1.3.0
 [1.2.0]: https://github.com/AndreaBonn/sysbar/releases/tag/v1.2.0
 [1.1.1]: https://github.com/AndreaBonn/sysbar/releases/tag/v1.1.1
 [1.1.0]: https://github.com/AndreaBonn/sysbar/releases/tag/v1.1.0

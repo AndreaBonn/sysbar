@@ -1,3 +1,20 @@
+sysbar (1.3.0) noble; urgency=medium
+
+  * What's new window after an update, naming what changed and where to
+    find it.
+  * Shortcuts without a GlobalShortcuts portal: Preferences lists the
+    command-line actions to bind in GNOME Settings.
+  * Undo for clearing the clipboard history and the shelf.
+  * Clearer tray menu, welcome, panel (summary row and quick toggles),
+    preferences, command palette, scenes window and uninstaller.
+  * Complete Italian UI, including the mixer.
+  * Fix: picking an audio device in the panel froze the app.
+  * Fix: editing a scene with an unplugged output device erased the device.
+  * Fix: a second shelf clear could delete the wrong batch before its Undo.
+  * Fix: keep awake logs a partial or failed inhibition.
+
+ -- AndreaBonn <andreabonacci95@protonmail.com>  Tue, 20 Oct 2026 10:00:00 +0200
+
 sysbar (1.2.0) noble; urgency=medium
 
   * Command palette: a window opened with a global hotkey that fuzzy-searches
