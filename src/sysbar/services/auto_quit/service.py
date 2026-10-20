@@ -62,9 +62,9 @@ class AutoQuitService:
         app_id = self._window_app.pop(window_id, None)
         if app_id is None:
             return
-        windows = self._app_windows.get(app_id)
-        if windows is None:
-            return
+        # A mapped window is always in its app's set: the set is dropped only once
+        # every window in it has been closed and unmapped.
+        windows = self._app_windows[app_id]
         windows.discard(window_id)
         if not windows:
             self._app_windows.pop(app_id, None)
@@ -83,9 +83,8 @@ class AutoQuitService:
 
     def _terminate(self, app_id: str) -> bool:
         self._grace_timers.pop(app_id, None)
-        pid = self._app_pid.get(app_id)
-        if pid is None:
-            return False
+        # Termination is scheduled only for apps with a known pid, never forgotten.
+        pid = self._app_pid[app_id]
         log.info("auto-quit terminating", extra={"app_id": app_id, "pid": pid})
         self._terminator.terminate(pid)
         self._kill_timers[app_id] = self._scheduler.schedule(
